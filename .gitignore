@@ -1,0 +1,101 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio cache/options
+.vs/
+*.user
+*.userosscache
+*.suo
+*.rsuser
+*.sln.docstates
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# Test Results
+TestResults/
+*.trx
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+.nuget/
+
+# .NET
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Publish output
+publish/
+
+# Azure
+PublishProfiles/
+*.pubxml
+*.publishsettings
+
+# Local settings
+appsettings.Development.json
+secrets.json
+
+# Entity Framework
+*.mdf
+*.ldf
+
+# SQL Server LocalDB
+*.dbmdl
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.cache
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+coverage.*
+*.coverage
+*.coveragexml
+
+# BenchmarkDotNet
+BenchmarkDotNet.Artifacts/
+
+# Generated files
+Generated/
+
+# JetBrains Rider
+*.DotSettings.user
+
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# NCrunch
+_NCrunch_*
+.*crunch*.local.xml
+
+# SonarQube
+.sonarqube/
+
+# StyleCop
+StyleCopReport.xml
