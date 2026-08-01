@@ -195,3 +195,237 @@ Maintainability
 This project is achievable within one semester long because it focuses on developing a prototype rather than a production-ready application. 
 
 The system will also use sample data instead of connecting with any existing university databases. The proposed scope includes core booking functionality, user management, validation, reporting, and software quality assurance artefacts while remaining realistic for students. 
+
+IV. REQUIREMENTS AND QUALITY ANALYSIS    
+
+1. Functional Requirements 
+
+No ID 
+
+Functional requirements 
+
+FR1 
+
+Students can search available rooms using date, time, location, capacity and room type filters 
+
+FR2 
+
+Students can book an available room 
+
+FR3 
+
+The system shall validate ​the availability of study rooms before confirming a booking​ 
+
+FR4 
+
+The system will validate programme or major eligibility before allowing specialised room bookings 
+
+FR5 
+
+Student will receive booking confirmation via email 
+
+FR6 
+
+Student can modify future bookings 
+
+FR7 
+
+Student can cancel future bookings 
+
+FR8 
+
+Student can view booking history 
+
+FR9 
+
+Academic staff can create recurring bookings 
+
+FR10 
+
+Administrators can manage room information and room access rules 
+
+FR11 
+
+Administrators can override or cancel bookings when necessary 
+
+FR12 
+
+Administrators can generate room utilisation reports 
+
+ 
+
+2. Non-functional Requirements 
+
+No 
+
+Requirements 
+
+Measurement 
+
+NFR1 
+
+Performance 
+
+Room searches will return results within 5 seconds for at least 100 reservations 
+
+NFR2 
+
+Reliability 
+
+The system will prevent duplicate bookings for the same room ​and time​ slot 
+
+NFR3 
+
+Security 
+
+Only authorised users may access administrative functions 
+
+NFR4 
+
+Usability 
+
+First-time users will complete a booking within 4 minutes without assistance 
+
+NFR5 
+
+Maintainability 
+
+The system will use a modular architecture to simplify future development 
+
+NFR6 
+
+Accessibility 
+
+Text shall remain readable, and navigation will support keyboard interaction where appropriate. The system will support both Vietnamese and English interfaces, allowing users to switch languages without restarting the application 
+
+NFR7 
+
+Availability 
+
+The prototype shall remain operational throughout demonstration and testing sessions 
+
+ 
+
+3. Requirements Quality Analysis 
+
+Several initial requirements are too general or vague and should be refined into measurable requirements 
+
+Original requirement 
+
+Improved requirement 
+
+Quality improvement 
+
+The system should be easy to use 
+
+A new user should complete a booking within 4 minutes without external assistance 
+
+Testable and measurable 
+
+The system should be fast 
+
+Search results should be displayed within 5 seconds for at least 100 reservations 
+
+Specific and measurable 
+
+The system should prevent double bookings 
+
+The system should reject overlapping bookings and display an appropriate validation message 
+
+Clear and testable 
+
+Only authorised users should use specialised rooms 
+
+The system shall verify programme eligibility before confirming specialised room bookings 
+
+Correct and verfiable 
+
+ 
+
+The refined requirements improve clarity, consistency, correctness, completeness, feasibility, and testability, making them easier to verify during testing. 
+
+4. Acceptance Criteria  
+
+No ID 
+
+Functional Requirements 
+
+Acceptance Criteria 
+
+FR2 
+
+Book a room 
+
+Given a student has selected an available room 
+
+When the student submits the booking request 
+
+Then the booking will be created successfully and a confirmation email shall be sent 
+
+FR3 
+
+Prevent Double Booking 
+
+Given a room has already been booked for a selected time 
+
+When another user attempts to reserve the same room during the same period 
+
+Then ​the system will reject booking and display an​ appropriate validation message 
+
+FR4 
+
+Programme Validation 
+
+Given a student attempts to reserve a specialised laboratory 
+
+When the student’s programme does not satisfy the access requirements 
+
+Then the booking shall not be created and an error message shall be displayed 
+
+FR7 
+
+Cancel Booking 
+
+Given a future booking exists 
+
+When the student cancels the booking 
+
+Then the booking will be removed and the room will become available for future bookings 
+
+ 
+
+5. Software Quality Attributes 
+
+The proposed system will focus on some important software quality attributes 
+
+Quality Attribute 
+
+Importance to the Project 
+
+Usability 
+
+Students should easily search and reserve rooms without training 
+
+Reliability 
+
+Booking conflicts and duplicate bookings must be prevented 
+
+Performance Efficiency 
+
+Room searches and booking confirmations should be completed quickly 
+
+Security 
+
+Restricted rooms and administrator functions should only be accessible to authorised users 
+
+Maintainability 
+
+The system should support future enhancements with minimal changes 
+
+Accessibility 
+
+The interface should be usable by users with different accessibility needs.  
+
+ 
+
+ 
