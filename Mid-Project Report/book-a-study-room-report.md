@@ -26,28 +26,172 @@ This prototype will be using sample data to simulate how it works and will not i
 
 In summary, the proposed system represents a realistic and achievable semester-long project. It involves multiple user roles, validation rules, reporting, workflow management, and quality assurance activities while remaining manageable within the available timeframe. More importantly, it provides sufficient complexity to illustrate the application of software quality assurance principles, responsible AI-assisted development, testing methods, and continuous quality improvement throughout the software development lifecycle. 
 
+III. PROBLEM DEFINITION AND APPROVAL  
+
 1. Meaningful real-world software quality problem 
 
-Many universities in Vietnam currently have no centralised, reliable, and sustainable way for students to check availability and book study rooms across campus. This project aims to develop a Study Room Booking Application that allows students to search for available rooms, reserve them for a specific time, cancel a booking if needed, and easily manage their reservations, while allowing staff to oversee room usage — with a strong focus on software quality assurance, including validation, reliability, usability, efficiency, and maintainability. 
+Many universities in Vietnam still rely heavily on manual processes to manage their study room reservations. Students who want to book a room for either individual or group study, discussions, meetings, or exam preparation are required to travel to the library or student service desk, ask about room availability, and then staff manually check it using paper schedules, whiteboards, or spreadsheets before confirming the booking. In some other cases, bookings are arranged through phone calls or messaging applications, resulting in inconsistent record keeping and overlapping bookings. 
 
-2. Background 
+Although this process seems acceptable during periods of low demand, it becomes significantly inefficient during assignment periods, mid-semester tests, and final examinations. Students are not able to book rooms easily and may spend a long time arranging a booking or even discover that their requested room has already been booked by another person. Staff must also spend a great amount of time checking availability, updating booking records, and resolving scheduling issues manually, which reduces productivity and increases the possibility of human error. 
 
-Universities in Vietnam are usually small and have a limited number of study rooms across their campuses, while demand for booking a study room is especially high during assignment and exam periods. During this time, many students seek a quiet space to study in groups or individually. When students want to book a room, they need to meet with a librarian and fill out manual sign-up sheets or make informal arrangements; the librarian then checks the room's availability manually on paper before notifying the student. This often leads to double-bookings, wasted trips to fully occupied rooms, and inefficiencies in the student study process. 
+To address these issues, this project proposes the development of a Study Room Booking and Management System. This system will provide a centralised platform where students and staff can search for available rooms, create reservations, update, modify, or cancel bookings, receive booking confirmations, and view their booking history. Administrative users will also be responsible for managing room information, access permissions, booking overrides, and room utilisation reports. 
 
-3. Core booking Features 
+2. Background and Motivation 
 
-1. Search/browser available rooms by date and time, viewing capacity and building/floor 
+Study rooms play an important role in supporting collaborative learning, presentations, group discussions, tutorials, project meetings, workshops, and independent study. However, the current manual booking process in many universities remains inefficient. 
 
-2. Book a room for a specific date/time slot 
+The motivation for this project is to create ​a centralised platform that​ improves the quality ​of the booking​ process by introducing an automated solution that reduces human error, booking conflicts, improves room visibility, minimises administrative workload, and provides a better user experience for both students and university staff. 
 
-3. Receive a confirmation of the booking via email 
+The system will also provide university management with valuable information regarding room utilisation, low and peak booking periods, frequently used facilities, and resource demand, supporting future planning and decision-making. 
 
-4. Cancel or modify an existing booking 
+3. Stakeholders and Users 
 
-5. Prevent double-booking / overlapping time conflicts 
+Stakeholder 
 
-6. Admin can view/manage all bookings, override/cancel bookings 
+Responsibilities 
 
-7. Basic usage reporting like most-booked rooms, peak times  
+Expected Benefits 
 
-8. Multi-language support 
+Students 
+
+Search for and book study rooms 
+
+Book rooms online, save travelling time, view real-time availability, reduce booking conflicts 
+
+Academic staff 
+
+Reserve presentation, meeting rooms, laboratories and teaching spaces 
+
+Easier recurring bookings and room management 
+
+Administrative staff 
+
+Manage bookings and room information 
+
+Reduced manual workload and the possibility of human error 
+
+University Management 
+
+Monitor room usage and utilisation 
+
+Better resource planning and decision-making 
+
+ 
+
+4. Summary of Major Use Cases 
+
+4.1 Student 
+
+- Search available rooms 
+
+- Book a room 
+
+​​- Modify or edit​ a booking 
+
+​​- Cancel​ a booking 
+
+​​- View reservation history​ 
+
+- Receive booking confirmation 
+
+4.2 Academic Staff 
+
+- Book specialised rooms 
+
+- Create recurring bookings 
+
+4.3 Administrator 
+
+- Manage rooms 
+
+- Manage bookings 
+
+- Override bookings 
+
+- Configure room access rules 
+
+- Generate reports 
+
+- Manage user roles 
+
+4.4 For all users 
+
+- Can choose their preferred languages 
+
+5. Software Quality Issues 
+
+The current manual booking process issues identified in this project are analysed using ​the ISO/IEC 25010 software​ product ​quality model, which​ provides internationally recognised quality characteristics for evaluating software systems. Analysing these quality characteristics in the development stages will support identifying potential risks, defining measurable quality requirements, and establishing a strong foundation for subsequent testing, validation, and continuous quality improvement throughout the software development lifecycle. 
+
+Functional Suitability 
+
+The current process does not satisfy users’ needs because room availability is checked manually. The increases of possibility of incorrect bookings, inconsistent booking records, and booking conflicts. The proposed system should solve these issues by correctly perfoming searching, booking, validation, cancellation, modification and reporting functions. 
+
+Reliability 
+
+Manual booking process increases the likelihood of duplicate bookings, overlapping bookings, and lost booking information. The proposed system should maintain accurate booking records and prevent any conflicting reservations through automatic validation. 
+
+Usability 
+
+Students need to physically visit the library or contact staff before knowing whether the room is available. The booking process is inconvenient, time-consuming, and difficult to follow. The proposed system should provide an intuitive interface that support users to search, modify, book, and cancel bookings when necessary. 
+
+Performance Efficiency 
+
+During peak periods such as assignment deadlines or final exams, many students may search for rooms simultaneously. The system should return search results and booking confirmation quickly to ensure a smooth user experience during peak demand. 
+
+Security 
+
+Different room types require different access permissions. For example, the design rooms should only be accessible to authorised students or staff. Administrative functions should also be protected through role-based access control. 
+
+Maintainability 
+
+Room information, booking policies, and access control rules may change over time. The system shall be designed using a modular architecture in order to support future changes without affecting existing functionality.  
+
+ 
+
+6. Why this project t is suitable for Software Quality Assurance 
+
+This project is highly suitable for apply Software Quality Assurance because it includes both functional and non-functional quality requirements.  
+
+To be more detailed, from a functional requirement, the system includes searching rooms, booking rooms, updating, email notifications, validation rules, role-based access control, reporting, and administrative management. 
+
+While from a quality perspective, this project allows the application of Software Quality Assurance activities including: 
+
+Requirements quality analysis 
+
+Requirements traceability 
+
+Unit testing 
+
+System testing 
+
+Integration testing 
+
+Acceptance testing 
+
+Regression testing 
+
+Defect management 
+
+Quality metrics 
+
+AI-assisted software development using GitHub Copilot 
+
+This project also evaluates some software ​quality characteristics defined​ in ​ISO/IEC 25010, including​: 
+
+Functional suitability 
+
+Usability 
+
+Reliability 
+
+Performance efficiency 
+
+Security 
+
+Maintainability 
+
+7. Project Feasibility 
+
+This project is achievable within one semester long because it focuses on developing a prototype rather than a production-ready application. 
+
+The system will also use sample data instead of connecting with any existing university databases. The proposed scope includes core booking functionality, user management, validation, reporting, and software quality assurance artefacts while remaining realistic for students. 
