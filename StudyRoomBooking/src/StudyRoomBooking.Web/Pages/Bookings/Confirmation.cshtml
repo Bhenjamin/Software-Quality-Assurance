@@ -1,0 +1,27 @@
+@page "{bookingId:guid}"
+@model StudyRoomBooking.Web.Pages.Bookings.ConfirmationModel
+@{
+    ViewData["Title"] = "Booking Confirmed";
+}
+
+<div class="alert alert-success">
+    <h1 class="h3">Booking confirmed</h1>
+    <p>Your reservation has been recorded.</p>
+</div>
+
+@if (Model.Booking is not null)
+{
+    <dl class="row">
+        <dt class="col-sm-2">Room</dt>
+        <dd class="col-sm-10">@Model.Room?.Name (@Model.Room?.Location)</dd>
+        <dt class="col-sm-2">When</dt>
+        <dd class="col-sm-10">@Model.Booking.StartTime.ToString("f") &rarr; @Model.Booking.EndTime.ToString("t")</dd>
+        <dt class="col-sm-2">Purpose</dt>
+        <dd class="col-sm-10">@Model.Booking.Purpose</dd>
+        <dt class="col-sm-2">Status</dt>
+        <dd class="col-sm-10">@Model.Booking.Status</dd>
+    </dl>
+}
+
+<a href="/Bookings/History" class="btn btn-primary">View my bookings</a>
+<a href="/Rooms/Search" class="btn btn-link">Book another room</a>

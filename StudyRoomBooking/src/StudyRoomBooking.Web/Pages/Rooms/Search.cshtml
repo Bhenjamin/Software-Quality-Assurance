@@ -1,0 +1,93 @@
+@page
+@model StudyRoomBooking.Web.Pages.Rooms.SearchModel
+@{
+    ViewData["Title"] = "Search Rooms";
+}
+
+<h1>Search rooms</h1>
+
+<form method="get" class="row g-3 mb-4">
+    <div class="col-md-2">
+        <label class="form-label">Date</label>
+        <input type="date" name="Date" value="@Model.Date?.ToString("yyyy-MM-dd")" class="form-control" required />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">From</label>
+        <input type="time" name="StartTimeOfDay" value="@Model.StartTimeOfDay" class="form-control" required />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">To</label>
+        <input type="time" name="EndTimeOfDay" value="@Model.EndTimeOfDay" class="form-control" required />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Min capacity</label>
+        <input type="number" name="MinCapacity" value="@Model.MinCapacity" class="form-control" min="1" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Location contains</label>
+        <input type="text" name="Location" value="@Model.Location" class="form-control" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Room type</label>
+        <select name="Type" class="form-select">
+            <option value="">Any</option>
+            @foreach (var type in Enum.GetValues<RoomType>())
+            {
+                <option value="@type" selected="@(Model.Type == type)">@type</option>
+            }
+        </select>
+    </div>
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+</form>
+
+@if (Model.SearchError is not null)
+{
+    <div class="alert alert-warning">@Model.SearchError</div>
+}
+else if (Model.HasSearched)
+{
+    <h2 class="h5">@Model.Results.Count room(s) available</h2>
+    @if (Model.Results.Count == 0)
+    {
+        <p class="text-muted">No rooms match those filters for that time slot — try widening your search.</p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Room</th>
+                    <th>Location</th>
+                    <th>Capacity</th>
+                    <th>Type</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var room in Model.Results)
+                {
+                    <tr>
+                        <td>
+                            @room.Name
+                            @if (room.RequiresRestrictedAccess)
+                            {
+                                <span class="badge bg-secondary ms-1">Restricted access</span>
+                            }
+                        </td>
+                        <td>@room.Location</td>
+                        <td>@room.Capacity</td>
+                        <td>@room.Type</td>
+                        <td>
+                            <a class="btn btn-sm btn-success"
+                               href="/Bookings/Create?roomId=@room.Id&start=@Model.SearchStart.ToString("o")&end=@Model.SearchEnd.ToString("o")">
+                                Book
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}

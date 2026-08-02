@@ -1,0 +1,50 @@
+@page
+@model StudyRoomBooking.Web.Pages.Admin.RoomsModel
+@{
+    ViewData["Title"] = "Manage Rooms";
+}
+
+<h1>Manage rooms</h1>
+
+<table class="table table-striped">
+    <thead>
+        <tr><th>Name</th><th>Location</th><th>Capacity</th><th>Type</th><th>Restricted</th><th>Active</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var room in Model.Rooms)
+        {
+            <tr>
+                <td>@room.Name</td>
+                <td>@room.Location</td>
+                <td>@room.Capacity</td>
+                <td>@room.Type</td>
+                <td>@(room.RequiresRestrictedAccess ? "Yes" : "No")</td>
+                <td>@(room.IsActive ? "Yes" : "No")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h2 class="h5 mt-4">Add a room</h2>
+<form method="post" asp-page-handler="AddRoom" class="row g-3">
+    <div class="col-md-3">
+        <input asp-for="NewRoomName" class="form-control" placeholder="Room name" required />
+    </div>
+    <div class="col-md-3">
+        <input asp-for="NewRoomLocation" class="form-control" placeholder="Location" required />
+    </div>
+    <div class="col-md-2">
+        <input asp-for="NewRoomCapacity" type="number" min="1" class="form-control" placeholder="Capacity" required />
+    </div>
+    <div class="col-md-2">
+        <select asp-for="NewRoomType" class="form-select">
+            @foreach (var type in Enum.GetValues<RoomType>())
+            {
+                <option value="@type">@type</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Add room</button>
+    </div>
+</form>

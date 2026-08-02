@@ -1,0 +1,31 @@
+@page
+@model StudyRoomBooking.Web.Pages.Bookings.CreateModel
+@{
+    ViewData["Title"] = "Book a Room";
+}
+
+<h1>Book @Model.Room?.Name</h1>
+
+@if (Model.Room is not null)
+{
+    <dl class="row">
+        <dt class="col-sm-2">Location</dt>
+        <dd class="col-sm-10">@Model.Room.Location</dd>
+        <dt class="col-sm-2">Capacity</dt>
+        <dd class="col-sm-10">@Model.Room.Capacity</dd>
+        <dt class="col-sm-2">Requested time</dt>
+        <dd class="col-sm-10">@Model.Start.ToString("f") &rarr; @Model.End.ToString("t")</dd>
+    </dl>
+
+    <form method="post">
+        <input type="hidden" asp-for="RoomId" />
+        <input type="hidden" asp-for="Start" />
+        <input type="hidden" asp-for="End" />
+        <div class="mb-3">
+            <label class="form-label">Purpose</label>
+            <input asp-for="Purpose" class="form-control" placeholder="e.g. Group project discussion" required />
+        </div>
+        <button type="submit" class="btn btn-primary">Confirm booking</button>
+        <a href="/Rooms/Search" class="btn btn-link">Back to search</a>
+    </form>
+}

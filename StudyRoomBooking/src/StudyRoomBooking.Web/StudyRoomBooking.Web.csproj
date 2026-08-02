@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>StudyRoomBooking.Web</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\StudyRoomBooking.Application\StudyRoomBooking.Application.csproj" />
+    <ProjectReference Include="..\StudyRoomBooking.Infrastructure\StudyRoomBooking.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,20 @@
+@page "{bookingId:guid}"
+@model StudyRoomBooking.Web.Pages.Bookings.CancelModel
+@{
+    ViewData["Title"] = "Cancel Booking";
+}
+
+<h1>Cancel booking</h1>
+
+@if (Model.Room is not null && Model.Booking is not null)
+{
+    <p>
+        Are you sure you want to cancel your booking of <strong>@Model.Room.Name</strong>
+        for @Model.Booking.StartTime.ToString("f")?
+    </p>
+
+    <form method="post">
+        <button type="submit" class="btn btn-danger">Yes, cancel it</button>
+        <a href="/Bookings/History" class="btn btn-link">No, go back</a>
+    </form>
+}

@@ -1,0 +1,27 @@
+@page
+@model StudyRoomBooking.Web.Pages.Admin.BookingsOverviewModel
+@{
+    ViewData["Title"] = "All Bookings";
+}
+
+<h1>All bookings</h1>
+<p class="text-muted">Basic overview for Assessment 1 — detailed reporting/filtering is a later-phase feature.</p>
+
+<table class="table table-striped">
+    <thead>
+        <tr><th>Room</th><th>Booked by</th><th>When</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+        @foreach (var booking in Model.Bookings)
+        {
+            var room = Model.RoomsById.GetValueOrDefault(booking.RoomId);
+            var user = Model.UsersById.GetValueOrDefault(booking.UserId);
+            <tr>
+                <td>@(room?.Name ?? "(unknown room)")</td>
+                <td>@(user?.FullName ?? "(unknown user)") @(user is not null ? $"({user.Role})" : "")</td>
+                <td>@booking.StartTime.ToString("g") &rarr; @booking.EndTime.ToString("t")</td>
+                <td>@booking.Status</td>
+            </tr>
+        }
+    </tbody>
+</table>

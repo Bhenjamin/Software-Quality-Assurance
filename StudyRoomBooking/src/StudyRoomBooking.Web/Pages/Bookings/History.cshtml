@@ -1,0 +1,45 @@
+@page
+@model StudyRoomBooking.Web.Pages.Bookings.HistoryModel
+@{
+    ViewData["Title"] = "My Bookings";
+}
+
+<h1>My bookings</h1>
+
+@if (Model.Bookings.Count == 0)
+{
+    <p class="text-muted">You haven't made any bookings yet.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Room</th>
+                <th>When</th>
+                <th>Purpose</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var booking in Model.Bookings)
+            {
+                var room = Model.RoomsById.GetValueOrDefault(booking.RoomId);
+                <tr>
+                    <td>@(room?.Name ?? "(unknown room)")</td>
+                    <td>@booking.StartTime.ToString("g") &rarr; @booking.EndTime.ToString("t")</td>
+                    <td>@booking.Purpose</td>
+                    <td>@booking.Status</td>
+                    <td>
+                        @if (booking.Status != BookingStatus.Cancelled)
+                        {
+                            <a class="btn btn-sm btn-outline-primary" href="/Bookings/Modify/@booking.Id">Modify</a>
+                            <a class="btn btn-sm btn-outline-danger" href="/Bookings/Cancel/@booking.Id">Cancel</a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

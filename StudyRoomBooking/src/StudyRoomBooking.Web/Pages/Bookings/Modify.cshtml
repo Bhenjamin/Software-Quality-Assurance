@@ -1,0 +1,25 @@
+@page "{bookingId:guid}"
+@model StudyRoomBooking.Web.Pages.Bookings.ModifyModel
+@{
+    ViewData["Title"] = "Modify Booking";
+}
+
+<h1>Modify booking</h1>
+
+@if (Model.Room is not null)
+{
+    <p>@Model.Room.Name (@Model.Room.Location)</p>
+
+    <form method="post">
+        <div class="mb-3">
+            <label class="form-label">New start time</label>
+            <input asp-for="NewStart" type="datetime-local" class="form-control" required />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">New end time</label>
+            <input asp-for="NewEnd" type="datetime-local" class="form-control" required />
+        </div>
+        <button type="submit" class="btn btn-primary">Save changes</button>
+        <a href="/Bookings/History" class="btn btn-link">Cancel</a>
+    </form>
+}
