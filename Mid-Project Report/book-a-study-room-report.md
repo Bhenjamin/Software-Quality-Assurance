@@ -432,7 +432,7 @@ The interface should be usable by users with different accessibility needs.
 
 The initial test strategy for the Study Room Booking System focuses on verifying the correctness of the core booking functionality, access-control rules, room searching, and booking lifecycle operations. Testing is designed to identify defects early and provide evidence that the implemented requirements are satisfied.
 
-## 1 Testing Scope
+#### 1 Testing Scope
 
 The testing scope includes the main functional requirements of the system:
 
@@ -457,7 +457,7 @@ The following items are out of scope:
 
 The system currently uses in-memory repositories and simulated login. Therefore, testing is primarily focused on application behaviour rather than production infrastructure.
 
-## 2 Test Levels and Types
+#### 2 Test Levels and Types
 
 **Unit testing** is the main testing level for the current implementation. MSTest is used to test individual application services and business rules. The existing test suite includes `AccessControlService`, `BookingService`, and `RoomSearchService`. Each test uses a fresh `TestFixture` containing isolated in-memory repositories.
 
@@ -471,7 +471,7 @@ The system currently uses in-memory repositories and simulated login. Therefore,
 
 Usability and security testing are relevant but are limited in the initial testing stage because the current assessment prototype does not implement production authentication or a complete user interface evaluation process.
 
-## 3 Functional Testing Approach
+#### 3 Functional Testing Approach
 
 Functional testing uses a combination of positive and negative test cases. Positive tests verify that valid operations succeed, while negative tests verify that invalid requests are rejected with the correct result or error code.
 
@@ -479,7 +479,7 @@ Boundary and business-rule scenarios are also tested. For example, booking times
 
 The tests are implemented using MSTest. Assertions check both the operation result and the resulting system state, such as booking status, error codes, and room availability.
 
-## 4 Non-Functional Testing Approach
+#### 4 Non-Functional Testing Approach
 
 Selected non-functional requirements will be tested at an initial level. Reliability is assessed by checking that invalid operations do not corrupt booking state and that cancellation correctly releases a booking slot.
 
@@ -489,16 +489,16 @@ Maintainability is supported through automated unit tests, isolated test fixture
 
 Performance and scalability testing are not included at this stage because the system uses in-memory repositories and is designed as an Assessment 1 prototype rather than a production deployment.
 
-## 5 Entry and Exit Criteria
+##### 5 Entry and Exit Criteria
 
-### Entry Criteria
+###### Entry Criteria
 
 * Core application services compile successfully.
 * The test project references the required Domain, Application, and Infrastructure projects.
 * Seed data and in-memory repositories are available.
 * The test environment is configured with .NET 8 and MSTest.
 
-### Exit Criteria
+##### Exit Criteria
 
 * All planned high-priority test cases have been executed.
 * All critical functional tests pass.
@@ -506,8 +506,18 @@ Performance and scalability testing are not included at this stage because the s
 * Failed tests have been investigated and documented.
 * Regression tests pass after defect corrections.
 
-## 6 Test Environment and Tools
+#### 6 Test Environment and Tools
 
 Testing is performed using **C#/.NET 8**, **MSTest**, and the `Microsoft.NET.Test.Sdk`, `MSTest.TestAdapter`, and `MSTest.TestFramework` packages.
 
 The application uses ASP.NET Core Razor Pages and can be executed
+
+***
+
+## Task 3: Proposed Solution and Initial Prototype 
+
+How the proposed solution addresses the selected real-world problem. 
+
+The proposed solution is to develop an online Study Room Booking and Management System that replaces the current manual booking process with a C# web platform.  The system addresses initially quality issues by allowing students and staff to find and book available rooms without needing to contact administrative staff directly.  Having an online booking system will help prevent double bookings, overlapping reservations, and unauthorised access to specialised rooms.  The system will also support different user roles, including students, academic staff, and administrators, preventing access features outside their responsibilities.  By providing these features with a user-friendly interface the proposed solution will help reduce human error, decreases administrative workload, and provide a more efficient experience for all stakeholders. 
+
+
