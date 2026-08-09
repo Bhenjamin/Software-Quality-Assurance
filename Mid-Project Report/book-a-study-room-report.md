@@ -1,7 +1,8 @@
 # I. PROBLEM TITLE 
 Quality Assurance Improvement for a University Study Room Booking and Management System 
 
-# II. PROBLEM STATEMENT 
+# II. PROBLEM STATEMENT VERSION 1
+
 There are a great number of universities in Vietnam that still rely heavily on manual processes to manage available rooms for studying or meetings within their facilities. Students who want to book a study room for either individual or group study, project meetings, or exam preparation often need to physically visit the library or student desk, where staff manually check available rooms using paper or whiteboard schedules or spreadsheets in Excel before confirming a booking. In some other cases, these bookings are arranged through phone calls or messaging, resulting in inconsistent record-keeping and consuming the time of both students and university staff. 
 
 When demand is low, this process seems to work fine, but it becomes significantly inefficient during peak periods, especially before mid-term or final exams and assignment deadlines. Students may need to travel back and forth just to find out that a room has already been allocated to another person. Furthermore, manual scheduling also increases the chance of double bookings, overlapping sessions, booking errors, and delays in confirming the availability of the room. Staff also need to spend a great amount of time answering booking enquiries, constantly updating reservation records, and resolving scheduling conflicts instead of focusing on other higher-value administrative tasks. 
@@ -24,8 +25,24 @@ This prototype will be using sample data to simulate how it works and will not i
 
 In summary, the proposed system represents a realistic and achievable semester-long project. It involves multiple user roles, validation rules, reporting, workflow management, and quality assurance activities while remaining manageable within the available timeframe. More importantly, it provides sufficient complexity to illustrate the application of software quality assurance principles, responsible AI-assisted development, testing methods, and continuous quality improvement throughout the software development lifecycle. 
 
+# II. PROBLEM STATEMENT VERSION 2 
+
+Many universities in Vietnam still rely on manual processes to manage study and meeting rooms. Students booking a room for study, project meetings, or exam preparation often visit the library or student desk, where staff manually check availability using paper schedules, whiteboards, or spreadsheets. Other bookings are arranged by phone or messaging, leading to inconsistent record-keeping and wasted time for both students and staff. 
+
+This works fine when demand is low, but becomes inefficient during peak periods such as exams and assignment deadlines. Students may travel to a room only to find it already taken. Manual scheduling increases double bookings, overlapping sessions, errors, and delays confirming availability. Staff spend considerable time answering enquiries, updating records, and resolving conflicts instead of higher-value tasks. 
+
+These issues expose important software quality concerns. Students face a process that lacks transparency and reliability, since availability cannot be checked in real time and confirmed bookings still feel uncertain, and they cannot easily change or cancel bookings without contacting staff. Staff face repetitive, error-prone manual management, especially with simultaneous requests. Administrators have limited visibility into utilisation and peak demand, making it hard to plan ahead or improve efficiency. 
+
+To address this, our project proposes a Study Room Booking and Management Application providing a centralised booking platform. Students will check availability using filters such as time, date, capacity, room type, and location. The system will validate requests before confirmation, ensuring rooms are available and users meet access restrictions for specialised rooms — for example, design studios reserved for Design students, unless administrative approval is granted. Students will receive confirmation via email, view booking history, and modify or cancel bookings when needed. 
+
+The system will support different user roles. Academic staff can reserve meeting rooms and laboratories, and request recurring bookings for teaching or workshops. Administrators will manage room information, cancel bookings, set access permissions, update room details, and monitor usage through reporting. Role-based access control ensures users only perform actions appropriate to their responsibilities. 
+
+The project scope extends beyond a basic booking application, focusing on quality assurance throughout the workflow — validation, conflict detection, authorisation, booking history, and reporting. The prototype will cover workflows from successful bookings to exceptions such as duplicate reservations, unauthorised access, and administrative overrides, using sample data rather than integrating with any real university database. 
+
+
 # III. PROBLEM DEFINITION AND APPROVAL  
 #### 1. Meaningful real-world software quality problem 
+
 Many universities in Vietnam still rely heavily on manual processes to manage their study room reservations. Students who want to book a room for either individual or group study, discussions, meetings, or exam preparation are required to travel to the library or student service desk, ask about room availability, and then staff manually check it using paper schedules, whiteboards, or spreadsheets before confirming the booking. In some other cases, bookings are arranged through phone calls or messaging applications, resulting in inconsistent record keeping and overlapping bookings. 
 
 Although this process seems acceptable during periods of low demand, it becomes significantly inefficient during assignment periods, mid-semester tests, and final examinations. Students are not able to book rooms easily and may spend a long time arranging a booking or even discover that their requested room has already been booked by another person. Staff must also spend a great amount of time checking availability, updating booking records, and resolving scheduling issues manually, which reduces productivity and increases the possibility of human error. 
