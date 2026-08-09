@@ -202,6 +202,10 @@ The proposed system will focus on some important software quality attributes
 | Maintainability | The system should support future enhancements with minimal changes |
 | Accessibility | The interface should be usable by users with different accessibility needs. |
 
+#### 6. Summary and Traceability 
+
+Each requirement – both functional and non-functional requirements, acceptance criteria has been assigned a unique identifier (FR1-FR12 for functional requirements, NFR1-NFR7 for non-functional requirements, and corresponding acceptance criteria linked to specific funtional requirements) to support consistent referencing throughout the project. These identifiers well also be used in the Requirement Traceability Matrix (Task 6) to link each requirement directly to the test cases designed to verify it, allowing our group to demonstrate that every requirement has been considered during testing session and that no requirements has been left unverified.  
+
 # V. Initial Test Strategy and Test Planning
 The initial test strategy for the Study Room Booking System focuses on verifying the correctness of the core booking functionality, access-control rules, room searching, and booking lifecycle operations. Testing is designed to identify defects early and provide evidence that the implemented requirements are satisfied.
 
