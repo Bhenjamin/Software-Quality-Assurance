@@ -186,13 +186,10 @@ The proposed system will focus on some important software quality attributes
 | Accessibility | The interface should be usable by users with different accessibility needs. |
 
 # V. Initial Test Strategy and Test Planning
-
 The initial test strategy for the Study Room Booking System focuses on verifying the correctness of the core booking functionality, access-control rules, room searching, and booking lifecycle operations. Testing is designed to identify defects early and provide evidence that the implemented requirements are satisfied.
 
 #### 1 Testing Scope
-
 The testing scope includes the main functional requirements of the system:
-
 * User and role-based access control
 * Room searching and availability checking
 * Room booking and validation
@@ -204,7 +201,6 @@ The testing scope includes the main functional requirements of the system:
 Selected non-functional requirements are also considered, particularly reliability, usability, and maintainability.
 
 The following items are out of scope:
-
 * Production authentication and authorisation infrastructure
 * Real database performance and scalability
 * Real external university systems
@@ -215,21 +211,13 @@ The following items are out of scope:
 The system currently uses in-memory repositories and simulated login. Therefore, testing is primarily focused on application behaviour rather than production infrastructure.
 
 #### 2 Test Levels and Types
+**Unit testing** is the main testing level for the current implementation. MSTest is used in Visual Studio to test individual application services and business rules. The existing test project includes tests for `AccessControlService`, `BookingService`, and `RoomSearchService`. Each test uses a fresh `TestFixture` containing isolated in-memory repositories, which prevents test data from affecting other tests.
 
-**Unit testing** is the main testing level for the current implementation. MSTest is used to test individual application services and business rules. The existing test suite includes `AccessControlService`, `BookingService`, and `RoomSearchService`. Each test uses a fresh `TestFixture` containing isolated in-memory repositories.
+The main testing approach is **functional unit testing**, using both positive and negative test cases. **Regression testing** is also performed by running the existing MSTest test suite after changes to ensure that previously working functionality has not been broken.
 
-**Integration testing** is relevant for verifying interactions between application services and repositories. For example, booking creation should correctly update the booking repository and affect subsequent room availability searches.
-
-**System testing** can be performed through the Razor Pages web application to verify complete user workflows, such as searching for a room, creating a booking, viewing booking history, and cancelling a booking.
-
-**Acceptance testing** focuses on whether the main user requirements are satisfied from the perspective of students and administrators. For example, a student should be able to find an available room and successfully book it.
-
-**Regression testing** is performed by rerunning the existing MSTest suite after changes to ensure that previously working functionality has not been broken.
-
-Usability and security testing are relevant but are limited in the initial testing stage because the current assessment prototype does not implement production authentication or a complete user interface evaluation process.
+Integration, system, acceptance, usability, and security testing are not the main focus of the current assessment because the testing work is limited to the MSTest project and the core application services.
 
 #### 3 Functional Testing Approach
-
 Functional testing uses a combination of positive and negative test cases. Positive tests verify that valid operations succeed, while negative tests verify that invalid requests are rejected with the correct result or error code.
 
 Boundary and business-rule scenarios are also tested. For example, booking times that overlap an existing booking should fail, while a cancelled booking should release the room so that another user can book the same time slot.
@@ -237,7 +225,6 @@ Boundary and business-rule scenarios are also tested. For example, booking times
 The tests are implemented using MSTest. Assertions check both the operation result and the resulting system state, such as booking status, error codes, and room availability.
 
 #### 4 Non-Functional Testing Approach
-
 Selected non-functional requirements will be tested at an initial level. Reliability is assessed by checking that invalid operations do not corrupt booking state and that cancellation correctly releases a booking slot.
 
 Usability can be evaluated through manual system testing by checking whether the main workflows are clear and understandable.
@@ -247,16 +234,13 @@ Maintainability is supported through automated unit tests, isolated test fixture
 Performance and scalability testing are not included at this stage because the system uses in-memory repositories and is designed as an Assessment 1 prototype rather than a production deployment.
 
 ##### 5 Entry and Exit Criteria
-
 ###### Entry Criteria
-
 * Core application services compile successfully.
 * The test project references the required Domain, Application, and Infrastructure projects.
 * Seed data and in-memory repositories are available.
 * The test environment is configured with .NET 8 and MSTest.
 
 ##### Exit Criteria
-
 * All planned high-priority test cases have been executed.
 * All critical functional tests pass.
 * No unresolved critical defects remain.
@@ -264,10 +248,16 @@ Performance and scalability testing are not included at this stage because the s
 * Regression tests pass after defect corrections.
 
 #### 6 Test Environment and Tools
+Testing is performed using **Visual Studio** and **C#** with the **MSTest** framework. Automated unit tests are executed through **Test Explorer** in Visual Studio.
 
-Testing is performed using **C#/.NET 8**, **MSTest**, and the `Microsoft.NET.Test.Sdk`, `MSTest.TestAdapter`, and `MSTest.TestFramework` packages.
+The test project uses the following dependencies:
+* `MSTest.TestFramework` — provides test attributes and assertions such as `[TestClass]`, `[TestMethod]`, and `Assert`.
+* `MSTest.TestAdapter` — enables MSTest tests to be discovered and executed.
+* `Microsoft.NET.Test.Sdk` — provides the test execution infrastructure.
 
-The application uses ASP.NET Core Razor Pages and can be executed
+The tests use **in-memory repositories** and seeded data, so an external database or external service is not required for the initial unit testing.
+
+The current testing focuses on the **C# Domain, Application, and Infrastructure components**. Browser and mobile-device testing are not included in the initial unit-testing scope. The Web interface can be tested separately through manual system testing if required.
 
 ***
 
