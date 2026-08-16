@@ -13,6 +13,13 @@ namespace StudyRoomBooking.Application.Services;
 /// </summary>
 public class BookingService : IBookingService
 {
+    /// <summary>
+    /// How far ahead a booking may be made. Prevents rooms from being
+    /// blocked out indefinitely by speculative bookings. 60 days covers a
+    /// full university term; adjust here if the policy changes.
+    /// </summary>
+    private const int MaxAdvanceBookingDays = 60;
+
     private readonly IRoomRepository _roomRepository;
     private readonly IUserRepository _userRepository;
     private readonly IBookingRepository _bookingRepository;
@@ -170,6 +177,13 @@ public class BookingService : IBookingService
         if (start < DateTime.UtcNow.AddMinutes(-1))
         {
             return BookingResult.Fail("INVALID_TIME_RANGE", "Bookings cannot be made in the past.");
+        }
+
+        if (start > DateTime.UtcNow.AddDays(MaxAdvanceBookingDays))
+        {
+            return BookingResult.Fail(
+                "TOO_FAR_IN_ADVANCE",
+                $"Bookings cannot be made more than {MaxAdvanceBookingDays} days in advance.");
         }
 
         return null;
