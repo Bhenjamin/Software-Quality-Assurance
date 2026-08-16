@@ -1,9 +1,61 @@
-# Introduction
+# 1. Introduction
 Software quality assurance (SQA) is an essential part of software development because developing software quickly does not necessarily guarantee that the resulting software will be of high quality. Modern software organisations increasingly rely on Agile practices, automation, DevOps workflows, and AI to improve development efficiency. However, these approaches can also introduce software quality concerns such as unclear requirements, insufficient validation, poor usability, unreliable workflows, security issues, maintainability problems, and inadequate testing. Therefore, systematic quality assurance practices are necessary to identify, prevent, and reduce potential software quality problems throughout the software development process.
+
 This project focuses on identifying a meaningful real-world software quality problem and developing a software-based solution or quality improvement prototype. The project involves understanding the problem context and stakeholder needs, identifying functional and non-functional requirements, and analysing these requirements to ensure that they are clear, complete, consistent, correct, feasible, and testable. Relevant software quality attributes are also considered to ensure that the proposed solution meets both functional expectations and broader quality requirements.
+
 AI-assisted development is also incorporated into the project to support software development and quality assurance activities. AI can assist with tasks such as code development, testing, validation, debugging, and quality improvement. However, AI-generated outputs may contain errors, security vulnerabilities, inappropriate solutions, or maintainability issues. Therefore, AI-assisted outputs must be reviewed, validated, modified, and tested by the development team to ensure that they are appropriate and meet the required quality standards.
+
 The project also uses GitHub to support collaborative development, version control, and project progress tracking. Git commits provide a record of the team's development activities and individual contributions throughout the project. Combined with systematic testing and quality assurance practices, including test case design, requirements traceability, defect management, and quality metrics, GitHub supports a structured development process. GitHub link: https://github.com/Bhenjamin/Software-Quality-Assurance
+
 Overall, the project demonstrates the application of software quality assurance principles, practical software development, collaborative version control, and responsible use of AI to address a real-world software quality problem and improve the quality of the proposed solution.
+
+# 2. Problem Definition 
+## 2.1. Background and Motivation
+
+## 2.2. Problem Statement
+
+## 2.3. Stakeholders and Users 
+
+## 2.4. Software Quality Issues
+
+# 3. Requirements and Quality Analysis
+## 3.1. Functional Requirements
+
+## 3.2. Non-functional Requirements
+
+## 3.3. Requirements Quality Analysis
+
+## 3.4. Acceptance Criteria
+
+## 3.5. Software Quality Attributes
+
+# 4. Proposed Solution and Initial Prototype
+
+# 5. AI-Assisted Development Using GitHub Copilot
+
+# 6. Initial Test Strategy and Test Planning
+## 6.1. Testing Scope
+
+## 6.2. Test Levels and Types
+
+## 6.3. Functional Testing Approach
+
+## 6.4. Non-Functional Testing Approach
+
+## 6.5. Entry and Exit Criteria
+
+## 6.6. Test Environment and Tools
+
+# 7. Initial Test Cases and Requirements Traceability
+## 7.1. Initial Test Cases
+
+## 7.2. Requirements Traceability
+
+# 8. Project Progress, Risks, and Next Steps
+
+# 9. Conclusion
+
+***
 
 # I. PROBLEM TITLE 
 Quality Assurance Improvement for a University Study Room Booking and Management System 
@@ -216,7 +268,7 @@ Each requirement – both functional and non-functional requirements, acceptance
 # V. Initial Test Strategy and Test Planning
 The initial test strategy for the Study Room Booking System focuses on verifying the correctness of the core booking functionality, access-control rules, room searching, and booking lifecycle operations. Testing is designed to identify defects early and provide evidence that the implemented requirements are satisfied.
 
-#### 1 Testing Scope
+#### 1. Testing Scope
 The testing scope includes the main functional requirements of the system:
 * User and role-based access control
 * Room searching and availability checking
@@ -238,21 +290,21 @@ The following items are out of scope:
 
 The system currently uses in-memory repositories and simulated login. Therefore, testing is primarily focused on application behaviour rather than production infrastructure.
 
-#### 2 Test Levels and Types
+#### 2. Test Levels and Types
 **Unit testing** is the main testing level for the current implementation. MSTest is used in Visual Studio to test individual application services and business rules. The existing test project includes tests for `AccessControlService`, `BookingService`, and `RoomSearchService`. Each test uses a fresh `TestFixture` containing isolated in-memory repositories, which prevents test data from affecting other tests.
 
 The main testing approach is **functional unit testing**, using both positive and negative test cases. **Regression testing** is also performed by running the existing MSTest test suite after changes to ensure that previously working functionality has not been broken.
 
 Integration, system, acceptance, usability, and security testing are not the main focus of the current assessment because the testing work is limited to the MSTest project and the core application services.
 
-#### 3 Functional Testing Approach
+#### 3. Functional Testing Approach
 Functional testing uses a combination of positive and negative test cases. Positive tests verify that valid operations succeed, while negative tests verify that invalid requests are rejected with the correct result or error code.
 
 Boundary and business-rule scenarios are also tested. For example, booking times that overlap an existing booking should fail, while a cancelled booking should release the room so that another user can book the same time slot.
 
 The tests are implemented using MSTest. Assertions check both the operation result and the resulting system state, such as booking status, error codes, and room availability.
 
-#### 4 Non-Functional Testing Approach
+#### 4. Non-Functional Testing Approach
 Selected non-functional requirements will be tested at an initial level. Reliability is assessed by checking that invalid operations do not corrupt booking state and that cancellation correctly releases a booking slot.
 
 Usability can be evaluated through manual system testing by checking whether the main workflows are clear and understandable.
@@ -261,7 +313,7 @@ Maintainability is supported through automated unit tests, isolated test fixture
 
 Performance and scalability testing are not included at this stage because the system uses in-memory repositories and is designed as an Assessment 1 prototype rather than a production deployment.
 
-##### 5 Entry and Exit Criteria
+##### 5. Entry and Exit Criteria
 ###### Entry Criteria
 * Core application services compile successfully.
 * The test project references the required Domain, Application, and Infrastructure projects.
@@ -275,7 +327,7 @@ Performance and scalability testing are not included at this stage because the s
 * Failed tests have been investigated and documented.
 * Regression tests pass after defect corrections.
 
-#### 6 Test Environment and Tools
+#### 6. Test Environment and Tools
 Testing is performed using **Visual Studio** and **C#** with the **MSTest** framework. Automated unit tests are executed through **Test Explorer** in Visual Studio.
 
 The test project uses the following dependencies:
