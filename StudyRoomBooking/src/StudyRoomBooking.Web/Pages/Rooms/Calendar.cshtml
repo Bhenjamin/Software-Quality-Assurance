@@ -1,0 +1,59 @@
+@page
+@model StudyRoomBooking.Web.Pages.Rooms.CalendarModel
+@{
+    ViewData["Title"] = "Room Availability";
+    var firstOfMonth = Model.MonthStart;
+    var daysInMonth = DateTime.DaysInMonth(firstOfMonth.Year, firstOfMonth.Month);
+    var leadingBlanks = (int)firstOfMonth.DayOfWeek;
+    var prevMonth = firstOfMonth.AddMonths(-1);
+    var nextMonth = firstOfMonth.AddMonths(1);
+}
+
+<h1>@Model.Room?.Name — @firstOfMonth.ToString("MMMM yyyy")</h1>
+<p class="text-muted">@Model.Room?.Location &middot; capacity @Model.Room?.Capacity</p>
+
+<div class="d-flex justify-content-between mb-3">
+    <a class="btn btn-outline-secondary btn-sm"
+       href="/Rooms/Calendar?roomId=@Model.RoomId&year=@prevMonth.Year&month=@prevMonth.Month">&larr; Previous month</a>
+    <a class="btn btn-outline-secondary btn-sm"
+       href="/Rooms/Calendar?roomId=@Model.RoomId&year=@nextMonth.Year&month=@nextMonth.Month">Next month &rarr;</a>
+</div>
+
+<div class="row row-cols-7 g-1 text-center fw-bold mb-1">
+    @foreach (var d in new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" })
+    {
+        <div class="col">@d</div>
+    }
+</div>
+
+<div class="row row-cols-7 g-1">
+    @for (int i = 0; i < leadingBlanks; i++)
+    {
+        <div class="col"><div class="border rounded p-2 bg-light" style="min-height:70px"></div></div>
+    }
+    @for (int day = 1; day <= daysInMonth; day++)
+    {
+        var date = new DateTime(firstOfMonth.Year, firstOfMonth.Month, day);
+        var bookedCount = Model.BookingCountByDay.GetValueOrDefault(date);
+        var isPast = date < DateTime.UtcNow.Date;
+        <div class="col">
+            @if (isPast)
+            {
+                <div class="border rounded p-2 text-muted" style="min-height:70px">
+                    <div>@day</div>
+                </div>
+            }
+            else
+            {
+                <a class="border rounded p-2 d-block text-decoration-none @(bookedCount > 0 ? "bg-warning-subtle" : "bg-success-subtle")"
+                   style="min-height:70px"
+                   href="/Rooms/Day?roomId=@Model.RoomId&date=@date.ToString("yyyy-MM-dd")">
+                    <div class="text-dark">@day</div>
+                    <small class="text-muted">@(bookedCount > 0 ? $"{bookedCount} booked" : "Open")</small>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+<a href="/Rooms/Search" class="btn btn-link mt-3">Back to search</a>
