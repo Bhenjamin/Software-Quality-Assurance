@@ -18,7 +18,9 @@ public class RoomSearchService : IRoomSearchService
 
     public IEnumerable<Room> SearchAvailableRooms(RoomSearchCriteria criteria)
     {
-        if (criteria.EndTime <= criteria.StartTime)
+        var hasTimeWindow = criteria.StartTime.HasValue && criteria.EndTime.HasValue;
+
+        if (hasTimeWindow && criteria.EndTime!.Value <= criteria.StartTime!.Value)
         {
             throw new ArgumentException("Search end time must be after start time.", nameof(criteria));
         }
@@ -41,8 +43,16 @@ public class RoomSearchService : IRoomSearchService
             candidates = candidates.Where(r => r.Type == criteria.Type.Value);
         }
 
+        // Without a time window there's nothing to check availability
+        // against — return every room matching the other filters, letting
+        // the caller (e.g. a calendar view) show availability per-day itself.
+        if (!hasTimeWindow)
+        {
+            return candidates.OrderBy(r => r.Name).ToList();
+        }
+
         return candidates
-            .Where(room => IsRoomFree(room.Id, criteria.StartTime, criteria.EndTime))
+            .Where(room => IsRoomFree(room.Id, criteria.StartTime!.Value, criteria.EndTime!.Value))
             .OrderBy(r => r.Name)
             .ToList();
     }
