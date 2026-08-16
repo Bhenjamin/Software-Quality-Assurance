@@ -301,4 +301,12 @@ The proposed solution is to develop an online Study Room Booking and Management 
 | TC-07 | FR1, NFR1 | Room search returns results within performance target | **Given** at least 50 sample reservations exist<br>**When** a student searches using date/time/capacity/room type filters<br>**Then** results are returned within 5 seconds | Search results returned correctly and within the 5-second threshold |
 | TC-08 | FR2 (edge case) | Reject a booking with a missing/invalid student ID | **Given** a booking request with an empty or null student ID<br>**When** the booking is submitted<br>**Then** the system rejects it | `ArgumentException` thrown, or `BookingResult.Success = false` with a clear message |
 
-
+#### 2 Requirements Traceability Matrix
+| Requirement ID | Requirement Summary | Related NFR (if any) | Test Case(s) | Status |
+|---|---|---|---|---|
+| FR1 | Search available rooms by filters | NFR1 | TC-07 | Pending |
+| FR2 | Book an available room | — | TC-01, TC-08 | Pending |
+| FR3 | Validate room availability before confirming booking | NFR2 | TC-01, TC-02 | Pending |
+| FR4 | Validate programme/major eligibility for specialised rooms | — | TC-03, TC-04 | Pending |
+| FR5 | Send booking confirmation via email | NFR3 | TC-05 | Pending |
+| FR7 | Cancel future bookings | NFR3 | TC-06 | Pending |
