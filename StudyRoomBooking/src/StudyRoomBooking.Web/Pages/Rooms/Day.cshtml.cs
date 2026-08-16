@@ -65,7 +65,7 @@ public class DayModel : PageModel
         var startTime = Date.Date + start;
         var endTime = Date.Date + end;
 
-        return RedirectToPage("Create", new
+        return RedirectToPage("/Bookings/Create", new
         {
             roomId = RoomId,
             start = startTime.ToString("o"),
