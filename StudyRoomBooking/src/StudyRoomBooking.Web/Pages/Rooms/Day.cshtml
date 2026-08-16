@@ -1,0 +1,39 @@
+@page
+@model StudyRoomBooking.Web.Pages.Rooms.DayModel
+@{
+    ViewData["Title"] = "Book a Slot";
+}
+
+<h1>@Model.Room?.Name — @Model.Date.ToString("dddd, d MMMM yyyy")</h1>
+
+@if (Model.ExistingBookings.Count > 0)
+{
+    <h2 class="h6">Already booked today</h2>
+    <ul>
+        @foreach (var b in Model.ExistingBookings)
+        {
+            <li>@b.StartTime.ToString("t") &ndash; @b.EndTime.ToString("t")</li>
+        }
+    </ul>
+}
+else
+{
+    <p class="text-muted">No bookings yet today.</p>
+}
+
+<h2 class="h6">Pick a time</h2>
+<form method="post" asp-page-handler="PickSlot" class="row g-3">
+    <div class="col-md-3">
+        <label class="form-label">From</label>
+        <input asp-for="StartTimeOfDay" type="time" class="form-control" required />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">To</label>
+        <input asp-for="EndTimeOfDay" type="time" class="form-control" required />
+    </div>
+    <div class="col-md-3 align-self-end">
+        <button type="submit" class="btn btn-primary">Continue to booking</button>
+    </div>
+</form>
+
+<a href="/Rooms/Calendar?roomId=@Model.RoomId&year=@Model.Date.Year&month=@Model.Date.Month" class="btn btn-link mt-3">Back to calendar</a>
