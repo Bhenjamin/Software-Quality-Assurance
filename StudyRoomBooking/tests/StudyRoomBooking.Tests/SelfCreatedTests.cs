@@ -121,7 +121,68 @@ public class SelfCreatedTests
         Assert.AreEqual(BookingStatus.Modified, modifyResult.Booking!.Status);
     }
 
-    // TC-06 Modify an existing future booking to a new available time
+    // TC-06 Cancel an existing booking and free up the time slot for others
+    [TestMethod]
+    public void CancelBooking_Succeeds_ForOwner_AndFreesTheSlot()
+    {
+        var room = _fixture.RoomOfType(RoomType.MeetingRoom);
+        var student = _fixture.StudentInProgramme("Computer Science");
+        var start = DateTime.UtcNow.AddHours(1);
 
+        var created = _fixture.BookingService.CreateBooking(new BookingRequest
+        {
+            RoomId = room.Id, UserId = student.Id, StartTime = start, EndTime = start.AddHours(1)
+        });
+
+        var cancelled = _fixture.BookingService.CancelBooking(created.Booking!.Id, student.Id, "Changed plans");
+        Assert.IsTrue(cancelled.Success);
+        Assert.AreEqual(BookingStatus.Cancelled, cancelled.Booking!.Status);
+
+        // The slot should now be free for another student.
+        var otherStudent = _fixture.StudentInProgramme("Graphic Design");
+        var rebooked = _fixture.BookingService.CreateBooking(new BookingRequest
+        {
+            RoomId = room.Id, UserId = otherStudent.Id, StartTime = start, EndTime = start.AddHours(1)
+        });
+        Assert.IsTrue(rebooked.Success);
+    }
+
+    // TC-07 Reject a booking request for a date/time in the past
+    [TestMethod]
+    public void CreateBooking_Fails_WhenStartTimeIsInThePast()
+    {
+        var room = _fixture.RoomOfType(RoomType.StudyPod);
+        var student = _fixture.StudentInProgramme("Computer Science");
+
+        var result = _fixture.BookingService.CreateBooking(new BookingRequest
+        {
+            RoomId = room.Id,
+            UserId = student.Id,
+            StartTime = DateTime.UtcNow.AddDays(-1),
+            EndTime = DateTime.UtcNow.AddDays(-1).AddHours(1)
+        });
+
+        Assert.IsFalse(result.Success);
+        Assert.AreEqual("INVALID_TIME_RANGE", result.ErrorCode);
+    }
+
+    // TC-08 Reject a booking with a missing / invalid student ID
+    [TestMethod]
+    public void CreateBooking_Fails_WhenUserIdIsEmptyOrInvalid()
+    {
+        var room = _fixture.RoomOfType(RoomType.StudyPod);
+
+        // Test with empty student ID (missing ID scenario)
+        var result = _fixture.BookingService.CreateBooking(new BookingRequest
+        {
+            RoomId = room.Id,
+            UserId = Guid.Empty,
+            StartTime = DateTime.UtcNow.AddHours(1),
+            EndTime = DateTime.UtcNow.AddHours(2)
+        });
+
+        Assert.IsFalse(result.Success);
+        Assert.AreEqual("USER_NOT_FOUND", result.ErrorCode);
+    }
     
 }
