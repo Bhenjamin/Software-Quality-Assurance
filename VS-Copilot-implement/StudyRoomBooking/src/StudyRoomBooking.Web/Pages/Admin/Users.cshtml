@@ -1,0 +1,68 @@
+@page
+@model StudyRoomBooking.Web.Pages.Admin.UsersModel
+@{
+	ViewData["Title"] = "Manage Users";
+}
+
+<div class="container mt-4">
+	<div class="row mb-3">
+		<div class="col-md-8">
+			<h1>Manage Users</h1>
+		</div>
+	</div>
+
+	@if (Model.Users.Count == 0)
+	{
+		<div class="alert alert-info">No users found.</div>
+	}
+	else
+	{
+		<table class="table table-striped">
+			<thead>
+				<tr>
+					<th>Email</th>
+					<th>Full Name</th>
+					<th>Role</th>
+					<th>Active</th>
+					<th>Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				@foreach (var user in Model.Users)
+				{
+					<tr>
+						<td>@user.Email</td>
+						<td>@user.FullName</td>
+						<td>@user.Role</td>
+						<td>
+							@if (user.IsActive)
+							{
+								<span class="badge bg-success">Active</span>
+							}
+							else
+							{
+								<span class="badge bg-danger">Inactive</span>
+							}
+						</td>
+						<td>
+							@if (user.IsActive)
+							{
+								<form method="post" style="display:inline;">
+									<button type="submit" asp-page-handler="disable" asp-route-userId="@user.Id" 
+											class="btn btn-sm btn-warning" onclick="return confirm('Disable this user?');">Disable</button>
+								</form>
+							}
+							else
+							{
+								<form method="post" style="display:inline;">
+									<button type="submit" asp-page-handler="enable" asp-route-userId="@user.Id" 
+											class="btn btn-sm btn-success">Enable</button>
+								</form>
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+</div>

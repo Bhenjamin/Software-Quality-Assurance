@@ -1,0 +1,62 @@
+@page
+@model StudyRoomBooking.Web.Pages.Admin.ReportsModel
+@{
+	ViewData["Title"] = "Reports";
+}
+
+<div class="container mt-4">
+	<h1>Reports</h1>
+
+	<form method="post" class="mt-4">
+		<div class="row">
+			<div class="col-md-3">
+				<div class="mb-3">
+					<label for="startDate" class="form-label">Start Date</label>
+					<input type="date" class="form-control" id="startDate" asp-for="StartDate">
+				</div>
+			</div>
+
+			<div class="col-md-3">
+				<div class="mb-3">
+					<label for="endDate" class="form-label">End Date</label>
+					<input type="date" class="form-control" id="endDate" asp-for="EndDate">
+				</div>
+			</div>
+
+			<div class="col-md-6">
+				<div class="mb-3">
+					<label>&nbsp;</label>
+					<button type="submit" class="btn btn-primary w-100">Generate Report</button>
+				</div>
+			</div>
+		</div>
+	</form>
+
+	@if (Model.HasGenerated && Model.OccupancyReport != null)
+	{
+		<div class="mt-4">
+			<h3>@Model.OccupancyReport.Title</h3>
+			<p><small>Generated: @Model.OccupancyReport.GeneratedDate.ToString("MMM dd, yyyy HH:mm")</small></p>
+
+			<table class="table table-striped">
+				<thead>
+					<tr>
+						<th>Metric</th>
+						<th>Value</th>
+						<th>Percentage</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var data in Model.OccupancyReport.Data)
+					{
+						<tr>
+							<td>@data.Label</td>
+							<td>@data.Value</td>
+							<td>@data.Percentage.ToString("F2")%</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+</div>

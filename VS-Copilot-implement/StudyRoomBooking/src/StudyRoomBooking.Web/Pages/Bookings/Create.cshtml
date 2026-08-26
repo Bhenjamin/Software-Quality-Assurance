@@ -1,0 +1,77 @@
+@page
+@model StudyRoomBooking.Web.Pages.Bookings.CreateModel
+@{
+	ViewData["Title"] = "Create Booking";
+}
+
+<div class="container mt-4">
+	<h1>Create New Booking</h1>
+
+	@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+	{
+		<div class="alert alert-danger">@Model.ErrorMessage</div>
+	}
+
+	<form method="post" class="mt-4">
+		<div class="row">
+			<div class="col-md-8">
+				<div class="mb-3">
+					<label for="roomId" class="form-label">Room</label>
+					<input type="number" class="form-control" id="roomId" asp-for="Booking.RoomId" required readonly>
+					@if (Model.Room != null)
+					{
+						<small class="text-muted">@Model.Room.RoomName - @Model.Room.Location (Capacity: @Model.Room.Capacity)</small>
+					}
+				</div>
+
+				<div class="mb-3">
+					<label for="bookingDate" class="form-label">Date</label>
+					<input type="date" class="form-control" id="bookingDate" asp-for="Booking.BookingDate" required>
+					<span class="text-danger" asp-validation-for="Booking.BookingDate"></span>
+				</div>
+
+				<div class="row">
+					<div class="col-md-6">
+						<div class="mb-3">
+							<label for="startTime" class="form-label">Start Time</label>
+							<input type="time" class="form-control" id="startTime" asp-for="Booking.StartTime" required>
+							<span class="text-danger" asp-validation-for="Booking.StartTime"></span>
+						</div>
+					</div>
+					<div class="col-md-6">
+						<div class="mb-3">
+							<label for="endTime" class="form-label">End Time</label>
+							<input type="time" class="form-control" id="endTime" asp-for="Booking.EndTime" required>
+							<span class="text-danger" asp-validation-for="Booking.EndTime"></span>
+						</div>
+					</div>
+				</div>
+
+				<div class="mb-3">
+					<label for="notes" class="form-label">Notes</label>
+					<textarea class="form-control" id="notes" asp-for="Booking.Notes" rows="4"></textarea>
+				</div>
+
+				<div class="mb-3">
+					<label for="recurrencePattern" class="form-label">Recurring Booking?</label>
+					<select class="form-select" id="recurrencePattern" asp-for="Booking.RecurrencePattern">
+						<option value="0">None (One-time)</option>
+						<option value="1">Daily</option>
+						<option value="2">Weekly</option>
+						<option value="3">Bi-Weekly</option>
+						<option value="4">Monthly</option>
+					</select>
+				</div>
+			</div>
+		</div>
+
+		<div class="mt-4">
+			<button type="submit" class="btn btn-primary">Create Booking</button>
+			<a href="/Bookings/Index" class="btn btn-secondary">Cancel</a>
+		</div>
+	</form>
+</div>
+
+@section Scripts {
+	@{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

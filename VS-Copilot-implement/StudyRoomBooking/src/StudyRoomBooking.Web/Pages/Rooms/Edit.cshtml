@@ -1,0 +1,74 @@
+@page "{id}"
+@model StudyRoomBooking.Web.Pages.Rooms.EditModel
+@{
+	ViewData["Title"] = "Edit Room";
+}
+
+<div class="container mt-4">
+	<h1>Edit Room</h1>
+
+	<form method="post" class="mt-4">
+		<input type="hidden" asp-for="Room.Id" />
+
+		<div class="row">
+			<div class="col-md-6">
+				<div class="mb-3">
+					<label for="roomCode" class="form-label">Room Code</label>
+					<input type="text" class="form-control" id="roomCode" asp-for="Room.RoomCode" required>
+					<span class="text-danger" asp-validation-for="Room.RoomCode"></span>
+				</div>
+
+				<div class="mb-3">
+					<label for="roomName" class="form-label">Room Name</label>
+					<input type="text" class="form-control" id="roomName" asp-for="Room.RoomName" required>
+					<span class="text-danger" asp-validation-for="Room.RoomName"></span>
+				</div>
+
+				<div class="mb-3">
+					<label for="location" class="form-label">Location</label>
+					<input type="text" class="form-control" id="location" asp-for="Room.Location" required>
+					<span class="text-danger" asp-validation-for="Room.Location"></span>
+				</div>
+
+				<div class="mb-3">
+					<label for="capacity" class="form-label">Capacity</label>
+					<input type="number" class="form-control" id="capacity" asp-for="Room.Capacity" required>
+					<span class="text-danger" asp-validation-for="Room.Capacity"></span>
+				</div>
+			</div>
+
+			<div class="col-md-6">
+				<div class="mb-3">
+					<label for="roomType" class="form-label">Room Type</label>
+					<select class="form-select" id="roomType" asp-for="Room.RoomType" required>
+						<option value="">-- Select --</option>
+						<option value="0">Standard</option>
+						<option value="1">Specialized</option>
+						<option value="2">Lab</option>
+						<option value="3">Seminar</option>
+					</select>
+					<span class="text-danger" asp-validation-for="Room.RoomType"></span>
+				</div>
+
+				<div class="mb-3">
+					<label for="description" class="form-label">Description</label>
+					<textarea class="form-control" id="description" asp-for="Room.Description" rows="3"></textarea>
+				</div>
+
+				<div class="mb-3 form-check">
+					<input type="checkbox" class="form-check-input" id="isAvailable" asp-for="Room.IsAvailable">
+					<label class="form-check-label" for="isAvailable">Available</label>
+				</div>
+			</div>
+		</div>
+
+		<div class="mt-4">
+			<button type="submit" class="btn btn-primary">Update Room</button>
+			<a href="/Rooms/Index" class="btn btn-secondary">Cancel</a>
+		</div>
+	</form>
+</div>
+
+@section Scripts {
+	@{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

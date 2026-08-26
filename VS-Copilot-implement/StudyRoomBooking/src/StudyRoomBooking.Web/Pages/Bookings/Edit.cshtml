@@ -1,0 +1,70 @@
+@page "{id}"
+@model StudyRoomBooking.Web.Pages.Bookings.EditModel
+@{
+	ViewData["Title"] = "Edit Booking";
+}
+
+<div class="container mt-4">
+	<h1>Edit Booking</h1>
+
+	@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+	{
+		<div class="alert alert-danger">@Model.ErrorMessage</div>
+	}
+
+	<form method="post" class="mt-4">
+		<input type="hidden" asp-for="Booking.Id" />
+		<input type="hidden" asp-for="Booking.UserId" />
+
+		<div class="row">
+			<div class="col-md-8">
+				<div class="mb-3">
+					<label for="roomId" class="form-label">Room ID</label>
+					<input type="number" class="form-control" id="roomId" asp-for="Booking.RoomId" required readonly>
+				</div>
+
+				<div class="mb-3">
+					<label for="bookingDate" class="form-label">Date</label>
+					<input type="date" class="form-control" id="bookingDate" asp-for="Booking.BookingDate" required>
+					<span class="text-danger" asp-validation-for="Booking.BookingDate"></span>
+				</div>
+
+				<div class="row">
+					<div class="col-md-6">
+						<div class="mb-3">
+							<label for="startTime" class="form-label">Start Time</label>
+							<input type="time" class="form-control" id="startTime" asp-for="Booking.StartTime" required>
+							<span class="text-danger" asp-validation-for="Booking.StartTime"></span>
+						</div>
+					</div>
+					<div class="col-md-6">
+						<div class="mb-3">
+							<label for="endTime" class="form-label">End Time</label>
+							<input type="time" class="form-control" id="endTime" asp-for="Booking.EndTime" required>
+							<span class="text-danger" asp-validation-for="Booking.EndTime"></span>
+						</div>
+					</div>
+				</div>
+
+				<div class="mb-3">
+					<label for="notes" class="form-label">Notes</label>
+					<textarea class="form-control" id="notes" asp-for="Booking.Notes" rows="4"></textarea>
+				</div>
+
+				<div class="mb-3">
+					<label for="status" class="form-label">Status</label>
+					<input type="text" class="form-control" id="status" value="@Model.Booking.Status" readonly>
+				</div>
+			</div>
+		</div>
+
+		<div class="mt-4">
+			<button type="submit" class="btn btn-primary">Update Booking</button>
+			<a href="/Bookings/Index" class="btn btn-secondary">Cancel</a>
+		</div>
+	</form>
+</div>
+
+@section Scripts {
+	@{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

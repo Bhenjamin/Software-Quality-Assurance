@@ -1,0 +1,107 @@
+@page
+@model StudyRoomBooking.Web.Pages.Search.IndexModel
+@{
+	ViewData["Title"] = "Search Rooms";
+}
+
+<div class="container mt-4">
+	<h1>Search Available Rooms</h1>
+
+	<form method="post" class="mt-4">
+		<div class="row">
+			<div class="col-md-3">
+				<div class="mb-3">
+					<label for="searchDate" class="form-label">Date</label>
+					<input type="date" class="form-control" id="searchDate" asp-for="SearchCriteria.SearchDate" required>
+				</div>
+			</div>
+
+			<div class="col-md-3">
+				<div class="mb-3">
+					<label for="startTime" class="form-label">Start Time</label>
+					<input type="time" class="form-control" id="startTime" asp-for="SearchCriteria.StartTime">
+				</div>
+			</div>
+
+			<div class="col-md-3">
+				<div class="mb-3">
+					<label for="endTime" class="form-label">End Time</label>
+					<input type="time" class="form-control" id="endTime" asp-for="SearchCriteria.EndTime">
+				</div>
+			</div>
+
+			<div class="col-md-3">
+				<div class="mb-3">
+					<label for="location" class="form-label">Location</label>
+					<input type="text" class="form-control" id="location" asp-for="SearchCriteria.Location" placeholder="e.g., Building A">
+				</div>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-md-3">
+				<div class="mb-3">
+					<label for="capacity" class="form-label">Minimum Capacity</label>
+					<input type="number" class="form-control" id="capacity" asp-for="SearchCriteria.Capacity" min="1">
+				</div>
+			</div>
+
+			<div class="col-md-3">
+				<div class="mb-3">
+					<label for="roomType" class="form-label">Room Type</label>
+					<select class="form-select" id="roomType" asp-for="SearchCriteria.RoomType">
+						<option value="">-- All Types --</option>
+						<option value="0">Standard</option>
+						<option value="1">Specialized</option>
+						<option value="2">Lab</option>
+						<option value="3">Seminar</option>
+					</select>
+				</div>
+			</div>
+
+			<div class="col-md-6">
+				<div class="mb-3">
+					<label>&nbsp;</label>
+					<button type="submit" class="btn btn-primary w-100">Search</button>
+				</div>
+			</div>
+		</div>
+	</form>
+
+	@if (Model.HasSearched)
+	{
+		<hr />
+		<h3>Search Results (@Model.SearchResults.Count rooms found)</h3>
+
+		@if (Model.SearchResults.Count == 0)
+		{
+			<div class="alert alert-info">No rooms available for your search criteria.</div>
+		}
+		else
+		{
+			<div class="row mt-4">
+				@foreach (var room in Model.SearchResults)
+				{
+					<div class="col-md-6 mb-3">
+						<div class="card">
+							<div class="card-body">
+								<h5 class="card-title">@room.RoomName</h5>
+								<p class="card-text">
+									<strong>Code:</strong> @room.RoomCode<br />
+									<strong>Location:</strong> @room.Location<br />
+									<strong>Capacity:</strong> @room.Capacity people<br />
+									<strong>Type:</strong> @room.RoomType<br />
+									@if (!string.IsNullOrEmpty(room.Description))
+									{
+										<strong>Description:</strong> @room.Description<br />
+									}
+								</p>
+								<a href="/Bookings/Create?roomId=@room.Id" class="btn btn-primary">Book This Room</a>
+							</div>
+						</div>
+					</div>
+				}
+			</div>
+		}
+	}
+</div>
