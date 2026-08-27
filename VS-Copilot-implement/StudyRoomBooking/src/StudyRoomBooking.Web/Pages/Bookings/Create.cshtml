@@ -2,6 +2,8 @@
 @model StudyRoomBooking.Web.Pages.Bookings.CreateModel
 @{
 	ViewData["Title"] = "Create Booking";
+	var today = DateTime.Today.ToString("yyyy-MM-dd");
+	var maxDate = DateTime.Today.AddDays(60).ToString("yyyy-MM-dd");
 }
 
 <div class="container mt-4">
@@ -9,10 +11,13 @@
 
 	@if (!string.IsNullOrEmpty(Model.ErrorMessage))
 	{
-		<div class="alert alert-danger">@Model.ErrorMessage</div>
+		<div class="alert alert-danger alert-dismissible fade show" role="alert">
+			@Model.ErrorMessage
+			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+		</div>
 	}
 
-	<form method="post" class="mt-4">
+	<form method="post" class="mt-4" onsubmit="return validateForm();">
 		<div class="row">
 			<div class="col-md-8">
 				<div class="mb-3">
@@ -25,23 +30,31 @@
 				</div>
 
 				<div class="mb-3">
-					<label for="bookingDate" class="form-label">Date</label>
-					<input type="date" class="form-control" id="bookingDate" asp-for="Booking.BookingDate" required>
+					<label for="bookingDate" class="form-label">Date <span class="text-danger">*</span></label>
+					<input type="date" class="form-control" id="bookingDate" asp-for="Booking.BookingDate" 
+						   required min="@today" max="@maxDate" onchange="validateDateRange();">
+					<small class="form-text text-muted">Booking must be between today and 60 days from now</small>
+					<span class="text-danger d-block" id="dateError"></span>
 					<span class="text-danger" asp-validation-for="Booking.BookingDate"></span>
 				</div>
 
 				<div class="row">
 					<div class="col-md-6">
 						<div class="mb-3">
-							<label for="startTime" class="form-label">Start Time</label>
-							<input type="time" class="form-control" id="startTime" asp-for="Booking.StartTime" required>
+							<label for="startTime" class="form-label">Start Time <span class="text-danger">*</span></label>
+							<input type="time" class="form-control" id="startTime" asp-for="Booking.StartTime" 
+								   required onchange="validateTime();">
+							<span class="text-danger d-block" id="startTimeError"></span>
 							<span class="text-danger" asp-validation-for="Booking.StartTime"></span>
 						</div>
 					</div>
 					<div class="col-md-6">
 						<div class="mb-3">
-							<label for="endTime" class="form-label">End Time</label>
-							<input type="time" class="form-control" id="endTime" asp-for="Booking.EndTime" required>
+							<label for="endTime" class="form-label">End Time <span class="text-danger">*</span></label>
+							<input type="time" class="form-control" id="endTime" asp-for="Booking.EndTime" 
+								   required onchange="validateTime();">
+							<small class="form-text text-muted">Must be after start time</small>
+							<span class="text-danger d-block" id="endTimeError"></span>
 							<span class="text-danger" asp-validation-for="Booking.EndTime"></span>
 						</div>
 					</div>
@@ -49,7 +62,7 @@
 
 				<div class="mb-3">
 					<label for="notes" class="form-label">Notes</label>
-					<textarea class="form-control" id="notes" asp-for="Booking.Notes" rows="4"></textarea>
+					<textarea class="form-control" id="notes" asp-for="Booking.Notes" rows="4" placeholder="Add any special requirements..."></textarea>
 				</div>
 
 				<div class="mb-3">
@@ -63,6 +76,20 @@
 					</select>
 				</div>
 			</div>
+
+			<div class="col-md-4">
+				<div class="card bg-light">
+					<div class="card-body">
+						<h5 class="card-title">Booking Rules</h5>
+						<ul class="small">
+							<li>Start and end times must be different</li>
+							<li>Cannot book in the past</li>
+							<li>Cannot book more than 60 days ahead</li>
+							<li>Check room availability carefully</li>
+						</ul>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<div class="mt-4">
@@ -74,4 +101,98 @@
 
 @section Scripts {
 	@{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+	<script>
+		function validateDateRange() {
+			const dateInput = document.getElementById('bookingDate');
+			const today = new Date();
+			today.setHours(0, 0, 0, 0);
+
+			const maxDate = new Date();
+			maxDate.setDate(maxDate.getDate() + 60);
+			maxDate.setHours(0, 0, 0, 0);
+
+			const selectedDate = new Date(dateInput.value);
+			selectedDate.setHours(0, 0, 0, 0);
+
+			const dateError = document.getElementById('dateError');
+
+			if (selectedDate < today) {
+				dateError.textContent = 'Cannot book in the past';
+				dateInput.classList.add('is-invalid');
+				return false;
+			}
+
+			if (selectedDate > maxDate) {
+				dateError.textContent = 'Cannot book more than 60 days in advance';
+				dateInput.classList.add('is-invalid');
+				return false;
+			}
+
+			dateError.textContent = '';
+			dateInput.classList.remove('is-invalid');
+			return true;
+		}
+
+		function validateTime() {
+			const startTimeInput = document.getElementById('startTime');
+			const endTimeInput = document.getElementById('endTime');
+			const startTimeError = document.getElementById('startTimeError');
+			const endTimeError = document.getElementById('endTimeError');
+
+			startTimeError.textContent = '';
+			endTimeError.textContent = '';
+			startTimeInput.classList.remove('is-invalid');
+			endTimeInput.classList.remove('is-invalid');
+
+			if (!startTimeInput.value || !endTimeInput.value) {
+				return true;
+			}
+
+			// Check if start and end times are the same
+			if (startTimeInput.value === endTimeInput.value) {
+				const errorMsg = 'Start and end times cannot be the same';
+				startTimeError.textContent = errorMsg;
+				endTimeError.textContent = errorMsg;
+				startTimeInput.classList.add('is-invalid');
+				endTimeInput.classList.add('is-invalid');
+				return false;
+			}
+
+			// Check if start is before end
+			if (startTimeInput.value > endTimeInput.value) {
+				const errorMsg = 'End time must be after start time';
+				endTimeError.textContent = errorMsg;
+				endTimeInput.classList.add('is-invalid');
+				return false;
+			}
+
+			return true;
+		}
+
+		function validateForm() {
+			const isDateValid = validateDateRange();
+			const isTimeValid = validateTime();
+
+			if (!isDateValid || !isTimeValid) {
+				event.preventDefault();
+				return false;
+			}
+
+			return true;
+		}
+
+		// Validate on page load to apply date constraints
+		document.addEventListener('DOMContentLoaded', function() {
+			const dateInput = document.getElementById('bookingDate');
+			const today = new Date().toISOString().split('T')[0];
+			const maxDate = new Date();
+			maxDate.setDate(maxDate.getDate() + 60);
+			const maxDateStr = maxDate.toISOString().split('T')[0];
+
+			if (!dateInput.value) {
+				dateInput.value = today;
+			}
+		});
+	</script>
 }
+

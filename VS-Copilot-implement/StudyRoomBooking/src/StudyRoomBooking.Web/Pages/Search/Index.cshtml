@@ -2,31 +2,47 @@
 @model StudyRoomBooking.Web.Pages.Search.IndexModel
 @{
 	ViewData["Title"] = "Search Rooms";
+	var today = DateTime.Today.ToString("yyyy-MM-dd");
+	var maxDate = DateTime.Today.AddDays(60).ToString("yyyy-MM-dd");
 }
 
 <div class="container mt-4">
 	<h1>Search Available Rooms</h1>
 
-	<form method="post" class="mt-4">
+	@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+	{
+		<div class="alert alert-danger alert-dismissible fade show" role="alert">
+			@Model.ErrorMessage
+			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+		</div>
+	}
+
+	<form method="post" class="mt-4" onsubmit="return validateSearchForm();">
 		<div class="row">
 			<div class="col-md-3">
 				<div class="mb-3">
-					<label for="searchDate" class="form-label">Date</label>
-					<input type="date" class="form-control" id="searchDate" asp-for="SearchCriteria.SearchDate" required>
+					<label for="searchDate" class="form-label">Date <span class="text-danger">*</span></label>
+					<input type="date" class="form-control" id="searchDate" asp-for="SearchCriteria.SearchDate" 
+						   required min="@today" max="@maxDate" onchange="validateSearchDate();">
+					<small class="form-text text-muted">Between today and 60 days from now</small>
+					<span class="text-danger d-block" id="dateError"></span>
 				</div>
 			</div>
 
 			<div class="col-md-3">
 				<div class="mb-3">
 					<label for="startTime" class="form-label">Start Time</label>
-					<input type="time" class="form-control" id="startTime" asp-for="SearchCriteria.StartTime">
+					<input type="time" class="form-control" id="startTime" asp-for="SearchCriteria.StartTime" onchange="validateSearchTime();">
+					<span class="text-danger d-block" id="startTimeError"></span>
 				</div>
 			</div>
 
 			<div class="col-md-3">
 				<div class="mb-3">
 					<label for="endTime" class="form-label">End Time</label>
-					<input type="time" class="form-control" id="endTime" asp-for="SearchCriteria.EndTime">
+					<input type="time" class="form-control" id="endTime" asp-for="SearchCriteria.EndTime" onchange="validateSearchTime();">
+					<small class="form-text text-muted">Must be after start time</small>
+					<span class="text-danger d-block" id="endTimeError"></span>
 				</div>
 			</div>
 
@@ -105,3 +121,98 @@
 		}
 	}
 </div>
+
+@section Scripts {
+	<script>
+		function validateSearchDate() {
+			const dateInput = document.getElementById('searchDate');
+			const today = new Date();
+			today.setHours(0, 0, 0, 0);
+
+			const maxDate = new Date();
+			maxDate.setDate(maxDate.getDate() + 60);
+			maxDate.setHours(0, 0, 0, 0);
+
+			const selectedDate = new Date(dateInput.value);
+			selectedDate.setHours(0, 0, 0, 0);
+
+			const dateError = document.getElementById('dateError');
+
+			if (selectedDate < today) {
+				dateError.textContent = 'Cannot search for past dates';
+				dateInput.classList.add('is-invalid');
+				return false;
+			}
+
+			if (selectedDate > maxDate) {
+				dateError.textContent = 'Cannot search more than 60 days in advance';
+				dateInput.classList.add('is-invalid');
+				return false;
+			}
+
+			dateError.textContent = '';
+			dateInput.classList.remove('is-invalid');
+			return true;
+		}
+
+		function validateSearchTime() {
+			const startTimeInput = document.getElementById('startTime');
+			const endTimeInput = document.getElementById('endTime');
+			const startTimeError = document.getElementById('startTimeError');
+			const endTimeError = document.getElementById('endTimeError');
+
+			startTimeError.textContent = '';
+			endTimeError.textContent = '';
+			startTimeInput.classList.remove('is-invalid');
+			endTimeInput.classList.remove('is-invalid');
+
+			// If both times are filled
+			if (startTimeInput.value && endTimeInput.value) {
+				// Check if start and end times are the same
+				if (startTimeInput.value === endTimeInput.value) {
+					const errorMsg = 'Start and end times cannot be the same';
+					startTimeError.textContent = errorMsg;
+					endTimeError.textContent = errorMsg;
+					startTimeInput.classList.add('is-invalid');
+					endTimeInput.classList.add('is-invalid');
+					return false;
+				}
+
+				// Check if start is before end
+				if (startTimeInput.value > endTimeInput.value) {
+					const errorMsg = 'End time must be after start time';
+					endTimeError.textContent = errorMsg;
+					endTimeInput.classList.add('is-invalid');
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		function validateSearchForm() {
+			const isDateValid = validateSearchDate();
+			const isTimeValid = validateSearchTime();
+
+			if (!isDateValid || !isTimeValid) {
+				event.preventDefault();
+				return false;
+			}
+
+			return true;
+		}
+
+		// Initialize date constraints on page load
+		document.addEventListener('DOMContentLoaded', function() {
+			const dateInput = document.getElementById('searchDate');
+			const today = new Date().toISOString().split('T')[0];
+			const maxDate = new Date();
+			maxDate.setDate(maxDate.getDate() + 60);
+			const maxDateStr = maxDate.toISOString().split('T')[0];
+
+			if (!dateInput.value) {
+				dateInput.value = today;
+			}
+		});
+	</script>
+}

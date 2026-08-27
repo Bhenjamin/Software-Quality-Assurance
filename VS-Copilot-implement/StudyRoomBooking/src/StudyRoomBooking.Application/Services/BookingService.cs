@@ -40,6 +40,18 @@ public class BookingService : IBookingService
 
     public void CreateBooking(BookingViewModel booking)
     {
+        // Validate booking date/time
+        ValidateBookingDateTime(booking.BookingDate, booking.StartTime, booking.EndTime);
+
+        // Check room access permission
+        var user = _dataStore.Users.FirstOrDefault(u => u.Id == booking.UserId);
+        if (user == null)
+            throw new InvalidOperationException("User not found.");
+
+        if (!HasAccessToRoom(booking.RoomId, user.Role))
+            throw new InvalidOperationException("You do not have permission to book this room.");
+
+        // Check room availability
         if (!IsRoomAvailable(booking.RoomId, booking.BookingDate, booking.StartTime, booking.EndTime))
             throw new InvalidOperationException("Room is not available for the selected time slot.");
 
@@ -59,8 +71,7 @@ public class BookingService : IBookingService
 
         _dataStore.Bookings.Add(newBooking);
 
-        // Send confirmation (placeholder - implement in NotificationService)
-        var user = _dataStore.Users.FirstOrDefault(u => u.Id == booking.UserId);
+        // Send confirmation
         if (user != null)
             _notificationService.SendBookingConfirmation(booking, user.Email);
     }
@@ -162,5 +173,59 @@ public class BookingService : IBookingService
             Status = booking.Status,
             Notes = booking.Notes
         };
+    }
+
+    /// <summary>
+    /// Validates booking date and time constraints
+    /// </summary>
+    private void ValidateBookingDateTime(DateTime bookingDate, TimeSpan startTime, TimeSpan endTime)
+    {
+        // Rule 1: Cannot book with same start and end time
+        if (startTime == endTime)
+            throw new InvalidOperationException("Start time and end time cannot be the same. Booking must have a duration.");
+
+        // Rule 2: Start time must be before end time
+        if (startTime > endTime)
+            throw new InvalidOperationException("Start time must be before end time.");
+
+        // Combine date and time for comparison
+        var bookingDateTime = bookingDate.Date.Add(startTime);
+        var now = DateTime.Now;
+
+        // Rule 3: Cannot book in the past
+        if (bookingDateTime < now)
+            throw new InvalidOperationException("Cannot book in the past. Please select a future date and time.");
+
+        // Rule 4: Cannot book more than 60 days in advance
+        var maxAdvanceDate = now.AddDays(60);
+        if (bookingDate > maxAdvanceDate.Date)
+            throw new InvalidOperationException("Cannot book more than 60 days in advance.");
+    }
+
+    /// <summary>
+    /// Checks if user has permission to book a specific room based on access rules and user role
+    /// </summary>
+    public bool HasAccessToRoom(int roomId, UserRole userRole)
+    {
+        var room = _dataStore.Rooms.FirstOrDefault(r => r.Id == roomId);
+        if (room == null)
+            return false;
+
+        // Admins have access to all rooms
+        if (userRole == UserRole.Admin)
+            return true;
+
+        // Check if there are access rules for this room
+        var accessRules = _dataStore.AccessRules
+            .Where(ar => ar.RoomId == roomId && ar.IsActive)
+            .ToList();
+
+        // If no access rules, anyone can book
+        if (accessRules.Count == 0)
+            return true;
+
+        // Check if user's role is allowed
+        var hasAccess = accessRules.Any(ar => ar.AllowedRole == userRole);
+        return hasAccess;
     }
 }
