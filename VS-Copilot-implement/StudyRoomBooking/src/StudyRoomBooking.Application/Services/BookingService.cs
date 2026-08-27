@@ -90,7 +90,13 @@ public class BookingService : IBookingService
     {
         var booking = _dataStore.Bookings.FirstOrDefault(b => b.Id == bookingId);
         if (booking == null)
-            return;
+            throw new InvalidOperationException($"Booking with ID {bookingId} not found.");
+
+        if (booking.Status == BookingStatus.Cancelled)
+            throw new InvalidOperationException("This booking has already been cancelled.");
+
+        if (booking.BookingDate < DateTime.Now.Date)
+            throw new InvalidOperationException("Cannot cancel bookings from the past.");
 
         booking.Status = BookingStatus.Cancelled;
         booking.CancelledAt = DateTime.UtcNow;
@@ -102,6 +108,21 @@ public class BookingService : IBookingService
             var bookingVm = MapToViewModel(booking);
             _notificationService.SendBookingCancellationNotification(bookingVm, user.Email);
         }
+    }
+
+    public bool CanCancelBooking(int bookingId)
+    {
+        var booking = _dataStore.Bookings.FirstOrDefault(b => b.Id == bookingId);
+        if (booking == null)
+            return false;
+
+        if (booking.Status == BookingStatus.Cancelled)
+            return false;
+
+        if (booking.BookingDate < DateTime.Now.Date)
+            return false;
+
+        return true;
     }
 
     public List<BookingViewModel> GetBookingHistory(int userId)

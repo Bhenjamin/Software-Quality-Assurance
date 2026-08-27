@@ -53,7 +53,7 @@
 						</td>
 						<td>
 							<a href="/Bookings/Edit?id=@booking.Id" class="btn btn-sm btn-warning">Edit</a>
-							<a href="/Bookings/Cancel?id=@booking.Id" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?');">Cancel</a>
+							<a href="/Bookings/Cancel/@booking.Id" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?');">Cancel</a>
 						</td>
 					</tr>
 				}
