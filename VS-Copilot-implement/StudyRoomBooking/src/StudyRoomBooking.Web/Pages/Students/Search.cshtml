@@ -75,7 +75,8 @@
 						<option value="">Any Type</option>
 						@foreach (var type in Enum.GetValues(typeof(StudyRoomBooking.Domain.Enums.RoomType)))
 						{
-							<option value="@type" selected="@(Model.SearchCriteria.RoomType == (StudyRoomBooking.Domain.Enums.RoomType)type)">@type</option>
+							var roomType = (StudyRoomBooking.Domain.Enums.RoomType)type;
+							<option value="@type" selected="@(Model.SearchCriteria.RoomType == roomType)">@roomType.ToDisplayName()</option>
 						}
 					</select>
 				</div>

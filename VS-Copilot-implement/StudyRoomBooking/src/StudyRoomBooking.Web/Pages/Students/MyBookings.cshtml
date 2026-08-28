@@ -52,7 +52,10 @@
 							</td>
 							<td>@booking.ConfirmationNumber</td>
 							<td>
-								<a asp-page="ModifyBooking" asp-route-id="@booking.Id" class="btn btn-sm btn-warning">Edit</a>
+								@if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Confirmed)
+								{
+									<a asp-page="ModifyBooking" asp-route-id="@booking.Id" class="btn btn-sm btn-warning">Edit</a>
+								}
 								<form method="post" class="d-inline">
 									<button type="submit" class="btn btn-sm btn-danger" asp-page-handler="CancelBooking" asp-route-id="@booking.Id" onclick="return confirm('Are you sure?');">Cancel</button>
 								</form>

@@ -24,6 +24,14 @@ public class ModifyBookingModel : PageModel
         var booking = await _bookingService.GetBookingByIdAsync(id);
         if (booking != null)
         {
+            // Check if booking is cancelled - prevent editing
+            if (booking.Status == Domain.Enums.BookingStatus.Cancelled)
+            {
+                TempData["ErrorMessage"] = "Cannot modify a cancelled booking.";
+                RedirectToPage("MyBookings");
+                return;
+            }
+
             var room = await _roomService.GetRoomByIdAsync(booking.RoomId);
             Booking = new BookingViewModel
             {
@@ -41,7 +49,7 @@ public class ModifyBookingModel : PageModel
         }
     }
 
-    public async Task<IActionResult> OnPostAsync(int bookingId, string bookingDate, string startTime, string endTime, string? notes)
+    public async Task<IActionResult> OnPostAsync(int bookingId, string bookingDate, string startHour, string endHour, string? notes)
     {
         try
         {
@@ -53,9 +61,44 @@ public class ModifyBookingModel : PageModel
                 return Page();
             }
 
+            // Check if booking is cancelled - prevent editing
+            if (booking.Status == Domain.Enums.BookingStatus.Cancelled)
+            {
+                ModelState.AddModelError(string.Empty, "Cannot modify a cancelled booking.");
+                await OnGetAsync(bookingId);
+                return Page();
+            }
+
             var date = DateTime.ParseExact(bookingDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-            var start = TimeSpan.ParseExact(startTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
-            var end = TimeSpan.ParseExact(endTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+
+            // Parse time from dropdown format (H:00 or HH:00)
+            TimeSpan start, end;
+            try
+            {
+                start = TimeSpan.ParseExact(startHour, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                start = TimeSpan.ParseExact(startHour, @"h\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            try
+            {
+                end = TimeSpan.ParseExact(endHour, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                end = TimeSpan.ParseExact(endHour, @"h\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            // Validate booking date and time constraints
+            var (isValid, errorMessage) = await _bookingService.ValidateBookingAsync(booking.RoomId, date, start, end);
+            if (!isValid)
+            {
+                ModelState.AddModelError(string.Empty, errorMessage);
+                await OnGetAsync(bookingId);
+                return Page();
+            }
 
             // Check availability (excluding current booking)
             var isAvailable = await _roomService.IsRoomAvailableAsync(booking.RoomId, date, start, end);

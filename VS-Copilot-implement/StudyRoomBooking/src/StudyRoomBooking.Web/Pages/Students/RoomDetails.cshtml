@@ -24,7 +24,7 @@
 								<p><strong>Capacity:</strong> @Model.Room.Capacity persons</p>
 							</div>
 							<div class="col-md-6">
-								<p><strong>Type:</strong> @Model.Room.Type</p>
+								<p><strong>Type:</strong> @Model.Room.Type.ToDisplayName()</p>
 								<p><strong>Status:</strong> 
 									@if (Model.Room.IsAvailable)
 									{
@@ -65,7 +65,7 @@
 											<input type="date" id="bookingDate" name="bookingDate" 
 												   min="@minDate" max="@maxDate"
 												   value="@(Model.SubmittedBookingDate ?? Model.DefaultBookingDate)" class="form-control" required />
-											<small class="text-muted">You can book from today up to 60 days in advance</small>
+											<small class="text-muted">Today to 60 days in advance</small>
 										</div>
 									</div>
 								</div>
@@ -73,7 +73,7 @@
 								<div class="row">
 									<div class="col-md-3">
 										<div class="form-group">
-											<label for="startTime" class="form-label">Start Hour (8-22) *</label>
+											<label for="startTime" class="form-label">Start Hour *</label>
 											<select id="startTime" name="startTime" class="form-select" required>
 												@for (int hour = 8; hour <= 21; hour++)
 												{
@@ -88,7 +88,7 @@
 									</div>
 									<div class="col-md-3">
 										<div class="form-group">
-											<label for="endTime" class="form-label">End Hour (8-22) *</label>
+											<label for="endTime" class="form-label">End Hour *</label>
 											<select id="endTime" name="endTime" class="form-select" required>
 												@for (int hour = 9; hour <= 22; hour++)
 												{

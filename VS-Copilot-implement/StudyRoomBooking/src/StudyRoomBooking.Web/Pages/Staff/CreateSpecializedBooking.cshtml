@@ -23,7 +23,7 @@
 						<p><strong>Capacity:</strong> @Model.Room.Capacity persons</p>
 					</div>
 					<div class="col-md-6">
-						<p><strong>Type:</strong> @Model.Room.Type</p>
+						<p><strong>Type:</strong> @Model.Room.Type.ToDisplayName()</p>
 						<p><strong>Description:</strong> @Model.Room.Description</p>
 					</div>
 				</div>
