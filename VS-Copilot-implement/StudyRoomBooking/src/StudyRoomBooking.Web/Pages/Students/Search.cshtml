@@ -81,19 +81,22 @@
 						   min="1" value="@Model.SearchCriteria.Capacity" class="form-control" />
 				</div>
 			</div>
-			<div class="col-md-3">
-				<div class="form-group">
-					<label for="roomType" class="form-label">Room Type</label>
-					<select id="roomType" name="searchCriteria.RoomType" class="form-select">
-						<option value="">Any Type</option>
-						@foreach (var type in Enum.GetValues(typeof(StudyRoomBooking.Domain.Enums.RoomType)))
-						{
-							var roomType = (StudyRoomBooking.Domain.Enums.RoomType)type;
-							<option value="@type" selected="@(Model.SearchCriteria.RoomType == roomType)">@roomType.ToDisplayName()</option>
-						}
-					</select>
+			@if (Model.CurrentUserRole == "Staff")
+			{
+				<div class="col-md-3">
+					<div class="form-group">
+						<label for="roomType" class="form-label">Room Type</label>
+						<select id="roomType" name="searchCriteria.RoomType" class="form-select">
+							<option value="">Any Type</option>
+							@foreach (var type in Enum.GetValues(typeof(StudyRoomBooking.Domain.Enums.RoomType)))
+							{
+								var roomType = (StudyRoomBooking.Domain.Enums.RoomType)type;
+								<option value="@type" selected="@(Model.SearchCriteria.RoomType == roomType)">@roomType.ToDisplayName()</option>
+							}
+						</select>
+					</div>
 				</div>
-			</div>
+			}
 			<div class="col-md-3">
 				<div class="form-group">
 					<label for="location" class="form-label">Location</label>
