@@ -26,11 +26,47 @@ public class SearchModel : PageModel
     public void OnGet()
     {
         SearchCriteria.BookingDate = DateTime.Today;
+        // StartTime and EndTime are nullable, so leave them as null (not set)
     }
 
     public async Task<List<Domain.Entities.Booking>> GetRoomBookingsAsync(int roomId, DateTime date)
     {
         return await _bookingService.SearchBookingsAsync(date, roomId);
+    }
+
+    /// <summary>
+    /// Determines if a time slot should be displayed as bookable based on search criteria.
+    /// Returns true if the time slot matches the user's time range selection.
+    /// - If neither start nor end is set: always return true
+    /// - If only start is set: return true if timeSlot >= start
+    /// - If only end is set: return true if timeSlot <= end
+    /// - If both are set: return true if timeSlot >= start AND timeSlot < end
+    /// </summary>
+    public bool IsTimeSlotInSearchRange(TimeSpan timeSlot)
+    {
+        bool isStartSet = SearchCriteria.StartTime.HasValue;
+        bool isEndSet = SearchCriteria.EndTime.HasValue;
+
+        if (!isStartSet && !isEndSet)
+        {
+            // Neither set - show all time slots
+            return true;
+        }
+        else if (isStartSet && !isEndSet)
+        {
+            // Only start is set - show from start to 22:00
+            return timeSlot >= SearchCriteria.StartTime.Value;
+        }
+        else if (!isStartSet && isEndSet)
+        {
+            // Only end is set - show from 8:00 to end
+            return timeSlot < SearchCriteria.EndTime.Value;
+        }
+        else
+        {
+            // Both set - show from start to end
+            return timeSlot >= SearchCriteria.StartTime.Value && timeSlot < SearchCriteria.EndTime.Value;
+        }
     }
 
     public async Task OnPostAsync()
@@ -55,6 +91,8 @@ public class SearchModel : PageModel
                 return;
             }
 
+            // Use provided times as-is (nullable) - no defaults
+            // When both are null, all rooms will be shown; when one or both are set, filtering applies
             SearchResults = await _roomService.SearchRoomsAsync(
                 SearchCriteria.BookingDate,
                 SearchCriteria.StartTime,

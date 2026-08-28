@@ -24,14 +24,14 @@
 				<div class="form-group">
 					<label for="startTime" class="form-label">Start Time</label>
 					<input type="time" id="startTime" name="searchCriteria.StartTime" 
-						   value="@Model.SearchCriteria.StartTime.ToString(@"hh\:mm")" class="form-control" required />
+						   value="@(Model.SearchCriteria.StartTime?.ToString(@"hh\:mm") ?? "")" class="form-control" />
 				</div>
 			</div>
 			<div class="col-md-3">
 				<div class="form-group">
 					<label for="endTime" class="form-label">End Time</label>
 					<input type="time" id="endTime" name="searchCriteria.EndTime" 
-						   value="@Model.SearchCriteria.EndTime.ToString(@"hh\:mm")" class="form-control" required />
+						   value="@(Model.SearchCriteria.EndTime?.ToString(@"hh\:mm") ?? "")" class="form-control" />
 				</div>
 			</div>
 			<div class="col-md-3">
@@ -48,7 +48,7 @@
 		<div class="card mt-4">
 			<div class="card-header">
 				<h5 class="mb-0">Specialized Room Availability Matrix for @Model.SearchCriteria.BookingDate.ToString("dddd, MMMM dd, yyyy")</h5>
-				<small class="text-muted">Time Range: @Model.SearchCriteria.StartTime.ToString(@"hh\:mm") - @Model.SearchCriteria.EndTime.ToString(@"hh\:mm")</small>
+				<small class="text-muted">Time Range: @(Model.SearchCriteria.StartTime?.ToString(@"hh\:mm") ?? "--:--") - @(Model.SearchCriteria.EndTime?.ToString(@"hh\:mm") ?? "--:--")</small>
 			</div>
 			<div class="card-body">
 				<div class="table-responsive">
@@ -57,8 +57,8 @@
 							<tr class="table-light">
 								<th style="width: 200px;">Room Details</th>
 								@{
-									var startTime = Model.SearchCriteria.StartTime;
-									var endTime = Model.SearchCriteria.EndTime;
+									var startTime = Model.SearchCriteria.StartTime ?? new TimeSpan(8, 0, 0);
+									var endTime = Model.SearchCriteria.EndTime ?? new TimeSpan(22, 0, 0);
 									var interval = TimeSpan.FromHours(1);
 									var currentTime = startTime;
 									var timeSlots = new List<TimeSpan>();

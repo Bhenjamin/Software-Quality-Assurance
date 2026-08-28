@@ -54,8 +54,26 @@ public class RoomDetailsModel : PageModel
             }
 
             var date = DateTime.ParseExact(bookingDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-            var start = TimeSpan.ParseExact(startTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
-            var end = TimeSpan.ParseExact(endTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+
+            // Parse time - handle both "8:00" and "08:00" formats
+            TimeSpan start, end;
+            try
+            {
+                start = TimeSpan.ParseExact(startTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                start = TimeSpan.ParseExact(startTime, @"h\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            try
+            {
+                end = TimeSpan.ParseExact(endTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                end = TimeSpan.ParseExact(endTime, @"h\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
 
             // Validate booking date and time constraints FIRST
             var (isValid, errorMessage) = await _bookingService.ValidateBookingAsync(roomId, date, start, end);

@@ -22,7 +22,7 @@ public class RoomService : IRoomService
         return await _unitOfWork.Rooms.GetAllAsync();
     }
 
-    public async Task<List<Room>> SearchRoomsAsync(DateTime date, TimeSpan startTime, TimeSpan endTime, int? capacity = null, RoomType? type = null, string? location = null)
+    public async Task<List<Room>> SearchRoomsAsync(DateTime date, TimeSpan? startTime, TimeSpan? endTime, int? capacity = null, RoomType? type = null, string? location = null)
     {
         var allRooms = await _unitOfWork.Rooms.GetAllAsync();
 
@@ -33,11 +33,21 @@ public class RoomService : IRoomService
             (string.IsNullOrEmpty(location) || r.Location.Contains(location, StringComparison.OrdinalIgnoreCase))
         ).ToList();
 
+        // If both times are not set, return all filtered rooms (no time-based filtering)
+        if (!startTime.HasValue && !endTime.HasValue)
+        {
+            return filtered;
+        }
+
+        // If at least one time is set, use default values for missing times
+        var actualStartTime = startTime ?? new TimeSpan(8, 0, 0);
+        var actualEndTime = endTime ?? new TimeSpan(22, 0, 0);
+
         // Filter by availability on the requested date/time
         var availableRooms = new List<Room>();
         foreach (var room in filtered)
         {
-            if (await IsRoomAvailableAsync(room.Id, date, startTime, endTime))
+            if (await IsRoomAvailableAsync(room.Id, date, actualStartTime, actualEndTime))
             {
                 availableRooms.Add(room);
             }

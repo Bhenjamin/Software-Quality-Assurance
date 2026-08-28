@@ -35,6 +35,8 @@ public class SearchSpecializedModel : PageModel
         HasSearched = true;
         try
         {
+            // Use provided times as-is (nullable) - no defaults
+            // When both are null, all rooms will be shown; when one or both are set, filtering applies
             SearchResults = await _roomService.SearchRoomsAsync(
                 SearchCriteria.BookingDate,
                 SearchCriteria.StartTime,

@@ -36,16 +36,26 @@
 			</div>
 			<div class="col-md-3">
 				<div class="form-group">
-					<label for="startTime" class="form-label">Start Time</label>
-					<input type="time" id="startTime" name="searchCriteria.StartTime" 
-						   value="@Model.SearchCriteria.StartTime.ToString(@"hh\:mm")" class="form-control" required />
+					<label for="startTime" class="form-label">Start Hour</label>
+					<select id="startTime" name="searchCriteria.StartTime" class="form-select">
+						<option value="" selected="@(!Model.SearchCriteria.StartTime.HasValue)">--:--</option>
+						@for (int hour = 8; hour <= 21; hour++)
+						{
+							<option value="@hour:00" selected="@(Model.SearchCriteria.StartTime.HasValue && Model.SearchCriteria.StartTime.Value.Hours == hour)">@hour:00</option>
+						}
+					</select>
 				</div>
 			</div>
 			<div class="col-md-3">
 				<div class="form-group">
-					<label for="endTime" class="form-label">End Time</label>
-					<input type="time" id="endTime" name="searchCriteria.EndTime" 
-						   value="@Model.SearchCriteria.EndTime.ToString(@"hh\:mm")" class="form-control" required />
+					<label for="endTime" class="form-label">End Hour</label>
+					<select id="endTime" name="searchCriteria.EndTime" class="form-select">
+						<option value="" selected="@(!Model.SearchCriteria.EndTime.HasValue)">--:--</option>
+						@for (int hour = 9; hour <= 22; hour++)
+						{
+							<option value="@hour:00" selected="@(Model.SearchCriteria.EndTime.HasValue && Model.SearchCriteria.EndTime.Value.Hours == hour)">@hour:00</option>
+						}
+					</select>
 				</div>
 			</div>
 		</div>
@@ -91,7 +101,7 @@
 		<div class="card mt-4">
 			<div class="card-header">
 				<h5 class="mb-0">Room Availability Matrix for @Model.SearchCriteria.BookingDate.ToString("dddd, MMMM dd, yyyy")</h5>
-				<small class="text-muted">Time Range: @Model.SearchCriteria.StartTime.ToString(@"hh\:mm") - @Model.SearchCriteria.EndTime.ToString(@"hh\:mm")</small>
+				<small class="text-muted">Time Range: 08:00 - 22:00</small>
 			</div>
 			<div class="card-body">
 				<div class="table-responsive">
@@ -100,8 +110,8 @@
 							<tr class="table-light">
 								<th style="width: 200px;">Room Details</th>
 								@{
-									var startTime = Model.SearchCriteria.StartTime;
-									var endTime = Model.SearchCriteria.EndTime;
+									var startTime = new TimeSpan(8, 0, 0);  // Always start from 8:00
+									var endTime = new TimeSpan(22, 0, 0);  // Always end at 22:00
 									var interval = TimeSpan.FromHours(1);
 									var currentTime = startTime;
 									var timeSlots = new List<TimeSpan>();
@@ -116,8 +126,7 @@
 								{
 									<th>@timeSlot.ToString(@"hh\:mm")</th>
 								}
-								<th style="width: 100px;">Action</th>
-							</tr>
+								</tr>
 						</thead>
 						<tbody>
 							@foreach (var room in Model.SearchResults)
@@ -138,22 +147,27 @@
 										var isBooked = bookingsForRoom.Any(b => 
 											!(b.EndTime <= timeSlot || b.StartTime >= nextTime) && 
 											b.Status != StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled);
+										var isInSearchRange = Model.IsTimeSlotInSearchRange(timeSlot);
 
 										<td style="padding: 4px;">
-											@if (isBooked)
+											@if (isInSearchRange)
 											{
-												<span class="badge bg-danger w-100">Booked</span>
+												@if (isBooked)
+												{
+													<span class="badge bg-danger w-100">Booked</span>
+												}
+												else
+												{
+													<a asp-page="RoomDetails" asp-route-id="@room.Id" asp-route-startTime="@timeSlot.Hours" class="badge bg-success w-100" style="text-decoration: none; display: block; padding: 4px 8px; cursor: pointer;">Free</a>
+												}
 											}
 											else
 											{
-												<span class="badge bg-success w-100">Free</span>
+												<span class="badge bg-secondary w-100" style="opacity: 0.5;">--</span>
 											}
 										</td>
-									}
-									<td style="vertical-align: middle;">
-										<a asp-page="RoomDetails" asp-route-id="@room.Id" class="btn btn-sm btn-primary">Book</a>
-									</td>
-								</tr>
+												}
+											</tr>
 							}
 						</tbody>
 					</table>
@@ -179,10 +193,6 @@
 				height: auto;
 			}
 		</style>
-	}
-				</tbody>
-			</table>
-		</div>
 	}
 	else if (Model.HasSearched)
 	{
