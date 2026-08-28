@@ -148,6 +148,8 @@
 											!(b.EndTime <= timeSlot || b.StartTime >= nextTime) && 
 											b.Status != StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled);
 										var isInSearchRange = Model.IsTimeSlotInSearchRange(timeSlot);
+										var startHour = timeSlot.Hours;
+										var endHour = nextTime.Hours;
 
 										<td style="padding: 4px;">
 											@if (isInSearchRange)
@@ -158,7 +160,7 @@
 												}
 												else
 												{
-													<a asp-page="RoomDetails" asp-route-id="@room.Id" asp-route-startTime="@timeSlot.Hours" class="badge bg-success w-100" style="text-decoration: none; display: block; padding: 4px 8px; cursor: pointer;">Free</a>
+													<a asp-page="RoomDetails" asp-route-id="@room.Id" asp-route-bookingDate="@Model.SearchCriteria.BookingDate.ToString("yyyy-MM-dd")" asp-route-startTime="@startHour:00" asp-route-endTime="@endHour:00" class="badge bg-success w-100" style="text-decoration: none; display: block; padding: 4px 8px; cursor: pointer;">Free</a>
 												}
 											}
 											else

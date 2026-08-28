@@ -13,6 +13,14 @@ public class RoomDetailsModel : PageModel
     private readonly IUserService _userService;
 
     public Room? Room { get; set; }
+    public string? DefaultBookingDate { get; set; }
+    public string? DefaultStartTime { get; set; }
+    public string? DefaultEndTime { get; set; }
+
+    // Properties to store submitted values when there's an error
+    public string? SubmittedBookingDate { get; set; }
+    public string? SubmittedStartTime { get; set; }
+    public string? SubmittedEndTime { get; set; }
 
     public RoomDetailsModel(IRoomService roomService, IBookingService bookingService, IUserService userService)
     {
@@ -21,15 +29,27 @@ public class RoomDetailsModel : PageModel
         _userService = userService;
     }
 
-    public async Task OnGetAsync(int id)
+    public async Task OnGetAsync(int id, string? bookingDate = null, string? startTime = null, string? endTime = null)
     {
         Room = await _roomService.GetRoomByIdAsync(id);
+
+        // Set default booking date if provided from route parameters, otherwise use today
+        DefaultBookingDate = bookingDate ?? DateTime.Today.ToString("yyyy-MM-dd");
+
+        // Set default times if provided from route parameters
+        DefaultStartTime = startTime;
+        DefaultEndTime = endTime;
     }
 
     public async Task<IActionResult> OnPostBookRoomAsync(int roomId, string bookingDate, string startTime, string endTime, string? notes)
     {
         try
         {
+            // Store the submitted values to preserve them if there's an error
+            SubmittedBookingDate = bookingDate;
+            SubmittedStartTime = startTime;
+            SubmittedEndTime = endTime;
+
             var room = await _roomService.GetRoomByIdAsync(roomId);
             if (room == null)
             {

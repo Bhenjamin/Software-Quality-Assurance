@@ -120,7 +120,15 @@ public class BookingService : IBookingService
 
         if (conflictingBookings.Any())
         {
-            return (false, "This room is already booked for the selected time slot. Please choose a different time or room.");
+            // Build a detailed error message with conflicting booking times
+            var conflictTimes = conflictingBookings
+                .OrderBy(b => b.StartTime)
+                .Select(b => $"- {b.StartTime:hh\\:mm} - {b.EndTime:hh\\:mm}");
+
+            var errorMessage = "This room is already booked during the selected time. Please choose a different time or room.\n\nConflicting bookings:\n" +
+                              string.Join("\n", conflictTimes);
+
+            return (false, errorMessage);
         }
 
         return (true, string.Empty);

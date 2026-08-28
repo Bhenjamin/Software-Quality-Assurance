@@ -44,13 +44,13 @@
 							@if (!ViewData.ModelState.IsValid)
 							{
 								<div class="alert alert-danger alert-dismissible fade show" role="alert">
-									<strong>Booking Error!</strong>
-									<ul class="mb-0">
+									<strong>Booking Unavailable</strong>
+									<div class="mb-0" style="white-space: pre-line;">
 										@foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
 										{
-											<li>@error.ErrorMessage</li>
+											<div>@error.ErrorMessage</div>
 										}
-									</ul>
+									</div>
 									<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 								</div>
 							}
@@ -64,7 +64,7 @@
 											<label for="bookingDate" class="form-label">Booking Date *</label>
 											<input type="date" id="bookingDate" name="bookingDate" 
 												   min="@minDate" max="@maxDate"
-												   value="@defaultDate" class="form-control" required />
+												   value="@(Model.SubmittedBookingDate ?? Model.DefaultBookingDate)" class="form-control" required />
 											<small class="text-muted">You can book from today up to 60 days in advance</small>
 										</div>
 									</div>
@@ -77,7 +77,11 @@
 											<select id="startTime" name="startTime" class="form-select" required>
 												@for (int hour = 8; hour <= 21; hour++)
 												{
-													<option value="@hour:00" selected="@(hour == 8)">@hour:00</option>
+													var timeValue = $"{hour}:00";
+													var isSelected = (Model.SubmittedStartTime == timeValue) || 
+																(Model.SubmittedStartTime == null && Model.DefaultStartTime == timeValue) || 
+																(Model.SubmittedStartTime == null && Model.DefaultStartTime == null && hour == 8);
+													<option value="@timeValue" selected="@isSelected">@hour:00</option>
 												}
 											</select>
 										</div>
@@ -88,7 +92,11 @@
 											<select id="endTime" name="endTime" class="form-select" required>
 												@for (int hour = 9; hour <= 22; hour++)
 												{
-													<option value="@hour:00" selected="@(hour == 17)">@hour:00</option>
+													var timeValue = $"{hour}:00";
+													var isSelected = (Model.SubmittedEndTime == timeValue) || 
+																(Model.SubmittedEndTime == null && Model.DefaultEndTime == timeValue) || 
+																(Model.SubmittedEndTime == null && Model.DefaultEndTime == null && hour == 17);
+													<option value="@timeValue" selected="@isSelected">@hour:00</option>
 												}
 											</select>
 										</div>
