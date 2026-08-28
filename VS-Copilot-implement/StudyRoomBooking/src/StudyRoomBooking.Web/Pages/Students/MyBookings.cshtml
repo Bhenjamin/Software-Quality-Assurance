@@ -1,0 +1,75 @@
+@page
+@model MyBookingsModel
+@{
+	ViewData["Title"] = "My Bookings";
+}
+
+<div class="container mt-4">
+	<h2>My Bookings</h2>
+
+	@if (!string.IsNullOrEmpty(Model.Message))
+	{
+		<div class="alert alert-success alert-dismissible fade show" role="alert">
+			@Model.Message
+			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+		</div>
+	}
+
+	@if (Model.Bookings.Any())
+	{
+		<div class="table-responsive">
+			<table class="table table-striped">
+				<thead>
+					<tr>
+						<th>Room Name</th>
+						<th>Date</th>
+						<th>Time</th>
+						<th>Status</th>
+						<th>Confirmation</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var booking in Model.Bookings)
+					{
+						<tr>
+							<td>@booking.RoomName</td>
+							<td>@booking.BookingDate.ToString("dd/MM/yyyy")</td>
+							<td>@booking.StartTime.ToString(@"hh\:mm") - @booking.EndTime.ToString(@"hh\:mm")</td>
+							<td>
+								@if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Confirmed)
+								{
+									<span class="badge bg-success">Confirmed</span>
+								}
+								else if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled)
+								{
+									<span class="badge bg-danger">Cancelled</span>
+								}
+								else
+								{
+									<span class="badge bg-warning">@booking.Status</span>
+								}
+							</td>
+							<td>@booking.ConfirmationNumber</td>
+							<td>
+								<a asp-page="ModifyBooking" asp-route-id="@booking.Id" class="btn btn-sm btn-warning">Edit</a>
+								<form method="post" class="d-inline">
+									<button type="submit" class="btn btn-sm btn-danger" asp-page-handler="CancelBooking" asp-route-id="@booking.Id" onclick="return confirm('Are you sure?');">Cancel</button>
+								</form>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+	else
+	{
+		<div class="alert alert-info">You don't have any bookings yet. <a asp-page="Search">Start booking a room</a></div>
+	}
+
+	<div class="mt-3">
+		<a asp-page="Search" class="btn btn-primary">Search for Rooms</a>
+		<a asp-page="/Index" class="btn btn-secondary">Back to Dashboard</a>
+	</div>
+</div>

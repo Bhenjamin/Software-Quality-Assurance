@@ -1,58 +1,54 @@
-using StudyRoomBooking.Infrastructure.Data;
-using StudyRoomBooking.Application.Interfaces;
-using StudyRoomBooking.Domain.Entities;
-
 namespace StudyRoomBooking.Application.Services;
 
 public class AuthenticationService : IAuthenticationService
 {
-    private readonly DataStore _dataStore;
+    private readonly IUserService _userService;
 
-    public AuthenticationService(DataStore dataStore)
+    // Demo credentials - in a real app, these would be in a database with hashed passwords
+    private static readonly Dictionary<string, (string Password, string Role)> DemoAccounts = new()
     {
-        _dataStore = dataStore;
+        { "student1@university.edu", ("password123", "Student") },
+        { "student2@university.edu", ("password123", "Student") },
+        { "staff@university.edu", ("password123", "Staff") },
+        { "admin@university.edu", ("password123", "Admin") }
+    };
+
+    public AuthenticationService(IUserService userService)
+    {
+        _userService = userService;
     }
 
-    public User? Authenticate(string email, string password)
+    public async Task<(bool Success, int UserId, string UserName, string Role, string Message)> LoginAsync(string email, string password)
     {
-        var user = _dataStore.Users.FirstOrDefault(u => u.Email == email && u.IsActive);
-
-        if (user != null && ValidatePassword(password, user.PasswordHash))
-            return user;
-
-        return null;
-    }
-
-    public void Register(string email, string fullName, string password)
-    {
-        var existingUser = _dataStore.Users.FirstOrDefault(u => u.Email == email);
-        if (existingUser != null)
-            throw new InvalidOperationException("User with this email already exists.");
-
-        var newUser = new User
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
-            Id = _dataStore.Users.Count > 0 ? _dataStore.Users.Max(u => u.Id) + 1 : 1,
-            Email = email,
-            FullName = fullName,
-            PasswordHash = HashPassword(password),
-            Role = Domain.Enums.UserRole.Student,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
+            return (false, 0, "", "", "Email and password are required.");
+        }
 
-        _dataStore.Users.Add(newUser);
+        // Check demo credentials
+        if (!DemoAccounts.TryGetValue(email.ToLower(), out var account))
+        {
+            return (false, 0, "", "", "Invalid email or password.");
+        }
+
+        if (account.Password != password)
+        {
+            return (false, 0, "", "", "Invalid email or password.");
+        }
+
+        // Get user from database
+        var user = await _userService.GetUserByUserIdAsync(email.ToLower());
+
+        if (user == null)
+        {
+            return (false, 0, "", "", "User not found. Please contact administrator.");
+        }
+
+        return (true, user.Id, user.Name, user.Role.ToString(), "Login successful.");
     }
 
-    public bool ValidatePassword(string password, string hash)
+    public async Task LogoutAsync()
     {
-        // TODO: Implement proper password hashing (BCrypt, PBKDF2, etc.)
-        // For prototype, simple comparison
-        return BCrypt.Net.BCrypt.Verify(password, hash);
-    }
-
-    private string HashPassword(string password)
-    {
-        // TODO: Implement proper password hashing (BCrypt, PBKDF2, etc.)
-        return BCrypt.Net.BCrypt.HashPassword(password);
+        await Task.CompletedTask;
     }
 }

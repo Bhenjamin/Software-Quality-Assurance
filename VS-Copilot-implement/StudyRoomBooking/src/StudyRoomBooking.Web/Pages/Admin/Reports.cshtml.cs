@@ -1,7 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using StudyRoomBooking.Application.Interfaces;
-using StudyRoomBooking.Application.ViewModels;
+using StudyRoomBooking.Application.Services;
 
 namespace StudyRoomBooking.Web.Pages.Admin;
 
@@ -9,49 +7,42 @@ public class ReportsModel : PageModel
 {
     private readonly IReportService _reportService;
 
-    [BindProperty]
+    public Dictionary<string, int> BookingStatistics { get; set; } = new();
+    public List<(string RoomName, int BookingCount)> RoomUtilization { get; set; } = new();
     public DateTime StartDate { get; set; }
-
-    [BindProperty]
     public DateTime EndDate { get; set; }
-
-    public ReportViewModel? OccupancyReport { get; set; }
-    public bool HasGenerated { get; set; } = false;
 
     public ReportsModel(IReportService reportService)
     {
         _reportService = reportService;
     }
 
-    public void OnGet()
+    public async Task OnGetAsync(DateTime? startDate = null, DateTime? endDate = null)
     {
-        if (!IsAdmin())
-            RedirectToPage("/Index");
+        StartDate = startDate ?? DateTime.Today.AddMonths(-1);
+        EndDate = endDate ?? DateTime.Today;
 
-        StartDate = DateTime.Today.AddDays(-30);
-        EndDate = DateTime.Today;
+        await LoadReports();
     }
 
-    public IActionResult OnPost()
+    public async Task OnPostAsync(DateTime startDate, DateTime endDate)
     {
-        if (!IsAdmin())
-            return RedirectToPage("/Index");
+        StartDate = startDate;
+        EndDate = endDate;
 
-        if (StartDate > EndDate)
-            ModelState.AddModelError("EndDate", "End date must be after start date");
-
-        if (!ModelState.IsValid)
-            return Page();
-
-        OccupancyReport = _reportService.GenerateOccupancyReport(StartDate, EndDate);
-        HasGenerated = true;
-
-        return Page();
+        await LoadReports();
     }
 
-    private bool IsAdmin()
+    private async Task LoadReports()
     {
-        var role = HttpContext.Session.GetString("UserRole");
-        return role == "Admin";
+        try
+        {
+            BookingStatistics = await _reportService.GetBookingStatisticsAsync(StartDate, EndDate);
+            RoomUtilization = await _reportService.GetRoomUtilizationAsync(StartDate, EndDate);
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError(string.Empty, $"Error loading report: {ex.Message}");
+        }
     }
 }

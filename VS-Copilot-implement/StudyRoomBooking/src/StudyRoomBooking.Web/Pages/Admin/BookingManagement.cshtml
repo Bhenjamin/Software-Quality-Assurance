@@ -1,0 +1,95 @@
+@page
+@model BookingManagementModel
+@{
+	ViewData["Title"] = "Booking Management";
+}
+
+<div class="container mt-4">
+	<h2>Booking Management</h2>
+
+	<form method="post" class="card p-3 mb-4">
+		<div class="row">
+			<div class="col-md-4">
+				<div class="form-group">
+					<label for="filterDate" class="form-label">Filter by Date</label>
+					<input type="date" id="filterDate" name="filterDate" value="@Model.FilterDate?.ToString("yyyy-MM-dd")" class="form-control" />
+				</div>
+			</div>
+			<div class="col-md-4">
+				<div class="form-group">
+					<label for="filterStatus" class="form-label">Filter by Status</label>
+					<select id="filterStatus" name="filterStatus" class="form-select">
+						<option value="">All Statuses</option>
+						@foreach (var status in Enum.GetValues(typeof(StudyRoomBooking.Domain.Enums.BookingStatus)))
+						{
+							<option value="@status" selected="@(Model.FilterStatus == (StudyRoomBooking.Domain.Enums.BookingStatus)status)">@status</option>
+						}
+					</select>
+				</div>
+			</div>
+			<div class="col-md-4">
+				<div class="form-group">
+					<label>&nbsp;</label>
+					<button type="submit" class="btn btn-primary form-control">Filter</button>
+				</div>
+			</div>
+		</div>
+	</form>
+
+	@if (Model.Bookings.Any())
+	{
+		<div class="table-responsive">
+			<table class="table table-striped">
+				<thead>
+					<tr>
+						<th>Confirmation #</th>
+						<th>Room</th>
+						<th>User</th>
+						<th>Date</th>
+						<th>Time</th>
+						<th>Status</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var booking in Model.Bookings)
+					{
+						<tr>
+							<td>@booking.ConfirmationNumber</td>
+							<td>@booking.RoomName</td>
+							<td>@booking.UserName</td>
+							<td>@booking.BookingDate.ToString("dd/MM/yyyy")</td>
+							<td>@booking.StartTime.ToString(@"hh\:mm") - @booking.EndTime.ToString(@"hh\:mm")</td>
+							<td>
+								@if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Confirmed)
+								{
+									<span class="badge bg-success">Confirmed</span>
+								}
+								else if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled)
+								{
+									<span class="badge bg-danger">Cancelled</span>
+								}
+								else
+								{
+									<span class="badge bg-warning">@booking.Status</span>
+								}
+							</td>
+							<td>
+								<form method="post" class="d-inline">
+									@if (booking.Status != StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled)
+									{
+										<button type="submit" class="btn btn-sm btn-danger" asp-page-handler="CancelBooking" asp-route-id="@booking.Id" onclick="return confirm('Are you sure?');">Cancel</button>
+									}
+								</form>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+	else
+	{
+		<div class="alert alert-info">No bookings found.</div>
+	}
+</div>

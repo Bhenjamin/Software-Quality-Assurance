@@ -1,66 +1,63 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = "Dashboard";
 }
 
 <div class="container mt-5">
-    <div class="row">
-        <div class="col-md-8">
-            <h1>Study Room Booking System</h1>
-            <p class="lead">Welcome to the Study Room Booking and Management System!</p>
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1>Welcome to Study Room Booking System</h1>
+            <p class="lead">Book study rooms, labs, and meeting spaces for your academic needs.</p>
+        </div>
+    </div>
 
-            @if (Model.IsAuthenticated)
-            {
-                <p>You are logged in as: <strong>@Model.UserName</strong> (@Model.UserRole)</p>
 
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h5 class="card-title">Search Rooms</h5>
-                                <p class="card-text">Find and search available study rooms</p>
-                                <a href="/Search/Index" class="btn btn-primary">Search Rooms</a>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="col-md-6">
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h5 class="card-title">My Bookings</h5>
-                                <p class="card-text">View and manage your bookings</p>
-                                <a href="/Bookings/Index" class="btn btn-primary">My Bookings</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h5 class="card-title">Booking History</h5>
-                                <p class="card-text">View your booking history</p>
-                                <a href="/BookingHistory/Index" class="btn btn-primary">History</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    @if (Model.UserRole == "Admin")
-                    {
-                        <div class="col-md-6">
-                            <div class="card mb-3">
-                                <div class="card-body">
-                                    <h5 class="card-title">Administration</h5>
-                                    <p class="card-text">Manage rooms and users</p>
-                                    <a href="/Admin/Dashboard" class="btn btn-danger">Admin Panel</a>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h3>Available Rooms</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Room Code</th>
+                        <th>Room Name</th>
+                        <th>Location</th>
+                        <th>Capacity</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="roomsTable">
+                    <tr>
+                        <td colspan="6" class="text-center">Loading rooms...</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // This will be populated with room data from the page model
+        document.addEventListener('DOMContentLoaded', function() {
+            var rooms = @Html.Raw(Model.RoomsJson);
+            if (rooms && rooms.length > 0) {
+                var tbody = document.getElementById('roomsTable');
+                tbody.innerHTML = '';
+                rooms.forEach(function(room) {
+                    var row = '<tr>' +
+                        '<td>' + room.code + '</td>' +
+                        '<td>' + room.name + '</td>' +
+                        '<td>' + room.location + '</td>' +
+                        '<td>' + room.capacity + '</td>' +
+                        '<td>' + room.type + '</td>' +
+                        '<td><span class="badge bg-success">Available</span></td>' +
+                        '</tr>';
+                    tbody.innerHTML += row;
+                });
+            }
+        });
+    </script>
+}

@@ -1,0 +1,145 @@
+@page
+@model RoomManagementModel
+@{
+	ViewData["Title"] = "Room Management";
+}
+
+<div class="container mt-4">
+	<div class="row mb-4">
+		<div class="col-md-8">
+			<h2>Room Management</h2>
+		</div>
+		<div class="col-md-4 text-end">
+			<a asp-page="RoomManagement" asp-page-handler="Create" class="btn btn-success">Add New Room</a>
+		</div>
+	</div>
+
+	@if (Model.Rooms.Any())
+	{
+		<div class="table-responsive">
+			<table class="table table-striped">
+				<thead>
+					<tr>
+						<th>Code</th>
+						<th>Name</th>
+						<th>Location</th>
+						<th>Capacity</th>
+						<th>Type</th>
+						<th>Status</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var room in Model.Rooms)
+					{
+						<tr>
+							<td>@room.Code</td>
+							<td>@room.Name</td>
+							<td>@room.Location</td>
+							<td>@room.Capacity</td>
+							<td>@room.Type</td>
+							<td>
+								@if (room.IsAvailable)
+								{
+									<span class="badge bg-success">Available</span>
+								}
+								else
+								{
+									<span class="badge bg-danger">Unavailable</span>
+								}
+							</td>
+							<td>
+								<a asp-page="RoomManagement" asp-route-id="@room.Id" asp-page-handler="Edit" class="btn btn-sm btn-warning">Edit</a>
+								<form method="post" class="d-inline">
+									<button type="submit" class="btn btn-sm btn-danger" asp-page-handler="Delete" asp-route-id="@room.Id" onclick="return confirm('Are you sure?');">Delete</button>
+								</form>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+	else
+	{
+		<div class="alert alert-info">No rooms found.</div>
+	}
+
+	@if (Model.ShowForm)
+	{
+		<div class="card mt-4">
+			<div class="card-header">
+				<h4>@(Model.IsEdit ? "Edit Room" : "Add New Room")</h4>
+			</div>
+			<div class="card-body">
+				<form method="post">
+					@if (Model.IsEdit && Model.EditingRoom != null)
+					{
+						<input type="hidden" name="roomId" value="@Model.EditingRoom.Id" />
+					}
+
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group">
+								<label for="code" class="form-label">Room Code *</label>
+								<input type="text" id="code" name="code" value="@Model.EditingRoom?.Code" class="form-control" required />
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="form-group">
+								<label for="name" class="form-label">Room Name *</label>
+								<input type="text" id="name" name="name" value="@Model.EditingRoom?.Name" class="form-control" required />
+							</div>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group">
+								<label for="location" class="form-label">Location *</label>
+								<input type="text" id="location" name="location" value="@Model.EditingRoom?.Location" class="form-control" required />
+							</div>
+						</div>
+						<div class="col-md-2">
+							<div class="form-group">
+								<label for="capacity" class="form-label">Capacity *</label>
+								<input type="number" id="capacity" name="capacity" min="1" value="@Model.EditingRoom?.Capacity" class="form-control" required />
+							</div>
+						</div>
+						<div class="col-md-4">
+							<div class="form-group">
+								<label for="type" class="form-label">Room Type *</label>
+								<select id="type" name="type" class="form-select" required>
+									@foreach (var type in Enum.GetValues(typeof(StudyRoomBooking.Domain.Enums.RoomType)))
+									{
+										<option value="@type" selected="@(Model.EditingRoom?.Type == (StudyRoomBooking.Domain.Enums.RoomType)type)">@type</option>
+									}
+								</select>
+							</div>
+						</div>
+					</div>
+
+					<div class="form-group">
+						<label for="description" class="form-label">Description</label>
+						<textarea id="description" name="description" class="form-control" rows="3">@Model.EditingRoom?.Description</textarea>
+					</div>
+
+					<div class="form-group">
+						<div class="form-check">
+							<input class="form-check-input" type="checkbox" id="isAvailable" name="isAvailable" 
+								   @(Model.EditingRoom?.IsAvailable == true ? "checked" : "") />
+							<label class="form-check-label" for="isAvailable">
+								Available
+							</label>
+						</div>
+					</div>
+
+					<div class="mt-3">
+						<button type="submit" class="btn btn-primary" asp-page-handler="Save">Save</button>
+						<a asp-page="RoomManagement" class="btn btn-secondary">Cancel</a>
+					</div>
+				</form>
+			</div>
+		</div>
+	}
+</div>

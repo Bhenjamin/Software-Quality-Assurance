@@ -1,85 +1,84 @@
-using StudyRoomBooking.Infrastructure.Data;
-using StudyRoomBooking.Application.Interfaces;
-using StudyRoomBooking.Application.ViewModels;
 using StudyRoomBooking.Domain.Entities;
+using StudyRoomBooking.Domain.Enums;
 
 namespace StudyRoomBooking.Application.Services;
 
 public class RoomService : IRoomService
 {
-    private readonly DataStore _dataStore;
+    private readonly Domain.Interfaces.IUnitOfWork _unitOfWork;
 
-    public RoomService(DataStore dataStore)
+    public RoomService(Domain.Interfaces.IUnitOfWork unitOfWork)
     {
-        _dataStore = dataStore;
+        _unitOfWork = unitOfWork;
     }
 
-    public List<RoomViewModel> GetAllRooms()
+    public async Task<Room?> GetRoomByIdAsync(int id)
     {
-        return _dataStore.Rooms
-            .Select(r => MapToViewModel(r))
-            .ToList();
+        return await _unitOfWork.Rooms.GetByIdAsync(id);
     }
 
-    public RoomViewModel? GetRoomById(int id)
+    public async Task<List<Room>> GetAllRoomsAsync()
     {
-        var room = _dataStore.Rooms.FirstOrDefault(r => r.Id == id);
-        return room != null ? MapToViewModel(room) : null;
+        return await _unitOfWork.Rooms.GetAllAsync();
     }
 
-    public void CreateRoom(RoomViewModel room)
+    public async Task<List<Room>> SearchRoomsAsync(DateTime date, TimeSpan startTime, TimeSpan endTime, int? capacity = null, RoomType? type = null, string? location = null)
     {
-        var newRoom = new Room
+        var allRooms = await _unitOfWork.Rooms.GetAllAsync();
+
+        var filtered = allRooms.Where(r =>
+            r.IsAvailable &&
+            (!capacity.HasValue || r.Capacity >= capacity.Value) &&
+            (!type.HasValue || r.Type == type.Value) &&
+            (string.IsNullOrEmpty(location) || r.Location.Contains(location, StringComparison.OrdinalIgnoreCase))
+        ).ToList();
+
+        // Filter by availability on the requested date/time
+        var availableRooms = new List<Room>();
+        foreach (var room in filtered)
         {
-            Id = _dataStore.Rooms.Count > 0 ? _dataStore.Rooms.Max(r => r.Id) + 1 : 1,
-            RoomCode = room.RoomCode,
-            RoomName = room.RoomName,
-            Location = room.Location,
-            Capacity = room.Capacity,
-            RoomType = room.RoomType,
-            Description = room.Description,
-            IsAvailable = room.IsAvailable,
-            CreatedAt = DateTime.UtcNow
-        };
+            if (await IsRoomAvailableAsync(room.Id, date, startTime, endTime))
+            {
+                availableRooms.Add(room);
+            }
+        }
 
-        _dataStore.Rooms.Add(newRoom);
+        return availableRooms;
     }
 
-    public void UpdateRoom(RoomViewModel room)
+    public async Task<Room> CreateRoomAsync(Room room)
     {
-        var existingRoom = _dataStore.Rooms.FirstOrDefault(r => r.Id == room.Id);
-        if (existingRoom == null)
-            return;
-
-        existingRoom.RoomCode = room.RoomCode;
-        existingRoom.RoomName = room.RoomName;
-        existingRoom.Location = room.Location;
-        existingRoom.Capacity = room.Capacity;
-        existingRoom.RoomType = room.RoomType;
-        existingRoom.Description = room.Description;
-        existingRoom.IsAvailable = room.IsAvailable;
-        existingRoom.UpdatedAt = DateTime.UtcNow;
+        room.CreatedAt = DateTime.UtcNow;
+        room.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.Rooms.AddAsync(room);
+        await _unitOfWork.SaveChangesAsync();
+        return room;
     }
 
-    public void DeleteRoom(int id)
+    public async Task<Room> UpdateRoomAsync(Room room)
     {
-        var room = _dataStore.Rooms.FirstOrDefault(r => r.Id == id);
-        if (room != null)
-            _dataStore.Rooms.Remove(room);
+        room.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.Rooms.UpdateAsync(room);
+        await _unitOfWork.SaveChangesAsync();
+        return room;
     }
 
-    private RoomViewModel MapToViewModel(Room room)
+    public async Task DeleteRoomAsync(int roomId)
     {
-        return new RoomViewModel
-        {
-            Id = room.Id,
-            RoomCode = room.RoomCode,
-            RoomName = room.RoomName,
-            Location = room.Location,
-            Capacity = room.Capacity,
-            RoomType = room.RoomType,
-            Description = room.Description,
-            IsAvailable = room.IsAvailable
-        };
+        await _unitOfWork.Rooms.DeleteAsync(roomId);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task<bool> IsRoomAvailableAsync(int roomId, DateTime date, TimeSpan startTime, TimeSpan endTime)
+    {
+        var bookings = await _unitOfWork.Bookings.GetByRoomIdAsync(roomId);
+        var conflictingBookings = bookings.Where(b =>
+            b.BookingDate.Date == date.Date &&
+            b.Status != BookingStatus.Cancelled &&
+            // Check for time overlap
+            !(b.EndTime <= startTime || b.StartTime >= endTime)
+        ).ToList();
+
+        return conflictingBookings.Count == 0;
     }
 }

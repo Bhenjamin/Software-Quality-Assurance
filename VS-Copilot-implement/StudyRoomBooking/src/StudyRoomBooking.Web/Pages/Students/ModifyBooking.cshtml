@@ -1,0 +1,63 @@
+@page "{id}"
+@model ModifyBookingModel
+@{
+	ViewData["Title"] = "Modify Booking";
+}
+
+<div class="container mt-4">
+	@if (Model.Booking != null)
+	{
+		<div class="card">
+			<div class="card-header">
+				<h3>Modify Booking - @Model.Booking.RoomName</h3>
+			</div>
+			<div class="card-body">
+				<form method="post">
+					<input type="hidden" name="bookingId" value="@Model.Booking.Id" />
+
+					<div class="row">
+						<div class="col-md-6">
+							<div class="form-group">
+								<label for="bookingDate" class="form-label">Booking Date</label>
+								<input type="date" id="bookingDate" name="bookingDate" 
+									   value="@Model.Booking.BookingDate.ToString("yyyy-MM-dd")" class="form-control" required />
+							</div>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-md-3">
+							<div class="form-group">
+								<label for="startTime" class="form-label">Start Time</label>
+								<input type="time" id="startTime" name="startTime" 
+									   value="@Model.Booking.StartTime.ToString(@"hh\:mm")" class="form-control" required />
+							</div>
+						</div>
+						<div class="col-md-3">
+							<div class="form-group">
+								<label for="endTime" class="form-label">End Time</label>
+								<input type="time" id="endTime" name="endTime" 
+									   value="@Model.Booking.EndTime.ToString(@"hh\:mm")" class="form-control" required />
+							</div>
+						</div>
+					</div>
+
+					<div class="form-group">
+						<label for="notes" class="form-label">Notes</label>
+						<textarea id="notes" name="notes" class="form-control" rows="3">@Model.Booking.Notes</textarea>
+					</div>
+
+					<div class="mt-3">
+						<button type="submit" class="btn btn-primary">Save Changes</button>
+						<a asp-page="MyBookings" class="btn btn-secondary">Cancel</a>
+					</div>
+				</form>
+			</div>
+		</div>
+	}
+	else
+	{
+		<div class="alert alert-danger">Booking not found.</div>
+		<a asp-page="MyBookings" class="btn btn-secondary">Back to My Bookings</a>
+	}
+</div>

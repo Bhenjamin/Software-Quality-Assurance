@@ -1,0 +1,191 @@
+@page
+@model SearchModel
+@{
+	ViewData["Title"] = "Search Rooms";
+	var minDate = DateTime.Today.ToString("yyyy-MM-dd");
+	var maxDate = DateTime.Today.AddDays(60).ToString("yyyy-MM-dd");
+}
+
+<div class="container mt-4">
+	<h2>Search Rooms</h2>
+
+	@if (!ViewData.ModelState.IsValid)
+	{
+		<div class="alert alert-danger alert-dismissible fade show" role="alert">
+			<strong>Search Error!</strong>
+			<ul class="mb-0">
+				@foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+				{
+					<li>@error.ErrorMessage</li>
+				}
+			</ul>
+			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+		</div>
+	}
+
+	<form method="post" class="card p-4 mb-4">
+		<div class="row">
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="bookingDate" class="form-label">Booking Date *</label>
+					<input type="date" id="bookingDate" name="searchCriteria.BookingDate" 
+						   min="@minDate" max="@maxDate"
+						   value="@Model.SearchCriteria.BookingDate.ToString("yyyy-MM-dd")" class="form-control" required />
+					<small class="text-muted">Today to 60 days in advance</small>
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="startTime" class="form-label">Start Time</label>
+					<input type="time" id="startTime" name="searchCriteria.StartTime" 
+						   value="@Model.SearchCriteria.StartTime.ToString(@"hh\:mm")" class="form-control" required />
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="endTime" class="form-label">End Time</label>
+					<input type="time" id="endTime" name="searchCriteria.EndTime" 
+						   value="@Model.SearchCriteria.EndTime.ToString(@"hh\:mm")" class="form-control" required />
+				</div>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="capacity" class="form-label">Minimum Capacity</label>
+					<input type="number" id="capacity" name="searchCriteria.Capacity" 
+						   min="1" value="@Model.SearchCriteria.Capacity" class="form-control" />
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="roomType" class="form-label">Room Type</label>
+					<select id="roomType" name="searchCriteria.RoomType" class="form-select">
+						<option value="">Any Type</option>
+						@foreach (var type in Enum.GetValues(typeof(StudyRoomBooking.Domain.Enums.RoomType)))
+						{
+							<option value="@type" selected="@(Model.SearchCriteria.RoomType == (StudyRoomBooking.Domain.Enums.RoomType)type)">@type</option>
+						}
+					</select>
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="location" class="form-label">Location</label>
+					<input type="text" id="location" name="searchCriteria.Location" 
+						   value="@Model.SearchCriteria.Location" placeholder="e.g., Building A" class="form-control" />
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<label>&nbsp;</label>
+					<button type="submit" class="btn btn-primary form-control">Search</button>
+				</div>
+			</div>
+		</div>
+	</form>
+
+	@if (Model.SearchResults.Any())
+	{
+		<div class="card mt-4">
+			<div class="card-header">
+				<h5 class="mb-0">Room Availability Matrix for @Model.SearchCriteria.BookingDate.ToString("dddd, MMMM dd, yyyy")</h5>
+				<small class="text-muted">Time Range: @Model.SearchCriteria.StartTime.ToString(@"hh\:mm") - @Model.SearchCriteria.EndTime.ToString(@"hh\:mm")</small>
+			</div>
+			<div class="card-body">
+				<div class="table-responsive">
+					<table class="table table-bordered text-center">
+						<thead>
+							<tr class="table-light">
+								<th style="width: 200px;">Room Details</th>
+								@{
+									var startTime = Model.SearchCriteria.StartTime;
+									var endTime = Model.SearchCriteria.EndTime;
+									var interval = TimeSpan.FromHours(1);
+									var currentTime = startTime;
+									var timeSlots = new List<TimeSpan>();
+
+									while (currentTime < endTime)
+									{
+										timeSlots.Add(currentTime);
+										currentTime = currentTime.Add(interval);
+									}
+								}
+								@foreach (var timeSlot in timeSlots)
+								{
+									<th>@timeSlot.ToString(@"hh\:mm")</th>
+								}
+								<th style="width: 100px;">Action</th>
+							</tr>
+						</thead>
+						<tbody>
+							@foreach (var room in Model.SearchResults)
+							{
+								<tr>
+									<td class="text-start" style="vertical-align: middle;">
+										<div>
+											<strong>@room.Name</strong><br />
+											<small class="text-muted">@room.Code<br />@room.Location<br />Cap: @room.Capacity</small>
+										</div>
+									</td>
+									@{
+										var bookingsForRoom = await Model.GetRoomBookingsAsync(room.Id, Model.SearchCriteria.BookingDate);
+									}
+									@foreach (var timeSlot in timeSlots)
+									{
+										var nextTime = timeSlot.Add(interval);
+										var isBooked = bookingsForRoom.Any(b => 
+											!(b.EndTime <= timeSlot || b.StartTime >= nextTime) && 
+											b.Status != StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled);
+
+										<td style="padding: 4px;">
+											@if (isBooked)
+											{
+												<span class="badge bg-danger w-100">Booked</span>
+											}
+											else
+											{
+												<span class="badge bg-success w-100">Free</span>
+											}
+										</td>
+									}
+									<td style="vertical-align: middle;">
+										<a asp-page="RoomDetails" asp-route-id="@room.Id" class="btn btn-sm btn-primary">Book</a>
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<style>
+			.room-matrix table {
+				font-size: 0.9rem;
+			}
+			.room-matrix .badge {
+				font-size: 0.75rem;
+				padding: 4px 8px;
+			}
+			.room-matrix th {
+				background-color: #f8f9fa;
+				padding: 8px 4px;
+				font-size: 0.85rem;
+			}
+			.room-matrix td {
+				padding: 8px 4px;
+				height: auto;
+			}
+		</style>
+	}
+				</tbody>
+			</table>
+		</div>
+	}
+	else if (Model.HasSearched)
+	{
+		<div class="alert alert-info">No available rooms found for the selected criteria.</div>
+	}
+</div>

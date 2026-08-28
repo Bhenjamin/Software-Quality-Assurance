@@ -1,0 +1,90 @@
+{
+  "Common": {
+    "AppName": "Hệ Thống Đặt Phòng Học",
+    "Language": "Tiếng Việt",
+    "Search": "Tìm Kiếm",
+    "Book": "Đặt Phòng",
+    "Cancel": "Hủy",
+    "Save": "Lưu",
+    "Edit": "Chỉnh Sửa",
+    "Delete": "Xóa",
+    "Back": "Quay Lại",
+    "Home": "Trang Chủ",
+    "Logout": "Đăng Xuất"
+  },
+  "Navigation": {
+    "StudentDashboard": "Bảng Điều Khiển Sinh Viên",
+    "SearchRooms": "Tìm Kiếm Phòng",
+    "MyBookings": "Đặt Phòng Của Tôi",
+    "BookingHistory": "Lịch Sử Đặt Phòng",
+    "StaffDashboard": "Bảng Điều Khiển Giảng Viên",
+    "SpecializedRooms": "Phòng Chuyên Biệt",
+    "RecurringBookings": "Đặt Phòng Lặp Lại",
+    "AdminDashboard": "Bảng Điều Khiển Quản Trị",
+    "RoomManagement": "Quản Lý Phòng",
+    "BookingManagement": "Quản Lý Đặt Phòng",
+    "UserRoles": "Vai Trò Người Dùng",
+    "AccessRules": "Quy Tắc Truy Cập",
+    "Overrides": "Ghi Đè",
+    "Reports": "Báo Cáo"
+  },
+  "Search": {
+    "Title": "Tìm Kiếm Phòng",
+    "BookingDate": "Ngày Đặt",
+    "StartTime": "Giờ Bắt Đầu",
+    "EndTime": "Giờ Kết Thúc",
+    "Capacity": "Sức Chứa Tối Thiểu",
+    "RoomType": "Loại Phòng",
+    "Location": "Vị Trí",
+    "SearchButton": "Tìm Kiếm Phòng",
+    "NoResults": "Không tìm thấy phòng khả dụng cho tiêu chí đã chọn.",
+    "RoomCode": "Mã Phòng",
+    "RoomName": "Tên Phòng",
+    "AvailableRooms": "Phòng Khả Dụng"
+  },
+  "Booking": {
+    "Title": "Tạo Đặt Phòng",
+    "ConfirmBooking": "Xác Nhận Đặt Phòng",
+    "BookingConfirmed": "Đặt phòng đã được xác nhận!",
+    "ConfirmationNumber": "Số Xác Nhận",
+    "RoomDetails": "Chi Tiết Phòng",
+    "BookingDetails": "Chi Tiết Đặt Phòng",
+    "Notes": "Ghi Chú",
+    "ModifyBooking": "Chỉnh Sửa Đặt Phòng",
+    "CancelBooking": "Hủy Đặt Phòng",
+    "ViewBookings": "Xem Các Đặt Phòng Của Tôi",
+    "BookingHistory": "Lịch Sử Đặt Phòng",
+    "Status": "Trạng Thái",
+    "CreatedDate": "Ngày Tạo",
+    "CancelConfirm": "Bạn có chắc chắn muốn hủy đặt phòng này không?"
+  },
+  "Room": {
+    "Code": "Mã",
+    "Name": "Tên",
+    "Location": "Vị Trí",
+    "Capacity": "Sức Chứa",
+    "Type": "Loại",
+    "Description": "Mô Tả",
+    "Available": "Khả Dụng",
+    "NotAvailable": "Không Khả Dụng"
+  },
+  "Admin": {
+    "ManageRooms": "Quản Lý Phòng",
+    "AddRoom": "Thêm Phòng Mới",
+    "EditRoom": "Chỉnh Sửa Phòng",
+    "DeleteRoom": "Xóa Phòng",
+    "ManageBookings": "Quản Lý Tất Cả Đặt Phòng",
+    "ManageUsers": "Quản Lý Người Dùng",
+    "AssignRoles": "Gán Vai Trò",
+    "CreateAccessRule": "Tạo Quy Tắc Truy Cập",
+    "ManageOverrides": "Quản Lý Ghi Đè",
+    "GenerateReports": "Tạo Báo Cáo"
+  },
+  "Validation": {
+    "Required": "Trường này là bắt buộc.",
+    "InvalidDate": "Ngày không hợp lệ.",
+    "InvalidTime": "Giờ không hợp lệ.",
+    "TimeRangeInvalid": "Giờ kết thúc phải sau giờ bắt đầu.",
+    "CapacityInvalid": "Sức chứa phải lớn hơn 0."
+  }
+}

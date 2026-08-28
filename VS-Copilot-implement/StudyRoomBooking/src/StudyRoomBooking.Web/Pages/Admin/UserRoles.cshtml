@@ -1,0 +1,74 @@
+@page
+@model UserRolesModel
+@{
+	ViewData["Title"] = "User Roles";
+}
+
+<div class="container mt-4">
+	<h2>User Roles Management</h2>
+
+	@if (Model.Users.Any())
+	{
+		<div class="table-responsive">
+			<table class="table table-striped">
+				<thead>
+					<tr>
+						<th>User ID</th>
+						<th>Name</th>
+						<th>Email</th>
+						<th>Current Role</th>
+						<th>Email Status</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var user in Model.Users)
+					{
+						<tr>
+							<td>@user.UserId</td>
+							<td>@user.Name</td>
+							<td>@user.Email</td>
+							<td>
+								@if (user.Role == StudyRoomBooking.Domain.Enums.UserRole.Student)
+								{
+									<span class="badge bg-primary">Student</span>
+								}
+								else if (user.Role == StudyRoomBooking.Domain.Enums.UserRole.Staff)
+								{
+									<span class="badge bg-info">Staff</span>
+								}
+								else
+								{
+									<span class="badge bg-danger">Admin</span>
+								}
+							</td>
+							<td>
+								@if (user.IsActive)
+								{
+									<span class="badge bg-success">Active</span>
+								}
+								else
+								{
+									<span class="badge bg-secondary">Inactive</span>
+								}
+							</td>
+							<td>
+								<form method="post" class="d-inline">
+									<button type="submit" class="btn btn-sm btn-warning" asp-page-handler="Edit" asp-route-id="@user.Id">Edit</button>
+								</form>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+	else
+	{
+		<div class="alert alert-info">No users found.</div>
+	}
+
+	<div class="mt-3">
+		<a asp-page="/Index" class="btn btn-secondary">Back to Admin Dashboard</a>
+	</div>
+</div>

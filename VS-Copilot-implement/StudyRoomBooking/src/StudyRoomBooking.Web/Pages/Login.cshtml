@@ -1,0 +1,173 @@
+@page
+@model LoginModel
+@{
+	ViewData["Title"] = "Login";
+	Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>@ViewData["Title"] - Study Room Booking System</title>
+	<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+	<style>
+		body {
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+		}
+		.login-container {
+			width: 100%;
+			max-width: 400px;
+			background: white;
+			border-radius: 10px;
+			box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+			overflow: hidden;
+		}
+		.login-header {
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: white;
+			padding: 30px 20px;
+			text-align: center;
+		}
+		.login-header h2 {
+			margin: 0;
+			font-weight: 600;
+			font-size: 28px;
+		}
+		.login-body {
+			padding: 40px 30px;
+		}
+		.form-group {
+			margin-bottom: 20px;
+		}
+		.form-label {
+			font-weight: 500;
+			margin-bottom: 8px;
+			color: #333;
+			display: block;
+		}
+		.form-control {
+			border: 2px solid #e9ecef;
+			border-radius: 5px;
+			padding: 10px 15px;
+			font-size: 14px;
+			transition: border-color 0.3s;
+		}
+		.form-control:focus {
+			border-color: #667eea;
+			box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+		}
+		.btn-login {
+			width: 100%;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: white;
+			font-weight: 600;
+			padding: 12px;
+			border: none;
+			border-radius: 5px;
+			font-size: 16px;
+			cursor: pointer;
+			transition: transform 0.2s, box-shadow 0.2s;
+			margin-bottom: 20px;
+		}
+		.btn-login:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+			color: white;
+		}
+		.demo-credentials {
+			background: #f8f9ff;
+			border: 2px solid #e9ecef;
+			border-radius: 8px;
+			padding: 15px;
+			margin-top: 20px;
+		}
+		.demo-credentials h6 {
+			margin-top: 0;
+			font-weight: 600;
+			color: #333;
+		}
+		.demo-credential-item {
+			margin-bottom: 8px;
+			font-size: 13px;
+			color: #666;
+		}
+		.demo-credential-item strong {
+			color: #333;
+		}
+		.demo-credential-item code {
+			background: white;
+			padding: 2px 5px;
+			border-radius: 3px;
+			font-family: 'Courier New', monospace;
+		}
+		.alert {
+			margin-bottom: 20px;
+			border-radius: 5px;
+		}
+	</style>
+</head>
+<body>
+	<div class="login-container">
+		<div class="login-header">
+			<h2>Study Room Booking</h2>
+			<p class="mb-0" style="opacity: 0.9; margin-top: 5px;">Login to Your Account</p>
+		</div>
+		<div class="login-body">
+			@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+			{
+				<div class="alert alert-danger" role="alert">
+					<strong>Login Failed</strong>
+					<p class="mb-0">@Model.ErrorMessage</p>
+				</div>
+			}
+
+			<form method="post">
+				<div class="form-group">
+					<label for="email" class="form-label">Email Address</label>
+					<input type="email" id="email" name="email" class="form-control" value="@Model.Email" required placeholder="Enter your email" />
+				</div>
+
+				<div class="form-group">
+					<label for="password" class="form-label">Password</label>
+					<input type="password" id="password" name="password" class="form-control" required placeholder="Enter your password" />
+				</div>
+
+				<button type="submit" class="btn-login">Sign In</button>
+			</form>
+
+			<div class="demo-credentials">
+				<h6>Demo Accounts</h6>
+				<div class="demo-credential-item">
+					<strong>Student 1:</strong><br />
+					<code>student1@university.edu</code><br />
+					<code>password123</code>
+				</div>
+				<div class="demo-credential-item" style="margin-top: 10px;">
+					<strong>Student 2:</strong><br />
+					<code>student2@university.edu</code><br />
+					<code>password123</code>
+				</div>
+				<div class="demo-credential-item" style="margin-top: 10px;">
+					<strong>Staff Member:</strong><br />
+					<code>staff@university.edu</code><br />
+					<code>password123</code>
+				</div>
+				<div class="demo-credential-item" style="margin-top: 10px;">
+					<strong>Administrator:</strong><br />
+					<code>admin@university.edu</code><br />
+					<code>password123</code>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

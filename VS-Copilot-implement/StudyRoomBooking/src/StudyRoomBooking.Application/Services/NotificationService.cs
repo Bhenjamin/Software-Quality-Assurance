@@ -1,26 +1,33 @@
-using StudyRoomBooking.Application.Interfaces;
-using StudyRoomBooking.Application.ViewModels;
-
 namespace StudyRoomBooking.Application.Services;
 
 public class NotificationService : INotificationService
 {
-    public void SendBookingConfirmation(BookingViewModel booking, string userEmail)
+    public async Task SendBookingConfirmationAsync(string email, string roomName, DateTime bookingDate, string confirmationNumber)
     {
-        // TODO: Implement email sending
-        // For now, this is a placeholder that logs the notification intent
-        Console.WriteLine($"[NOTIFICATION] Booking confirmation sent to {userEmail} for booking {booking.Id}");
+        // Mock implementation - console output
+        Console.WriteLine($"[NOTIFICATION] Booking Confirmation sent to {email}");
+        Console.WriteLine($"  Room: {roomName}");
+        Console.WriteLine($"  Date: {bookingDate:dd/MM/yyyy}");
+        Console.WriteLine($"  Confirmation #: {confirmationNumber}");
+        await Task.CompletedTask;
     }
 
-    public void SendBookingModificationNotification(BookingViewModel booking, string userEmail)
+    public async Task SendBookingCancellationAsync(string email, string roomName, DateTime bookingDate)
     {
-        // TODO: Implement email sending
-        Console.WriteLine($"[NOTIFICATION] Booking modification notification sent to {userEmail} for booking {booking.Id}");
+        // Mock implementation - console output
+        Console.WriteLine($"[NOTIFICATION] Booking Cancellation sent to {email}");
+        Console.WriteLine($"  Room: {roomName}");
+        Console.WriteLine($"  Date: {bookingDate:dd/MM/yyyy}");
+        await Task.CompletedTask;
     }
 
-    public void SendBookingCancellationNotification(BookingViewModel booking, string userEmail)
+    public async Task SendBookingModificationAsync(string email, string roomName, DateTime oldDate, DateTime newDate)
     {
-        // TODO: Implement email sending
-        Console.WriteLine($"[NOTIFICATION] Booking cancellation notification sent to {userEmail} for booking {booking.Id}");
+        // Mock implementation - console output
+        Console.WriteLine($"[NOTIFICATION] Booking Modification sent to {email}");
+        Console.WriteLine($"  Room: {roomName}");
+        Console.WriteLine($"  Old Date: {oldDate:dd/MM/yyyy}");
+        Console.WriteLine($"  New Date: {newDate:dd/MM/yyyy}");
+        await Task.CompletedTask;
     }
 }

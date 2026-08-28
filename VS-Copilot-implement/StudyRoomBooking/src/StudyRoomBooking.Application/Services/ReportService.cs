@@ -1,101 +1,44 @@
-using StudyRoomBooking.Infrastructure.Data;
-using StudyRoomBooking.Application.Interfaces;
-using StudyRoomBooking.Application.ViewModels;
 using StudyRoomBooking.Domain.Enums;
 
 namespace StudyRoomBooking.Application.Services;
 
 public class ReportService : IReportService
 {
-    private readonly DataStore _dataStore;
+    private readonly Domain.Interfaces.IUnitOfWork _unitOfWork;
 
-    public ReportService(DataStore dataStore)
+    public ReportService(Domain.Interfaces.IUnitOfWork unitOfWork)
     {
-        _dataStore = dataStore;
+        _unitOfWork = unitOfWork;
     }
 
-    public ReportViewModel GenerateOccupancyReport(DateTime startDate, DateTime endDate)
+    public async Task<Dictionary<string, int>> GetBookingStatisticsAsync(DateTime startDate, DateTime endDate)
     {
-        var bookings = _dataStore.Bookings
-            .Where(b => b.BookingDate >= startDate && b.BookingDate <= endDate && b.Status != BookingStatus.Cancelled)
-            .ToList();
+        var bookings = await _unitOfWork.Bookings.GetByDateRangeAsync(startDate, endDate);
 
-        var totalRooms = _dataStore.Rooms.Count;
-        var bookedRooms = bookings.Select(b => b.RoomId).Distinct().Count();
-
-        return new ReportViewModel
+        var stats = new Dictionary<string, int>
         {
-            Title = "Room Occupancy Report",
-            GeneratedDate = DateTime.UtcNow,
-            Data = new List<ReportDataViewModel>
-            {
-                new ReportDataViewModel
-                {
-                    Label = "Booked Rooms",
-                    Value = bookedRooms,
-                    Percentage = totalRooms > 0 ? (decimal)bookedRooms / totalRooms * 100 : 0
-                },
-                new ReportDataViewModel
-                {
-                    Label = "Available Rooms",
-                    Value = totalRooms - bookedRooms,
-                    Percentage = totalRooms > 0 ? (decimal)(totalRooms - bookedRooms) / totalRooms * 100 : 0
-                },
-                new ReportDataViewModel
-                {
-                    Label = "Total Bookings",
-                    Value = bookings.Count,
-                    Percentage = 100
-                }
-            }
+            { "Total Bookings", bookings.Count },
+            { "Confirmed", bookings.Count(b => b.Status == BookingStatus.Confirmed) },
+            { "Cancelled", bookings.Count(b => b.Status == BookingStatus.Cancelled) },
+            { "Completed", bookings.Count(b => b.Status == BookingStatus.Completed) }
         };
+
+        return stats;
     }
 
-    public ReportViewModel GenerateUserBookingReport(int userId)
+    public async Task<List<(string RoomName, int BookingCount)>> GetRoomUtilizationAsync(DateTime startDate, DateTime endDate)
     {
-        var bookings = _dataStore.Bookings
-            .Where(b => b.UserId == userId)
-            .ToList();
+        var bookings = await _unitOfWork.Bookings.GetByDateRangeAsync(startDate, endDate);
+        var rooms = await _unitOfWork.Rooms.GetAllAsync();
 
-        var confirmed = bookings.Count(b => b.Status == BookingStatus.Confirmed);
-        var cancelled = bookings.Count(b => b.Status == BookingStatus.Cancelled);
-        var pending = bookings.Count(b => b.Status == BookingStatus.Pending);
+        var utilization = new List<(string, int)>();
 
-        return new ReportViewModel
+        foreach (var room in rooms)
         {
-            Title = $"User Booking Report - {userId}",
-            GeneratedDate = DateTime.UtcNow,
-            Data = new List<ReportDataViewModel>
-            {
-                new ReportDataViewModel { Label = "Confirmed", Value = confirmed, Percentage = bookings.Count > 0 ? (decimal)confirmed / bookings.Count * 100 : 0 },
-                new ReportDataViewModel { Label = "Cancelled", Value = cancelled, Percentage = bookings.Count > 0 ? (decimal)cancelled / bookings.Count * 100 : 0 },
-                new ReportDataViewModel { Label = "Pending", Value = pending, Percentage = bookings.Count > 0 ? (decimal)pending / bookings.Count * 100 : 0 }
-            }
-        };
-    }
+            var roomBookingCount = bookings.Count(b => b.RoomId == room.Id && b.Status != BookingStatus.Cancelled);
+            utilization.Add((room.Name, roomBookingCount));
+        }
 
-    public ReportViewModel GenerateRoomBookingReport(int roomId)
-    {
-        var bookings = _dataStore.Bookings
-            .Where(b => b.RoomId == roomId)
-            .ToList();
-
-        var confirmed = bookings.Count(b => b.Status == BookingStatus.Confirmed);
-        var cancelled = bookings.Count(b => b.Status == BookingStatus.Cancelled);
-        var pending = bookings.Count(b => b.Status == BookingStatus.Pending);
-
-        var room = _dataStore.Rooms.FirstOrDefault(r => r.Id == roomId);
-
-        return new ReportViewModel
-        {
-            Title = $"Room Booking Report - {room?.RoomName}",
-            GeneratedDate = DateTime.UtcNow,
-            Data = new List<ReportDataViewModel>
-            {
-                new ReportDataViewModel { Label = "Confirmed", Value = confirmed, Percentage = bookings.Count > 0 ? (decimal)confirmed / bookings.Count * 100 : 0 },
-                new ReportDataViewModel { Label = "Cancelled", Value = cancelled, Percentage = bookings.Count > 0 ? (decimal)cancelled / bookings.Count * 100 : 0 },
-                new ReportDataViewModel { Label = "Pending", Value = pending, Percentage = bookings.Count > 0 ? (decimal)pending / bookings.Count * 100 : 0 }
-            }
-        };
+        return utilization.OrderByDescending(x => x.Item2).ToList();
     }
 }

@@ -1,0 +1,105 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using StudyRoomBooking.Application.Services;
+using StudyRoomBooking.Domain.Entities;
+using StudyRoomBooking.Domain.Enums;
+
+namespace StudyRoomBooking.Web.Pages.Staff;
+
+public class CreateRecurringModel : PageModel
+{
+    private readonly IRoomService _roomService;
+    private readonly IBookingService _bookingService;
+    private readonly IUserService _userService;
+
+    public List<Room> AvailableRooms { get; set; } = new();
+
+    public CreateRecurringModel(IRoomService roomService, IBookingService bookingService, IUserService userService)
+    {
+        _roomService = roomService;
+        _bookingService = bookingService;
+        _userService = userService;
+    }
+
+    public async Task OnGetAsync()
+    {
+        AvailableRooms = await _roomService.GetAllRoomsAsync();
+    }
+
+    public async Task<IActionResult> OnPostAsync(int roomId, string startDate, string startTime, string endTime, 
+        RecurrencePattern recurrencePattern, string? recurrenceEndDate, string? notes)
+    {
+        try
+        {
+            var room = await _roomService.GetRoomByIdAsync(roomId);
+            if (room == null)
+            {
+                ModelState.AddModelError(string.Empty, "Room not found.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            // Get current user (staff member)
+            var user = await _userService.GetUserByUserIdAsync("ST101");
+            if (user == null)
+            {
+                ModelState.AddModelError(string.Empty, "User not found.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            var date = DateTime.ParseExact(startDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            var start = TimeSpan.ParseExact(startTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            var end = TimeSpan.ParseExact(endTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+
+            // Parse recurrence end date if provided
+            DateTime? recurrenceEnd = null;
+            if (!string.IsNullOrEmpty(recurrenceEndDate))
+            {
+                recurrenceEnd = DateTime.ParseExact(recurrenceEndDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            // Validate booking date and time constraints for the start date
+            var (isValid, errorMessage) = await _bookingService.ValidateBookingAsync(roomId, date, start, end);
+            if (!isValid)
+            {
+                ModelState.AddModelError(string.Empty, errorMessage);
+                await OnGetAsync();
+                return Page();
+            }
+
+            // Check availability
+            var isAvailable = await _roomService.IsRoomAvailableAsync(roomId, date, start, end);
+            if (!isAvailable)
+            {
+                ModelState.AddModelError(string.Empty, "Selected time slot is not available.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            // Create recurring booking
+            var booking = new Booking
+            {
+                RoomId = roomId,
+                UserId = user.Id,
+                BookingDate = date,
+                StartTime = start,
+                EndTime = end,
+                RecurrencePattern = recurrencePattern,
+                RecurrenceEndDate = recurrenceEnd,
+                Notes = notes,
+                Status = BookingStatus.Confirmed
+            };
+
+            await _bookingService.CreateBookingAsync(booking);
+
+            return RedirectToPage("SearchSpecialized", new { message = "Recurring booking created successfully!" });
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError(string.Empty, $"Error creating booking: {ex.Message}");
+            await OnGetAsync();
+            return Page();
+        }
+    }
+}

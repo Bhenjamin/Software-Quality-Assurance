@@ -1,0 +1,87 @@
+@page
+@model CreateBookingModel
+@{
+	ViewData["Title"] = "Create Booking";
+	var minDate = DateTime.Today.ToString("yyyy-MM-dd");
+	var maxDate = DateTime.Today.AddDays(60).ToString("yyyy-MM-dd");
+	var defaultDate = DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<div class="container mt-4">
+	<div class="row">
+		<div class="col-md-8">
+			<div class="card">
+				<div class="card-header">
+					<h3>Create New Booking</h3>
+				</div>
+				<div class="card-body">
+					@if (!ViewData.ModelState.IsValid)
+					{
+						<div class="alert alert-danger alert-dismissible fade show" role="alert">
+							<strong>Booking Error!</strong>
+							<ul class="mb-0">
+								@foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+								{
+									<li>@error.ErrorMessage</li>
+								}
+							</ul>
+							<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+						</div>
+					}
+
+					<form method="post">
+						<div class="form-group">
+							<label for="roomId" class="form-label">Select Room *</label>
+							<select id="roomId" name="roomId" class="form-select" required>
+								<option value="">-- Select a room --</option>
+								@foreach (var room in Model.AvailableRooms)
+								{
+									<option value="@room.Id">@room.Name (@room.Code) - @room.Location</option>
+								}
+							</select>
+						</div>
+
+						<div class="row">
+							<div class="col-md-6">
+								<div class="form-group">
+									<label for="bookingDate" class="form-label">Booking Date *</label>
+									<input type="date" id="bookingDate" name="bookingDate" 
+										   min="@minDate" max="@maxDate"
+										   value="@defaultDate" class="form-control" required />
+									<small class="text-muted">You can book from today up to 60 days in advance</small>
+								</div>
+							</div>
+						</div>
+
+						<div class="row">
+							<div class="col-md-3">
+								<div class="form-group">
+									<label for="startTime" class="form-label">Start Time *</label>
+									<input type="time" id="startTime" name="startTime" 
+										   value="08:00" class="form-control" required />
+								</div>
+							</div>
+							<div class="col-md-3">
+								<div class="form-group">
+									<label for="endTime" class="form-label">End Time *</label>
+									<input type="time" id="endTime" name="endTime" 
+										   value="17:00" class="form-control" required />
+								</div>
+							</div>
+						</div>
+
+						<div class="form-group">
+							<label for="notes" class="form-label">Notes</label>
+							<textarea id="notes" name="notes" class="form-control" rows="3" placeholder="Add any special requests or notes..."></textarea>
+						</div>
+
+						<div class="mt-3">
+							<button type="submit" class="btn btn-primary">Create Booking</button>
+							<a asp-page="Search" class="btn btn-secondary">Back to Search</a>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

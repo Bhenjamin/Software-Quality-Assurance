@@ -1,0 +1,90 @@
+{
+  "Common": {
+    "AppName": "Study Room Booking System",
+    "Language": "English",
+    "Search": "Search",
+    "Book": "Book",
+    "Cancel": "Cancel",
+    "Save": "Save",
+    "Edit": "Edit",
+    "Delete": "Delete",
+    "Back": "Back",
+    "Home": "Home",
+    "Logout": "Logout"
+  },
+  "Navigation": {
+    "StudentDashboard": "Student Dashboard",
+    "SearchRooms": "Search Rooms",
+    "MyBookings": "My Bookings",
+    "BookingHistory": "Booking History",
+    "StaffDashboard": "Staff Dashboard",
+    "SpecializedRooms": "Specialized Rooms",
+    "RecurringBookings": "Recurring Bookings",
+    "AdminDashboard": "Admin Dashboard",
+    "RoomManagement": "Room Management",
+    "BookingManagement": "Booking Management",
+    "UserRoles": "User Roles",
+    "AccessRules": "Access Rules",
+    "Overrides": "Overrides",
+    "Reports": "Reports"
+  },
+  "Search": {
+    "Title": "Search Rooms",
+    "BookingDate": "Booking Date",
+    "StartTime": "Start Time",
+    "EndTime": "End Time",
+    "Capacity": "Minimum Capacity",
+    "RoomType": "Room Type",
+    "Location": "Location",
+    "SearchButton": "Search Rooms",
+    "NoResults": "No available rooms found for the selected criteria.",
+    "RoomCode": "Room Code",
+    "RoomName": "Room Name",
+    "AvailableRooms": "Available Rooms"
+  },
+  "Booking": {
+    "Title": "Create Booking",
+    "ConfirmBooking": "Confirm Booking",
+    "BookingConfirmed": "Booking confirmed successfully!",
+    "ConfirmationNumber": "Confirmation Number",
+    "RoomDetails": "Room Details",
+    "BookingDetails": "Booking Details",
+    "Notes": "Notes",
+    "ModifyBooking": "Modify Booking",
+    "CancelBooking": "Cancel Booking",
+    "ViewBookings": "View My Bookings",
+    "BookingHistory": "Booking History",
+    "Status": "Status",
+    "CreatedDate": "Created Date",
+    "CancelConfirm": "Are you sure you want to cancel this booking?"
+  },
+  "Room": {
+    "Code": "Code",
+    "Name": "Name",
+    "Location": "Location",
+    "Capacity": "Capacity",
+    "Type": "Type",
+    "Description": "Description",
+    "Available": "Available",
+    "NotAvailable": "Not Available"
+  },
+  "Admin": {
+    "ManageRooms": "Manage Rooms",
+    "AddRoom": "Add New Room",
+    "EditRoom": "Edit Room",
+    "DeleteRoom": "Delete Room",
+    "ManageBookings": "Manage All Bookings",
+    "ManageUsers": "Manage Users",
+    "AssignRoles": "Assign Roles",
+    "CreateAccessRule": "Create Access Rule",
+    "ManageOverrides": "Manage Overrides",
+    "GenerateReports": "Generate Reports"
+  },
+  "Validation": {
+    "Required": "This field is required.",
+    "InvalidDate": "Invalid date.",
+    "InvalidTime": "Invalid time.",
+    "TimeRangeInvalid": "End time must be after start time.",
+    "CapacityInvalid": "Capacity must be greater than 0."
+  }
+}

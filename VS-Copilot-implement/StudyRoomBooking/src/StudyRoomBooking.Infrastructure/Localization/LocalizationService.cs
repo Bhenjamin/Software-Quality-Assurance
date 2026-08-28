@@ -1,75 +1,99 @@
 using System.Text.Json;
-using Microsoft.AspNetCore.Http;
-using StudyRoomBooking.Infrastructure.Shared;
 
 namespace StudyRoomBooking.Infrastructure.Localization;
 
 public class LocalizationService : ILocalizationService
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly Dictionary<string, Dictionary<string, string>> _translations = new();
-    private const string LanguageSessionKey = "CurrentLanguage";
-    private const string DefaultLanguage = "en-US";
+    private Dictionary<string, object> _resources = new();
+    private string _currentLanguage = "en";
+    private readonly string _localizationPath;
 
-    public LocalizationService(IHttpContextAccessor httpContextAccessor)
+    public string CurrentLanguage => _currentLanguage;
+    public List<string> AvailableLanguages => new() { "en", "vi" };
+
+    public LocalizationService()
     {
-        _httpContextAccessor = httpContextAccessor;
-        LoadTranslations();
+        _localizationPath = Path.Combine(AppContext.BaseDirectory, "Localization", "Resources");
+        LoadResources("en");
     }
 
-    private void LoadTranslations()
+    public void SetLanguage(string languageCode)
     {
-        var languages = new[] { "en-US", "vi-VN" };
-        var basePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Localization", "Resources");
-
-        foreach (var lang in languages)
+        if (AvailableLanguages.Contains(languageCode))
         {
-            var filePath = Path.Combine(basePath, $"{lang}.json");
-            if (File.Exists(filePath))
-            {
-                var json = File.ReadAllText(filePath);
-                var translations = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-                if (translations != null)
-                    _translations[lang] = translations;
-            }
+            _currentLanguage = languageCode;
+            LoadResources(languageCode);
         }
     }
 
     public string GetString(string key)
     {
-        var language = GetCurrentLanguage();
-        if (_translations.ContainsKey(language) && _translations[language].ContainsKey(key))
-            return _translations[language][key];
+        return GetString("", key);
+    }
 
-        // Fallback to English
-        if (_translations.ContainsKey(DefaultLanguage) && _translations[DefaultLanguage].ContainsKey(key))
-            return _translations[DefaultLanguage][key];
+    public string GetString(string section, string key)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(section))
+            {
+                // Try to find the key in any section
+                foreach (var section_item in _resources)
+                {
+                    if (section_item.Value is JsonElement jsonElement)
+                    {
+                        if (jsonElement.TryGetProperty(key, out var value))
+                        {
+                            return value.GetString() ?? key;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (_resources.TryGetValue(section, out var sectionObj))
+                {
+                    if (sectionObj is JsonElement jsonElement)
+                    {
+                        if (jsonElement.TryGetProperty(key, out var value))
+                        {
+                            return value.GetString() ?? key;
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // If anything goes wrong, return the key
+        }
 
         return key;
     }
 
-    public void SetLanguage(string languageCode)
+    private void LoadResources(string languageCode)
     {
-        var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext != null)
-            httpContext.Session.SetString(LanguageSessionKey, languageCode);
-    }
+        _resources.Clear();
 
-    public string GetCurrentLanguage()
-    {
-        var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext != null)
+        var filePath = Path.Combine(_localizationPath, $"{languageCode}.json");
+
+        if (File.Exists(filePath))
         {
-            var language = httpContext.Session.GetString(LanguageSessionKey);
-            if (!string.IsNullOrEmpty(language))
-                return language;
-
-            // Check Accept-Language header
-            var acceptLanguage = httpContext.Request.Headers["Accept-Language"].ToString();
-            if (acceptLanguage.Contains("vi"))
-                return "vi-VN";
+            try
+            {
+                var json = File.ReadAllText(filePath);
+                using (var doc = JsonDocument.Parse(json))
+                {
+                    foreach (var property in doc.RootElement.EnumerateObject())
+                    {
+                        _resources[property.Name] = property.Value.Clone();
+                    }
+                }
+            }
+            catch
+            {
+                // If loading fails, resources will be empty
+            }
         }
-
-        return DefaultLanguage;
     }
 }

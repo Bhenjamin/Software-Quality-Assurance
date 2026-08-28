@@ -1,0 +1,131 @@
+@page "{id}"
+@model RoomDetailsModel
+@{
+	ViewData["Title"] = "Room Details";
+	var minDate = DateTime.Today.ToString("yyyy-MM-dd");
+	var maxDate = DateTime.Today.AddDays(60).ToString("yyyy-MM-dd");
+	var defaultDate = DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<div class="container mt-4">
+	<div class="row">
+		<div class="col-md-8">
+			@if (Model.Room != null)
+			{
+				<div class="card mb-4">
+					<div class="card-header">
+						<h3>@Model.Room.Name</h3>
+					</div>
+					<div class="card-body">
+						<div class="row mb-3">
+							<div class="col-md-6">
+								<p><strong>Room Code:</strong> @Model.Room.Code</p>
+								<p><strong>Location:</strong> @Model.Room.Location</p>
+								<p><strong>Capacity:</strong> @Model.Room.Capacity persons</p>
+							</div>
+							<div class="col-md-6">
+								<p><strong>Type:</strong> @Model.Room.Type</p>
+								<p><strong>Status:</strong> 
+									@if (Model.Room.IsAvailable)
+									{
+										<span class="badge bg-success">Available</span>
+									}
+									else
+									{
+										<span class="badge bg-danger">Not Available</span>
+									}
+								</p>
+							</div>
+						</div>
+						<p><strong>Description:</strong> @Model.Room.Description</p>
+
+						@if (Model.Room.IsAvailable)
+						{
+							@if (!ViewData.ModelState.IsValid)
+							{
+								<div class="alert alert-danger alert-dismissible fade show" role="alert">
+									<strong>Booking Error!</strong>
+									<ul class="mb-0">
+										@foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+										{
+											<li>@error.ErrorMessage</li>
+										}
+									</ul>
+									<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+								</div>
+							}
+
+							<form method="post">
+								<input type="hidden" name="roomId" value="@Model.Room.Id" />
+
+								<div class="row mt-4">
+									<div class="col-md-6">
+										<div class="form-group">
+											<label for="bookingDate" class="form-label">Booking Date *</label>
+											<input type="date" id="bookingDate" name="bookingDate" 
+												   min="@minDate" max="@maxDate"
+												   value="@defaultDate" class="form-control" required />
+											<small class="text-muted">You can book from today up to 60 days in advance</small>
+										</div>
+									</div>
+								</div>
+
+								<div class="row">
+									<div class="col-md-3">
+										<div class="form-group">
+											<label for="startTime" class="form-label">Start Time *</label>
+											<input type="time" id="startTime" name="startTime" 
+												   value="08:00" class="form-control" required />
+										</div>
+									</div>
+									<div class="col-md-3">
+										<div class="form-group">
+											<label for="endTime" class="form-label">End Time *</label>
+											<input type="time" id="endTime" name="endTime" 
+												   value="17:00" class="form-control" required />
+										</div>
+									</div>
+								</div>
+
+								<div class="form-group mt-3">
+									<label for="notes" class="form-label">Notes (optional)</label>
+									<textarea id="notes" name="notes" class="form-control" rows="3"></textarea>
+								</div>
+
+								<div class="mt-3">
+									<button type="submit" class="btn btn-primary" asp-page-handler="BookRoom">Book this Room</button>
+									<a asp-page="Search" class="btn btn-secondary">Back to Search</a>
+								</div>
+							</form>
+						}
+						else
+						{
+							<div class="alert alert-danger mt-3">This room is currently not available.</div>
+							<a asp-page="Search" class="btn btn-secondary">Back to Search</a>
+						}
+					</div>
+				</div>
+			}
+			else
+			{
+				<div class="alert alert-danger">Room not found.</div>
+			}
+		</div>
+
+		<div class="col-md-4">
+			<div class="card">
+				<div class="card-header">
+					<h5 class="mb-0">Availability</h5>
+				</div>
+				<div class="card-body">
+					<p class="text-muted">Today's schedule:</p>
+					<div id="availabilityInfo">
+						<p class="text-center">
+							<span class="badge bg-success">Available for booking</span>
+						</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
