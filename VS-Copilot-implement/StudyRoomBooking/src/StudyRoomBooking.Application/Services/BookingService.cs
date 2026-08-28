@@ -90,8 +90,14 @@ public class BookingService : IBookingService
         }
     }
 
-    public async Task<(bool IsValid, string ErrorMessage)> ValidateBookingAsync(int roomId, DateTime bookingDate, TimeSpan startTime, TimeSpan endTime)
+    public async Task<(bool IsValid, string ErrorMessage)> ValidateBookingAsync(int roomId, DateTime bookingDate, TimeSpan startTime, TimeSpan endTime, int? bookingIdToExclude = null)
     {
+        // Validation 0: Check if start time is before end time
+        if (startTime >= endTime)
+        {
+            return (false, "Start hour must be before end hour. Please select a valid time range.");
+        }
+
         // Get today's date in local time zone
         var today = DateTime.Today;  // Midnight today in local timezone
         var selectedDate = bookingDate.Date;  // Ensure we're comparing just the date part
@@ -115,6 +121,7 @@ public class BookingService : IBookingService
         var conflictingBookings = existingBookings.Where(b =>
             b.BookingDate.Date == selectedDate &&
             b.Status != BookingStatus.Cancelled &&
+            b.Id != bookingIdToExclude &&  // Exclude the booking being modified
             !(b.EndTime <= startTime || b.StartTime >= endTime) // Check for time overlap
         ).ToList();
 
@@ -125,7 +132,7 @@ public class BookingService : IBookingService
                 .OrderBy(b => b.StartTime)
                 .Select(b => $"- {b.StartTime:hh\\:mm} - {b.EndTime:hh\\:mm}");
 
-            var errorMessage = "This room is already booked during the selected time. Please choose a different time or room.\n\nConflicting bookings:\n" +
+            var errorMessage = "This room is already booked during the selected time. Please choose a different time or room.\n\nConflicting bookings:\n" + 
                               string.Join("\n", conflictTimes);
 
             return (false, errorMessage);

@@ -91,22 +91,27 @@ public class ModifyBookingModel : PageModel
                 end = TimeSpan.ParseExact(endHour, @"h\:mm", System.Globalization.CultureInfo.InvariantCulture);
             }
 
-            // Validate booking date and time constraints
-            var (isValid, errorMessage) = await _bookingService.ValidateBookingAsync(booking.RoomId, date, start, end);
-            if (!isValid)
-            {
-                ModelState.AddModelError(string.Empty, errorMessage);
-                await OnGetAsync(bookingId);
-                return Page();
-            }
+            // Validate booking date and time constraints only if date or time has changed
+            bool dateOrTimeChanged = date.Date != booking.BookingDate.Date || start != booking.StartTime || end != booking.EndTime;
 
-            // Check availability (excluding current booking)
-            var isAvailable = await _roomService.IsRoomAvailableAsync(booking.RoomId, date, start, end);
-            if (!isAvailable)
+            if (dateOrTimeChanged)
             {
-                ModelState.AddModelError(string.Empty, "Selected time slot is not available.");
-                await OnGetAsync(bookingId);
-                return Page();
+                var (isValid, errorMessage) = await _bookingService.ValidateBookingAsync(booking.RoomId, date, start, end, bookingId);
+                if (!isValid)
+                {
+                    ModelState.AddModelError(string.Empty, errorMessage);
+                    await OnGetAsync(bookingId);
+                    return Page();
+                }
+
+                // Check availability (excluding current booking)
+                var isAvailable = await _roomService.IsRoomAvailableAsync(booking.RoomId, date, start, end);
+                if (!isAvailable)
+                {
+                    ModelState.AddModelError(string.Empty, "Selected time slot is not available.");
+                    await OnGetAsync(bookingId);
+                    return Page();
+                }
             }
 
             booking.BookingDate = date;

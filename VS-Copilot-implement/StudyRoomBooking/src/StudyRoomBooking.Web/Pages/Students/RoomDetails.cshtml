@@ -7,6 +7,18 @@
 	var defaultDate = DateTime.Today.ToString("yyyy-MM-dd");
 }
 
+<style>
+	.time-validation-error {
+		display: none;
+		color: #dc3545;
+		font-size: 0.875rem;
+		margin-top: 0.25rem;
+	}
+	.time-validation-error.show {
+		display: block;
+	}
+</style>
+
 <div class="container mt-4">
 	<div class="row">
 		<div class="col-md-8">
@@ -85,23 +97,24 @@
 												}
 											</select>
 										</div>
-									</div>
-									<div class="col-md-3">
-										<div class="form-group">
-											<label for="endTime" class="form-label">End Hour *</label>
-											<select id="endTime" name="endTime" class="form-select" required>
-												@for (int hour = 9; hour <= 22; hour++)
-												{
-													var timeValue = $"{hour}:00";
-													var isSelected = (Model.SubmittedEndTime == timeValue) || 
-																(Model.SubmittedEndTime == null && Model.DefaultEndTime == timeValue) || 
-																(Model.SubmittedEndTime == null && Model.DefaultEndTime == null && hour == 17);
-													<option value="@timeValue" selected="@isSelected">@hour:00</option>
-												}
-											</select>
+										</div>
+										<div class="col-md-3">
+											<div class="form-group">
+												<label for="endTime" class="form-label">End Hour *</label>
+												<select id="endTime" name="endTime" class="form-select" required>
+													@for (int hour = 9; hour <= 22; hour++)
+													{
+														var timeValue = $"{hour}:00";
+														var isSelected = (Model.SubmittedEndTime == timeValue) || 
+																		(Model.SubmittedEndTime == null && Model.DefaultEndTime == timeValue) || 
+																		(Model.SubmittedEndTime == null && Model.DefaultEndTime == null && hour == 17);
+														<option value="@timeValue" selected="@isSelected">@hour:00</option>
+													}
+												</select>
+												<div id="timeValidationError" class="time-validation-error">Start hour must be before end hour.</div>
+											</div>
 										</div>
 									</div>
-								</div>
 
 								<div class="form-group mt-3">
 									<label for="notes" class="form-label">Notes (optional)</label>
@@ -145,3 +158,50 @@
 		</div>
 	</div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	const startTimeSelect = document.getElementById('startTime');
+	const endTimeSelect = document.getElementById('endTime');
+	const bookButton = document.querySelector('button[asp-page-handler="BookRoom"]');
+	const timeValidationError = document.getElementById('timeValidationError');
+
+	function validateTimeRange() {
+		if (startTimeSelect.value && endTimeSelect.value) {
+			const startHour = parseInt(startTimeSelect.value.split(':')[0]);
+			const endHour = parseInt(endTimeSelect.value.split(':')[0]);
+
+			if (startHour >= endHour) {
+				timeValidationError.classList.add('show');
+				if (bookButton) bookButton.disabled = true;
+				return false;
+			} else {
+				timeValidationError.classList.remove('show');
+				if (bookButton) bookButton.disabled = false;
+				return true;
+			}
+		} else {
+			timeValidationError.classList.remove('show');
+			if (bookButton) bookButton.disabled = false;
+			return true;
+		}
+	}
+
+	// Add event listeners to both time selects
+	startTimeSelect.addEventListener('change', validateTimeRange);
+	endTimeSelect.addEventListener('change', validateTimeRange);
+
+	// Validate on form submission
+	const form = document.querySelector('form');
+	if (form) {
+		form.addEventListener('submit', function(e) {
+			if (!validateTimeRange()) {
+				e.preventDefault();
+			}
+		});
+	}
+
+	// Initial validation in case values are pre-filled
+	validateTimeRange();
+});
+</script>

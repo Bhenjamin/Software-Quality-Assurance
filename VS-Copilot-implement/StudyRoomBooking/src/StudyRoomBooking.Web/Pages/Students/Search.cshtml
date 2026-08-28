@@ -6,6 +6,18 @@
 	var maxDate = DateTime.Today.AddDays(60).ToString("yyyy-MM-dd");
 }
 
+<style>
+	.time-validation-error {
+		display: none;
+		color: #dc3545;
+		font-size: 0.875rem;
+		margin-top: 0.25rem;
+	}
+	.time-validation-error.show {
+		display: block;
+	}
+</style>
+
 <div class="container mt-4">
 	<h2>Search Rooms</h2>
 
@@ -56,6 +68,7 @@
 							<option value="@hour:00" selected="@(Model.SearchCriteria.EndTime.HasValue && Model.SearchCriteria.EndTime.Value.Hours == hour)">@hour:00</option>
 						}
 					</select>
+					<div id="timeValidationError" class="time-validation-error">Start hour must be before end hour.</div>
 				</div>
 			</div>
 		</div>
@@ -202,3 +215,47 @@
 		<div class="alert alert-info">No available rooms found for the selected criteria.</div>
 	}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	const startTimeSelect = document.getElementById('startTime');
+	const endTimeSelect = document.getElementById('endTime');
+	const searchButton = document.querySelector('form button[type="submit"]');
+	const timeValidationError = document.getElementById('timeValidationError');
+
+	function validateTimeRange() {
+		if (startTimeSelect.value && endTimeSelect.value) {
+			const startHour = parseInt(startTimeSelect.value.split(':')[0]);
+			const endHour = parseInt(endTimeSelect.value.split(':')[0]);
+
+			if (startHour >= endHour) {
+				timeValidationError.classList.add('show');
+				searchButton.disabled = true;
+				return false;
+			} else {
+				timeValidationError.classList.remove('show');
+				searchButton.disabled = false;
+				return true;
+			}
+		} else {
+			timeValidationError.classList.remove('show');
+			searchButton.disabled = false;
+			return true;
+		}
+	}
+
+	// Add event listeners to both time selects
+	startTimeSelect.addEventListener('change', validateTimeRange);
+	endTimeSelect.addEventListener('change', validateTimeRange);
+
+	// Validate on form submission
+	document.querySelector('form').addEventListener('submit', function(e) {
+		if (!validateTimeRange()) {
+			e.preventDefault();
+		}
+	});
+
+	// Initial validation in case values are pre-filled
+	validateTimeRange();
+});
+</script>
