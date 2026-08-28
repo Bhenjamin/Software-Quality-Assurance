@@ -52,11 +52,64 @@ public class CreateRecurringModel : PageModel
             var start = TimeSpan.ParseExact(startTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
             var end = TimeSpan.ParseExact(endTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
 
+            // Validate time range (start must be before end)
+            if (start >= end)
+            {
+                ModelState.AddModelError(string.Empty, "Start time must be before end time.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            // Validate time is within allowed range (8:00 to 22:00)
+            var minTime = new TimeSpan(8, 0, 0);
+            var maxTime = new TimeSpan(22, 0, 0);
+            if (start < minTime || end > maxTime)
+            {
+                ModelState.AddModelError(string.Empty, "Booking time must be between 8:00 AM and 10:00 PM.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            // Validate booking date is not in the past
+            var today = DateTime.Today;
+            if (date.Date < today)
+            {
+                ModelState.AddModelError(string.Empty, "Cannot book for dates in the past. Please select today or later.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            // Validate booking date is not more than 60 days in advance
+            var daysInAdvance = (date.Date - today).Days;
+            if (daysInAdvance > 60)
+            {
+                ModelState.AddModelError(string.Empty, $"Bookings can only be made up to 60 days in advance. Your selected date is {daysInAdvance} days away.");
+                await OnGetAsync();
+                return Page();
+            }
+
             // Parse recurrence end date if provided
             DateTime? recurrenceEnd = null;
             if (!string.IsNullOrEmpty(recurrenceEndDate))
             {
                 recurrenceEnd = DateTime.ParseExact(recurrenceEndDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+
+                // Validate recurrence end date is not before start date
+                if (recurrenceEnd.Value.Date < date.Date)
+                {
+                    ModelState.AddModelError(string.Empty, "Recurrence end date must be on or after the start date.");
+                    await OnGetAsync();
+                    return Page();
+                }
+
+                // Validate recurrence end date is not more than 60 days in advance
+                var recurrenceDaysInAdvance = (recurrenceEnd.Value.Date - today).Days;
+                if (recurrenceDaysInAdvance > 60)
+                {
+                    ModelState.AddModelError(string.Empty, $"Recurrence end date can only be up to 60 days in advance. Your selected date is {recurrenceDaysInAdvance} days away.");
+                    await OnGetAsync();
+                    return Page();
+                }
             }
 
             // Validate booking date and time constraints for the start date
@@ -93,7 +146,7 @@ public class CreateRecurringModel : PageModel
 
             await _bookingService.CreateBookingAsync(booking);
 
-            return RedirectToPage("SearchSpecialized", new { message = "Recurring booking created successfully!" });
+            return RedirectToPage("/Students/Search", new { message = "Recurring booking created successfully!" });
         }
         catch (Exception ex)
         {

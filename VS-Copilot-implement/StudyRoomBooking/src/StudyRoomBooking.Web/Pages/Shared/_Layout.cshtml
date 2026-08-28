@@ -1,15 +1,27 @@
-﻿@{
+﻿@inject StudyRoomBooking.Infrastructure.Localization.ILocalizationService localizationService
+@{
     // Handle language selection from query parameter
     var langParam = Context.Request.Query["lang"].ToString();
     if (!string.IsNullOrEmpty(langParam) && (langParam == "en" || langParam == "vi"))
     {
         Context.Session.SetString("CurrentLanguage", langParam.ToUpper());
+        localizationService.SetLanguage(langParam); // Update localization service
     }
 
     // Ensure CurrentLanguage is always set (default to EN)
     if (string.IsNullOrEmpty(Context.Session.GetString("CurrentLanguage")))
     {
         Context.Session.SetString("CurrentLanguage", "EN");
+        localizationService.SetLanguage("en");
+    }
+    else
+    {
+        // Set the localization service to match the session language
+        var sessionLang = Context.Session.GetString("CurrentLanguage")?.ToLower();
+        if (!string.IsNullOrEmpty(sessionLang))
+        {
+            localizationService.SetLanguage(sessionLang);
+        }
     }
 }
 <!DOCTYPE html>
@@ -34,7 +46,7 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
+                            <a class="nav-link text-dark" asp-area="" asp-page="/Index">@localizationService.GetString("Common", "Home")</a>
                         </li>
                         @{
                             var userRole = Context.Session.GetString("CurrentUserRole") ?? "";
@@ -42,22 +54,28 @@
                         @if (userRole == "Student")
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Students/Search">Search Room</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Students/Search">@localizationService.GetString("Navigation", "SearchRooms")</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Students/MyBookings">My Bookings</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Students/MyBookings">@localizationService.GetString("Navigation", "MyBookings")</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Students/BookingHistory">Booking History</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Students/BookingHistory">@localizationService.GetString("Navigation", "BookingHistory")</a>
                             </li>
                         }
                         @if (userRole == "Staff")
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Staff/SearchSpecialized">Specialized Rooms</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Students/Search">@localizationService.GetString("Navigation", "SearchRooms")</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Staff/CreateRecurring">Recurring Bookings</a>
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Students/MyBookings">@localizationService.GetString("Navigation", "MyBookings")</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Students/BookingHistory">@localizationService.GetString("Navigation", "BookingHistory")</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Staff/CreateRecurring">@localizationService.GetString("Navigation", "RecurringBookings")</a>
                             </li>
                         }
                         @if (userRole == "Admin")
@@ -67,10 +85,10 @@
                                     Admin
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="adminMenu">
-                                    <li><a class="dropdown-item" asp-area="" asp-page="/Admin/RoomManagement">Rooms</a></li>
-                                    <li><a class="dropdown-item" asp-area="" asp-page="/Admin/BookingManagement">Bookings</a></li>
-                                    <li><a class="dropdown-item" asp-area="" asp-page="/Admin/UserRoles">User Roles</a></li>
-                                    <li><a class="dropdown-item" asp-area="" asp-page="/Admin/AccessRules">Access Rules</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Admin/RoomManagement">@localizationService.GetString("Navigation", "RoomManagement")</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Admin/BookingManagement">@localizationService.GetString("Navigation", "BookingManagement")</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Admin/UserRoles">@localizationService.GetString("Navigation", "UserRoles")</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-page="/Admin/AccessRules">@localizationService.GetString("Navigation", "AccessRules")</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-page="/Admin/Overrides">Overrides</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-page="/Admin/Reports">Reports</a></li>
                                 </ul>
@@ -103,7 +121,7 @@
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
                                     <li>
                                         <a class="dropdown-item" asp-page="/Logout">
-                                            🚪 Logout
+                                            🚪 @localizationService.GetString("Common", "Logout")
                                         </a>
                                     </li>
                                 </ul>

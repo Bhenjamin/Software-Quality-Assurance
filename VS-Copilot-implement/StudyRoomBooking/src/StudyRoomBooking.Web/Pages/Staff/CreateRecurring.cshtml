@@ -7,15 +7,42 @@
 	var defaultDate = DateTime.Today.ToString("yyyy-MM-dd");
 }
 
+<style>
+	.time-validation-error {
+		display: none;
+		color: #dc3545;
+		font-size: 0.875rem;
+		margin-top: 0.25rem;
+	}
+	.time-validation-error.show {
+		display: block;
+	}
+</style>
+
 <div class="container mt-4">
 	<h2>Create Recurring Booking</h2>
 
-	<div class="card">
-		<div class="card-body">
-			<form method="post">
-				<div class="row">
-					<div class="col-md-6">
-						<div class="form-group">
+	@if (!ViewData.ModelState.IsValid)
+	{
+		<div class="alert alert-danger alert-dismissible fade show" role="alert">
+			<strong>Booking Error!</strong>
+			<ul class="mb-0">
+				@foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+				{
+					<li>@error.ErrorMessage</li>
+				}
+			</ul>
+			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+		</div>
+	}
+
+	<div class="row">
+		<!-- Left Column: Form -->
+		<div class="col-lg-8">
+			<div class="card">
+				<div class="card-body">
+					<form method="post">
+						<div class="form-group mb-3">
 							<label for="roomId" class="form-label">Select Room *</label>
 							<select id="roomId" name="roomId" class="form-select" required>
 								<option value="">-- Select a room --</option>
@@ -25,41 +52,44 @@
 								}
 							</select>
 						</div>
-					</div>
-				</div>
 
-				<div class="row">
-					<div class="col-md-6">
-						<div class="form-group">
+						<div class="form-group mb-3">
 							<label for="startDate" class="form-label">Start Date *</label>
 							<input type="date" id="startDate" name="startDate" 
 								   min="@minDate" max="@maxDate"
 								   value="@defaultDate" class="form-control" required />
 							<small class="text-muted">You can book from today up to 60 days in advance</small>
 						</div>
-					</div>
-				</div>
 
-				<div class="row">
-					<div class="col-md-3">
-						<div class="form-group">
-							<label for="startTime" class="form-label">Start Time *</label>
-							<input type="time" id="startTime" name="startTime" 
-								   value="08:00" class="form-control" required />
+						<div class="row">
+							<div class="col-md-6 mb-3">
+								<div class="form-group">
+									<label for="startTime" class="form-label">Start Hour *</label>
+									<select id="startTime" name="startTime" class="form-select" required>
+										<option value="" disabled selected>--:--</option>
+										@for (int hour = 8; hour <= 21; hour++)
+										{
+											<option value="@hour:00" selected="@(hour == 8)">@hour:00</option>
+										}
+									</select>
+								</div>
+							</div>
+							<div class="col-md-6 mb-3">
+								<div class="form-group">
+									<label for="endTime" class="form-label">End Hour *</label>
+									<select id="endTime" name="endTime" class="form-select" required>
+										<option value="" disabled selected>--:--</option>
+										@for (int hour = 9; hour <= 22; hour++)
+										{
+											<option value="@hour:00" selected="@(hour == 17)">@hour:00</option>
+										}
+									</select>
+									<div id="timeValidationError" class="time-validation-error">Start hour must be before end hour.</div>
+								</div>
+							</div>
 						</div>
-					</div>
-					<div class="col-md-3">
-						<div class="form-group">
-							<label for="endTime" class="form-label">End Time *</label>
-							<input type="time" id="endTime" name="endTime" 
-								   value="17:00" class="form-control" required />
-						</div>
-					</div>
-				</div>
 
-				<div class="row">
-					<div class="col-md-6">
-						<div class="form-group">
+						<div class="form-group mb-3">
 							<label for="recurrencePattern" class="form-label">Recurrence Pattern *</label>
 							<select id="recurrencePattern" name="recurrencePattern" class="form-select" required>
 								@foreach (var pattern in Enum.GetValues(typeof(StudyRoomBooking.Domain.Enums.RecurrencePattern)))
@@ -68,46 +98,97 @@
 								}
 							</select>
 						</div>
-					</div>
-				</div>
 
-				<div class="row">
-					<div class="col-md-6">
-						<div class="form-group">
+						<div class="form-group mb-3">
 							<label for="recurrenceEndDate" class="form-label">Recurrence End Date</label>
 							<input type="date" id="recurrenceEndDate" name="recurrenceEndDate" 
 								   min="@minDate" max="@maxDate"
 								   class="form-control" />
+							<small class="text-muted">Optional: Leave empty for indefinite recurrence</small>
 						</div>
-					</div>
-				</div>
 
-				<div class="form-group">
-					<label for="notes" class="form-label">Notes</label>
-					<textarea id="notes" name="notes" class="form-control" rows="3"></textarea>
-				</div>
+						<div class="form-group mb-3">
+							<label for="notes" class="form-label">Notes</label>
+							<textarea id="notes" name="notes" class="form-control" rows="3"></textarea>
+						</div>
 
-				<div class="mt-4">
-					<button type="submit" class="btn btn-primary">Create Recurring Booking</button>
-					<a asp-page="/Staff/SearchSpecialized" class="btn btn-secondary">Back</a>
+						<div class="mt-4">
+							<button type="submit" class="btn btn-primary">Create Recurring Booking</button>
+							<a asp-page="/Students/Search" class="btn btn-secondary">Back</a>
+						</div>
+					</form>
 				</div>
-			</form>
+			</div>
 		</div>
-	</div>
 
-	<div class="card mt-4">
-		<div class="card-header">
-			<h5 class="mb-0">Information</h5>
-		</div>
-		<div class="card-body">
-			<p><strong>Recurrence Patterns:</strong></p>
-			<ul>
-				<li><strong>None:</strong> One-time booking</li>
-				<li><strong>Daily:</strong> Repeats every day</li>
-				<li><strong>Weekly:</strong> Repeats every week on the same day</li>
-				<li><strong>Bi-Weekly:</strong> Repeats every two weeks</li>
-				<li><strong>Monthly:</strong> Repeats every month on the same date</li>
-			</ul>
+		<!-- Right Column: Information Panel -->
+		<div class="col-lg-4">
+			<div class="card sticky-top" style="top: 20px;">
+				<div class="card-header">
+					<h5 class="mb-0">Information</h5>
+				</div>
+				<div class="card-body">
+					<p><strong>Recurrence Patterns:</strong></p>
+					<ul class="small">
+						<li><strong>None:</strong> One-time booking</li>
+						<li><strong>Daily:</strong> Repeats every day</li>
+						<li><strong>Weekly:</strong> Repeats every week on the same day</li>
+						<li><strong>Bi-Weekly:</strong> Repeats every two weeks</li>
+						<li><strong>Monthly:</strong> Repeats every month on the same date</li>
+					</ul>
+					<hr>
+					<p class="mb-2"><strong>Booking Limits:</strong></p>
+					<ul class="small mb-0">
+						<li><strong>Date Range:</strong> Today to 60 days in advance</li>
+						<li><strong>Time Range:</strong> 8:00 AM to 10:00 PM</li>
+						<li><strong>Note:</strong> All times are in full hours (no minutes)</li>
+					</ul>
+				</div>
+			</div>
 		</div>
 	</div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	const startTimeSelect = document.getElementById('startTime');
+	const endTimeSelect = document.getElementById('endTime');
+	const submitButton = document.querySelector('form button[type="submit"]');
+	const timeValidationError = document.getElementById('timeValidationError');
+
+	function validateTimeRange() {
+		if (startTimeSelect.value && endTimeSelect.value) {
+			const startHour = parseInt(startTimeSelect.value.split(':')[0]);
+			const endHour = parseInt(endTimeSelect.value.split(':')[0]);
+
+			if (startHour >= endHour) {
+				timeValidationError.classList.add('show');
+				submitButton.disabled = true;
+				return false;
+			} else {
+				timeValidationError.classList.remove('show');
+				submitButton.disabled = false;
+				return true;
+			}
+		} else {
+			timeValidationError.classList.remove('show');
+			submitButton.disabled = false;
+			return true;
+		}
+	}
+
+	// Add event listeners to both time selects
+	startTimeSelect.addEventListener('change', validateTimeRange);
+	endTimeSelect.addEventListener('change', validateTimeRange);
+
+	// Validate on form submission
+	document.querySelector('form').addEventListener('submit', function(e) {
+		if (!validateTimeRange()) {
+			e.preventDefault();
+		}
+	});
+
+	// Initial validation in case values are pre-filled
+	validateTimeRange();
+});
+</script>
