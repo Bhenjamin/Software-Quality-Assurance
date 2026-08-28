@@ -1,4 +1,18 @@
-﻿<!DOCTYPE html>
+﻿@{
+    // Handle language selection from query parameter
+    var langParam = Context.Request.Query["lang"].ToString();
+    if (!string.IsNullOrEmpty(langParam) && (langParam == "en" || langParam == "vi"))
+    {
+        Context.Session.SetString("CurrentLanguage", langParam.ToUpper());
+    }
+
+    // Ensure CurrentLanguage is always set (default to EN)
+    if (string.IsNullOrEmpty(Context.Session.GetString("CurrentLanguage")))
+    {
+        Context.Session.SetString("CurrentLanguage", "EN");
+    }
+}
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -63,19 +77,37 @@
                             </li>
                         }
                     </ul>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="languageMenu" data-bs-toggle="dropdown" aria-expanded="false">
-                            Language
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="languageMenu">
-                            <li><a class="dropdown-item" href="?lang=en">English</a></li>
-                            <li><a class="dropdown-item" href="?lang=vi">Tiếng Việt</a></li>
-                        </ul>
-                    </div>
-                    <div class="ms-2">
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <!-- Language Selector -->
+                        @{
+                            var currentLang = Context.Session.GetString("CurrentLanguage") ?? "EN";
+                            var langDisplay = currentLang.ToUpper();
+                        }
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="languageMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                                @langDisplay
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="languageMenu">
+                                <li><a class="dropdown-item" href="?lang=en">English (EN)</a></li>
+                                <li><a class="dropdown-item" href="?lang=vi">Tiếng Việt (VI)</a></li>
+                            </ul>
+                        </div>
+
+                        <!-- User Account Menu (shows when logged in) -->
                         @if (Context.Session.GetString("CurrentUser") != null)
                         {
-                            <a asp-page="/Logout" class="btn btn-sm btn-outline-danger">Logout</a>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                                    👤 @Context.Session.GetString("CurrentUser")
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
+                                    <li>
+                                        <a class="dropdown-item" asp-page="/Logout">
+                                            🚪 Logout
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
                         }
                     </div>
 
