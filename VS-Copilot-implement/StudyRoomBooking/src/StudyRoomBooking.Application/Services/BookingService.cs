@@ -9,7 +9,10 @@ public class BookingService : IBookingService
     private readonly INotificationService _notificationService;
     private const int MaxAdvanceDaysAllowed = 60;
 
-    public BookingService(Domain.Interfaces.IUnitOfWork unitOfWork, INotificationService notificationService)
+    public BookingService(
+        Domain.Interfaces.IUnitOfWork unitOfWork,
+        INotificationService notificationService
+    )
     {
         _unitOfWork = unitOfWork;
         _notificationService = notificationService;
@@ -35,22 +38,42 @@ public class BookingService : IBookingService
         return await _unitOfWork.Bookings.GetByRoomIdAsync(roomId);
     }
 
-    public async Task<List<Booking>> SearchBookingsAsync(DateTime date, int? roomId = null, int? userId = null)
+    public async Task<List<Booking>> SearchBookingsAsync(
+        DateTime date,
+        int? roomId = null,
+        int? userId = null
+    )
     {
         var allBookings = await _unitOfWork.Bookings.GetAllAsync();
 
-        var filtered = allBookings.Where(b => 
-            b.BookingDate.Date == date.Date &&
-            b.Status != BookingStatus.Cancelled &&
-            (!roomId.HasValue || b.RoomId == roomId.Value) &&
-            (!userId.HasValue || b.UserId == userId.Value)
-        ).ToList();
+        var filtered = allBookings
+            .Where(b =>
+                b.BookingDate.Date == date.Date
+                && b.Status != BookingStatus.Cancelled
+                && (!roomId.HasValue || b.RoomId == roomId.Value)
+                && (!userId.HasValue || b.UserId == userId.Value)
+            )
+            .ToList();
 
         return filtered;
     }
 
     public async Task<Booking> CreateBookingAsync(Booking booking)
     {
+        if (booking.UserId <= 0)
+        {
+            throw new ArgumentException(
+                "A valid student must be attached to the booking.",
+                nameof(booking)
+            );
+        }
+
+        var init_user = await _unitOfWork.Users.GetByIdAsync(booking.UserId);
+        if (init_user == null)
+        {
+            throw new ArgumentException("The specified student does not exist.", nameof(booking));
+        }
+
         booking.ConfirmationNumber = Guid.NewGuid().ToString("N").Substring(0, 10).ToUpper();
         booking.Status = BookingStatus.Confirmed;
         booking.CreatedAt = DateTime.UtcNow;
@@ -64,7 +87,12 @@ public class BookingService : IBookingService
 
         if (user != null && room != null)
         {
-            await _notificationService.SendBookingConfirmationAsync(user.Email, room.Name, booking.BookingDate, booking.ConfirmationNumber);
+            await _notificationService.SendBookingConfirmationAsync(
+                user.Email,
+                room.Name,
+                booking.BookingDate,
+                booking.ConfirmationNumber
+            );
         }
 
         return booking;
@@ -90,7 +118,13 @@ public class BookingService : IBookingService
         }
     }
 
-    public async Task<(bool IsValid, string ErrorMessage)> ValidateBookingAsync(int roomId, DateTime bookingDate, TimeSpan startTime, TimeSpan endTime, int? bookingIdToExclude = null)
+    public async Task<(bool IsValid, string ErrorMessage)> ValidateBookingAsync(
+        int roomId,
+        DateTime bookingDate,
+        TimeSpan startTime,
+        TimeSpan endTime,
+        int? bookingIdToExclude = null
+    )
     {
         // Validation 0: Check if start time is before end time
         if (startTime >= endTime)
@@ -99,31 +133,40 @@ public class BookingService : IBookingService
         }
 
         // Get today's date in local time zone
-        var today = DateTime.Today;  // Midnight today in local timezone
-        var selectedDate = bookingDate.Date;  // Ensure we're comparing just the date part
+        var today = DateTime.Today; // Midnight today in local timezone
+        var selectedDate = bookingDate.Date; // Ensure we're comparing just the date part
 
         // Validation 1: Check if booking date is in the past (strictly before today)
         if (selectedDate < today)
         {
             var daysInPast = (today - selectedDate).Days;
-            return (false, $"Cannot book rooms in the past. The date you selected is {daysInPast} days ago. Please select today or a future date.");
+            return (
+                false,
+                $"Cannot book rooms in the past. The date you selected is {daysInPast} days ago. Please select today or a future date."
+            );
         }
 
         // Validation 2: Check if booking is more than 60 days in advance
         var daysInAdvance = (selectedDate - today).Days;
         if (daysInAdvance > MaxAdvanceDaysAllowed)
         {
-            return (false, $"Bookings can only be made up to {MaxAdvanceDaysAllowed} days in advance. Your selected date is {daysInAdvance} days away.");
+            return (
+                false,
+                $"Bookings can only be made up to {MaxAdvanceDaysAllowed} days in advance. Your selected date is {daysInAdvance} days away."
+            );
         }
 
         // Validation 3: Check for double bookings (same room, overlapping time)
         var existingBookings = await _unitOfWork.Bookings.GetByRoomIdAsync(roomId);
-        var conflictingBookings = existingBookings.Where(b =>
-            b.BookingDate.Date == selectedDate &&
-            b.Status != BookingStatus.Cancelled &&
-            b.Id != bookingIdToExclude &&  // Exclude the booking being modified
-            !(b.EndTime <= startTime || b.StartTime >= endTime) // Check for time overlap
-        ).ToList();
+        var conflictingBookings = existingBookings
+            .Where(b =>
+                b.BookingDate.Date == selectedDate
+                && b.Status != BookingStatus.Cancelled
+                && b.Id != bookingIdToExclude
+                && // Exclude the booking being modified
+                !(b.EndTime <= startTime || b.StartTime >= endTime) // Check for time overlap
+            )
+            .ToList();
 
         if (conflictingBookings.Any())
         {
@@ -132,8 +175,9 @@ public class BookingService : IBookingService
                 .OrderBy(b => b.StartTime)
                 .Select(b => $"- {b.StartTime:hh\\:mm} - {b.EndTime:hh\\:mm}");
 
-            var errorMessage = "This room is already booked during the selected time. Please choose a different time or room.\n\nConflicting bookings:\n" + 
-                              string.Join("\n", conflictTimes);
+            var errorMessage =
+                "This room is already booked during the selected time. Please choose a different time or room.\n\nConflicting bookings:\n"
+                + string.Join("\n", conflictTimes);
 
             return (false, errorMessage);
         }
