@@ -3,27 +3,28 @@
 A two-week prototype demonstrating Software Quality Assurance practice
 alongside a working booking system, built with a clean, layered C# solution.
 
-> **Scope note:** This is a foundation prototype, not a finished product. See
-> [`TEAM_TASKS.md`](TEAM_TASKS.md) for the planned extensions and responsibilities.
+> **Scope note:** This is a foundation prototype, not a finished product. 
 
 ## Solution structure
 
 ```text
-VS-Copilot-implement/
-└── StudyRoomBooking/
-    ├── StudyRoomBooking.slnx
-    ├── src/
-    │   ├── StudyRoomBooking.Domain/          Room, User, Booking models + enums — no dependencies
-    │   ├── StudyRoomBooking.Application/     Interfaces, DTOs, and core services
-    │   ├── StudyRoomBooking.Infrastructure/  In-memory repositories + seed data
-    │   ├── StudyRoomBooking.Web/             ASP.NET Core Razor Pages GUI
-    │   └── StudyRoomBooking.ConsoleDemo/     Console walkthrough of the application logic
-    └── tests/
-        └── StudyRoomBooking.Tests/           MSTest suite for validation and regression checks
+
+StudyRoomBooking/
+├── StudyRoomBooking.slnx
+├── src/
+│   ├── StudyRoomBooking.Domain/          Room, User, Booking models + enums — no dependencies
+│   ├── StudyRoomBooking.Application/     Interfaces, DTOs, and core services
+│   ├── StudyRoomBooking.Infrastructure/  In-memory repositories + seed data
+│   ├── StudyRoomBooking.Web/             ASP.NET Core Razor Pages GUI
+│   └── StudyRoomBooking.ConsoleDemo/     Console walkthrough of the application logic
+└── tests/
+    └── StudyRoomBooking.Tests/           MSTest suite for validation and regression checks
 ```
 
 Dependencies flow one way: `Web` / `ConsoleDemo` / `Tests` → `Infrastructure` → `Application` → `Domain`.
 Nothing in `Domain` or `Application` depends on `Infrastructure` or `Web`, so a future swap to a real database or API layer can be done without disturbing the business logic or tests.
+
+***
 
 ## GUI framework choice
 
@@ -35,58 +36,52 @@ Nothing in `Domain` or `Application` depends on `Infrastructure` or `Web`, so a 
 - Validation, overlap prevention, and authorization remain in the application services and are tested through the MSTest suite.
 - Login is simulated with a session-based user selection, consistent with the assessment scope.
 
-### Screens implemented
+***
 
-**Student workflow:** user selection → room search with filters → availability results → booking form → confirmation → booking history → modify → cancel.
+## Features Completed So Far
 
-**Administrator workflow:** room list → add-room form → all-bookings overview → user/role overview.
+### Authentication & Roles
+- Login / logout with role-based access (Student, Staff, Admin)
 
-Reporting dashboards and more advanced room management are intentionally left for future extension.
+### Room Search & Booking (Student)
+- Search available rooms by date, time, capacity, room type, and location
+- Room search results respect major-based access restrictions — specialised rooms (e.g. Design Studio, Engineering Lab) only appear for students in the required major
+- View room details
+- Create a booking for an available room
+- Booking validation: rejects overlapping/double bookings for the same room and time slot
+- Booking validation: rejects bookings in the past
+- Booking validation: rejects bookings more than 60 days in advance
+- Modify an existing future booking to a new time/date
+- Cancel a future booking
+- View booking history / "My Bookings"
 
-## Running the GUI
+### Recurring Bookings (Staff)
+- Create recurring bookings (daily, weekly, bi-weekly, monthly patterns)
+- Recurring bookings can skip the standard advance-booking-window check
 
-```bash
-dotnet run --project src/StudyRoomBooking.Web
-```
+### Admin
+- Room management (create/update/delete rooms)
+- Access rule management (major-based room restrictions)
+- Booking management / overrides (admin can override booking rules with a reason)
+- User role management
+- Reports: booking statistics and room utilisation by date range
 
-Then open the URL printed by the app, usually `http://localhost:5176`.
+### Other
+- Unit test suite (MSTest + Moq) covering core booking and search/eligibility logic
 
-## What's implemented (Assessment 1 priority list)
-
-1. Clean C# solution architecture ✅
-2. Core domain models (`Room`, `User`, `Booking`) ✅
-3. Room searching with filters for date, time, capacity, location, and room type ✅
-4. Booking creation via `BookingService.CreateBooking` ✅
-5. Booking validation (time sanity, user/room existence) ✅
-6. Double-booking prevention through overlap checks per room ✅
-7. User roles (`Student`, `AcademicStaff`, `Administrator`, `ManagementUser`) ✅
-8. Basic access control (`AccessControlService`) ✅
-9. Booking modification and cancellation ✅
-10. MSTest suite covering core workflows ✅
-
-Out of scope for this phase: advanced reporting, real authentication, email integration, recurring bookings, and broader multilingual support.
+***
 
 ## Running it
 
-Requires the .NET 8 SDK.
+Requires the .NET 8 or 10 SDK.
 
 ```bash
 # Run the GUI
 dotnet run --project src/StudyRoomBooking.Web
 
-# Run the console demo
-dotnet run --project src/StudyRoomBooking.ConsoleDemo
+# Then Open in your browser
+http://localhost:5176
 
 # Run the test suite
 dotnet test
 ```
-
-## Requirements traceability (examples)
-
-| Requirement (testable form) | Implemented in | Covered by |
-|---|---|---|
-| Search results return within 5s for ≥100 reservations | `RoomSearchService.SearchAvailableRooms` | `RoomSearchServiceTests` |
-| System rejects overlapping reservations | `BookingService.CreateBooking` / `HasConflict` | `BookingLifecycleTests` |
-| Only authorised users access restricted rooms/admin functions | `AccessControlService` | `AccessControlServiceTests` |
-
-A full traceability matrix mapping every requirement in the project brief is a future developer task.
