@@ -44,10 +44,14 @@ public class RoomManagementModel : PageModel
     }
 
     public async Task<IActionResult> OnPostSaveAsync(int? roomId, string code, string name, string location, 
-        int capacity, RoomType type, string description, bool isAvailable)
+        int capacity, RoomType type, string description)
     {
         try
         {
+            // Read checkbox value directly from form (more reliable than model binding)
+            bool isAvailable = Request.Form.ContainsKey("isAvailable") && 
+                              Request.Form["isAvailable"].ToString().Equals("true", StringComparison.OrdinalIgnoreCase);
+
             if (roomId.HasValue)
             {
                 // Update existing room
