@@ -3,7 +3,6 @@
 @{
 	ViewData["Title"] = "Recurring Bookings";
 	var minDate = DateTime.Today.ToString("yyyy-MM-dd");
-	var maxDate = DateTime.Today.AddDays(60).ToString("yyyy-MM-dd");
 	var defaultDate = DateTime.Today.ToString("yyyy-MM-dd");
 }
 
@@ -56,7 +55,7 @@
 						<div class="form-group mb-3">
 							<label for="startDate" class="form-label">Start Date *</label>
 							<input type="date" id="startDate" name="startDate" 
-								   min="@minDate" max="@maxDate"
+								   min="@minDate"
 								   value="@(Model.PreSelectedStartDate ?? defaultDate)" class="form-control" required />
 							<small class="text-muted">You can book from today up to 60 days in advance</small>
 						</div>
@@ -104,9 +103,9 @@
 						<div class="form-group mb-3">
 							<label for="recurrenceEndDate" class="form-label">Recurrence End Date</label>
 							<input type="date" id="recurrenceEndDate" name="recurrenceEndDate" 
-								   min="@minDate" max="@maxDate"
+								   min="@minDate"
 								   value="@(Model.PreSelectedRecurrenceEndDate ?? "")" class="form-control" />
-							<small class="text-muted">Optional: Leave empty for indefinite recurrence</small>
+							<small class="text-muted">Optional: Leave empty for the same day as start date. No limit on future dates.</small>
 						</div>
 
 						<div class="form-group mb-3">
@@ -141,7 +140,7 @@
 					<hr>
 					<p class="mb-2"><strong>Booking Limits:</strong></p>
 					<ul class="small mb-0">
-						<li><strong>Date Range:</strong> Today to 60 days in advance</li>
+						<li><strong>Date Range:</strong> Today onwards (no future date limit for recurring bookings)</li>
 						<li><strong>Time Range:</strong> 8:00 AM to 10:00 PM</li>
 						<li><strong>Note:</strong> All times are in full hours (no minutes)</li>
 					</ul>
