@@ -57,6 +57,15 @@ public class RoomService : IRoomService
                 {
                     filteredByMajor.Add(room);
                 }
+                // Specialised restricted rooms (DesignStudio, EngineeringLab) should be included
+                // if the student has access, regardless of "Any Type" search
+                else if (room.Type == RoomType.DesignStudio || room.Type == RoomType.EngineeringLab)
+                {
+                    if (allowedMajors.Contains(studentMajor.Value))
+                    {
+                        filteredByMajor.Add(room);
+                    }
+                }
                 // If room type is not specified (Any Type search):
                 // - Students should only see Study rooms and restricted Lab rooms for their major
                 // - Do NOT show unrestricted rooms (Meeting, Seminar, etc.)

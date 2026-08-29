@@ -167,7 +167,7 @@ void InitializeSeedData(IServiceProvider serviceProvider)
             Name = "Design Studio",
             Location = "Building D, Floor 1",
             Capacity = 12,
-            Type = StudyRoomBooking.Domain.Enums.RoomType.Lab,
+            Type = StudyRoomBooking.Domain.Enums.RoomType.DesignStudio,
             Description = "Design and creative workspace - Business major only"
         },
         new()
@@ -176,7 +176,7 @@ void InitializeSeedData(IServiceProvider serviceProvider)
             Name = "Engineering Lab",
             Location = "Building E, Floor 1",
             Capacity = 25,
-            Type = StudyRoomBooking.Domain.Enums.RoomType.Lab,
+            Type = StudyRoomBooking.Domain.Enums.RoomType.EngineeringLab,
             Description = "Advanced engineering lab - Engineering major only"
         }
     };
