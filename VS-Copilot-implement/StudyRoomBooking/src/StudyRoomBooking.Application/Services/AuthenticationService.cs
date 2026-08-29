@@ -44,7 +44,7 @@ public class AuthenticationService : IAuthenticationService
             return (false, 0, "", "", "User not found. Please contact administrator.");
         }
 
-        return (true, user.Id, user.Name, user.Role.ToString(), "Login successful.");
+        return (true, user.Id, user.UserId, user.Role.ToString(), "Login successful.");
     }
 
     public async Task LogoutAsync()

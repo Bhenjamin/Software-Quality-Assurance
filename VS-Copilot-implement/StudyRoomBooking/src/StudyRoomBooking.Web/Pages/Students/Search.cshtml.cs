@@ -11,6 +11,7 @@ public class SearchModel : PageModel
 {
     private readonly IRoomService _roomService;
     private readonly IBookingService _bookingService;
+    private readonly IUserService _userService;
 
     [BindProperty]
     public RoomSearchCriteria SearchCriteria { get; set; } = new();
@@ -18,28 +19,84 @@ public class SearchModel : PageModel
     public List<Room> SearchResults { get; set; } = new();
     public bool HasSearched { get; set; } = false;
     public string? CurrentUserRole { get; set; } = null;
+    public StudentMajor? CurrentUserMajor { get; set; } = null;
+    public string? CurrentUserName { get; set; } = null;
+    public List<RoomType> AvailableRoomTypes { get; set; } = new();
 
-    public SearchModel(IRoomService roomService, IBookingService bookingService)
+    public SearchModel(IRoomService roomService, IBookingService bookingService, IUserService userService)
     {
         _roomService = roomService;
         _bookingService = bookingService;
+        _userService = userService;
     }
 
-    public void OnGet()
+    public async Task OnGetAsync()
     {
         SearchCriteria.BookingDate = DateTime.Today;
         // StartTime and EndTime are nullable, so leave them as null (not set)
 
         // Get the current user role from session
         CurrentUserRole = HttpContext.Session.GetString("CurrentUserRole");
+        CurrentUserName = HttpContext.Session.GetString("CurrentUser");
 
-        // Apply role-based room type filtering
-        if (CurrentUserRole == "Student")
+        // Get user's major if student
+        if (CurrentUserRole == "Student" && !string.IsNullOrEmpty(CurrentUserName))
         {
-            // Students can only search for Study rooms
-            SearchCriteria.RoomType = RoomType.Study;
+            var user = await _userService.GetUserByUserIdAsync(CurrentUserName);
+            if (user != null)
+            {
+                CurrentUserMajor = user.Major;
+            }
         }
-        // Staff can search all room types - no restriction here
+
+        // Populate available room types based on user role
+        await PopulateAvailableRoomTypesAsync();
+    }
+
+    private async Task PopulateAvailableRoomTypesAsync()
+    {
+        if (CurrentUserRole == "Staff")
+        {
+            // Staff can see all room types
+            AvailableRoomTypes = Enum.GetValues(typeof(RoomType))
+                .Cast<RoomType>()
+                .ToList();
+        }
+        else if (CurrentUserRole == "Student" && CurrentUserMajor.HasValue)
+        {
+            // Students can only see Study rooms and restricted rooms available to their major
+            var allRooms = await _roomService.GetAllRoomsAsync();
+            var availableTypes = new HashSet<RoomType>();
+
+            // Add Study room type (always available to all students)
+            availableTypes.Add(RoomType.Study);
+
+            // Check which restricted rooms are available to this student's major
+            foreach (var room in allRooms)
+            {
+                if (room.Type == RoomType.Study)
+                {
+                    // Already added above
+                    continue;
+                }
+
+                var allowedMajors = await _roomService.GetAllowedMajorsForRoomAsync(room.Id);
+
+                // If room has restrictions and student's major is in the list, add this room type
+                if (allowedMajors.Count > 0 && allowedMajors.Contains(CurrentUserMajor.Value))
+                {
+                    availableTypes.Add(room.Type);
+                }
+            }
+
+            // Exclude ComputerLab for Engineering students (they should only see their restricted Lab rooms)
+            if (CurrentUserMajor.Value == StudentMajor.Engineering)
+            {
+                availableTypes.Remove(RoomType.ComputerLab);
+            }
+
+            AvailableRoomTypes = availableTypes.ToList();
+        }
     }
 
     public async Task<List<Domain.Entities.Booking>> GetRoomBookingsAsync(int roomId, DateTime date)
@@ -88,8 +145,19 @@ public class SearchModel : PageModel
 
         try
         {
-            // Get the current user role from session
+            // Get the current user role and name from session
             CurrentUserRole = HttpContext.Session.GetString("CurrentUserRole");
+            CurrentUserName = HttpContext.Session.GetString("CurrentUser");
+
+            // Get user's major if student
+            if (CurrentUserRole == "Student" && !string.IsNullOrEmpty(CurrentUserName))
+            {
+                var user = await _userService.GetUserByUserIdAsync(CurrentUserName);
+                if (user != null)
+                {
+                    CurrentUserMajor = user.Major;
+                }
+            }
 
             // Validate booking date is not in the past
             var today = DateTime.Today;
@@ -107,23 +175,24 @@ public class SearchModel : PageModel
                 return;
             }
 
-            // Apply role-based room type filtering
-            if (CurrentUserRole == "Student")
-            {
-                // Students can only book Study rooms - override any filter selection
-                SearchCriteria.RoomType = RoomType.Study;
-            }
-            // Staff can search all room types - use their selected filter as-is
+            // Populate available room types (in case major or role changed)
+            await PopulateAvailableRoomTypesAsync();
+
+            // No longer restrict students to Study rooms only - they can now access their major-restricted rooms
+            // Room filtering will be applied based on major restrictions instead
 
             // Use provided times as-is (nullable) - no defaults
             // When both are null, all rooms will be shown; when one or both are set, filtering applies
+
+            // Search with major filtering for students
             SearchResults = await _roomService.SearchRoomsAsync(
                 SearchCriteria.BookingDate,
                 SearchCriteria.StartTime,
                 SearchCriteria.EndTime,
                 SearchCriteria.Capacity,
                 SearchCriteria.RoomType,
-                SearchCriteria.Location
+                SearchCriteria.Location,
+                CurrentUserRole == "Student" ? CurrentUserMajor : null
             );
         }
         catch (Exception ex)

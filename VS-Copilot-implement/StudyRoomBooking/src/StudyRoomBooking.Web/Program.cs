@@ -64,7 +64,8 @@ void InitializeSeedData(IServiceProvider serviceProvider)
         UserId = "student1@university.edu",
         Name = "Nguyễn Văn A",
         Email = "student1@university.edu",
-        Role = StudyRoomBooking.Domain.Enums.UserRole.Student
+        Role = StudyRoomBooking.Domain.Enums.UserRole.Student,
+        Major = StudyRoomBooking.Domain.Enums.StudentMajor.Engineering
     };
 
     var student2 = new StudyRoomBooking.Domain.Entities.User
@@ -72,7 +73,17 @@ void InitializeSeedData(IServiceProvider serviceProvider)
         UserId = "student2@university.edu",
         Name = "Trần Thị B",
         Email = "student2@university.edu",
-        Role = StudyRoomBooking.Domain.Enums.UserRole.Student
+        Role = StudyRoomBooking.Domain.Enums.UserRole.Student,
+        Major = StudyRoomBooking.Domain.Enums.StudentMajor.Business
+    };
+
+    var student3 = new StudyRoomBooking.Domain.Entities.User
+    {
+        UserId = "student3@university.edu",
+        Name = "Lê Văn C",
+        Email = "student3@university.edu",
+        Role = StudyRoomBooking.Domain.Enums.UserRole.Student,
+        Major = StudyRoomBooking.Domain.Enums.StudentMajor.Science
     };
 
     var staff = new StudyRoomBooking.Domain.Entities.User
@@ -96,6 +107,7 @@ void InitializeSeedData(IServiceProvider serviceProvider)
     {
         userService.CreateUserAsync(student1).Wait();
         userService.CreateUserAsync(student2).Wait();
+        userService.CreateUserAsync(student3).Wait();
         userService.CreateUserAsync(staff).Wait();
         userService.CreateUserAsync(admin).Wait();
     }
@@ -111,7 +123,7 @@ void InitializeSeedData(IServiceProvider serviceProvider)
             Location = "Building A, Floor 1",
             Capacity = 4,
             Type = StudyRoomBooking.Domain.Enums.RoomType.Study,
-            Description = "Small study room for group work"
+            Description = "Small study room for group work - Open to all majors"
         },
         new()
         {
@@ -120,7 +132,7 @@ void InitializeSeedData(IServiceProvider serviceProvider)
             Location = "Building A, Floor 2",
             Capacity = 6,
             Type = StudyRoomBooking.Domain.Enums.RoomType.Study,
-            Description = "Medium study room"
+            Description = "Medium study room - Open to all majors"
         },
         new()
         {
@@ -129,7 +141,7 @@ void InitializeSeedData(IServiceProvider serviceProvider)
             Location = "Building B, Floor 1",
             Capacity = 30,
             Type = StudyRoomBooking.Domain.Enums.RoomType.ComputerLab,
-            Description = "Lab for programming and IT courses"
+            Description = "Lab for programming and IT courses - Engineering & Science majors only"
         },
         new()
         {
@@ -138,7 +150,7 @@ void InitializeSeedData(IServiceProvider serviceProvider)
             Location = "Building C, Floor 1",
             Capacity = 10,
             Type = StudyRoomBooking.Domain.Enums.RoomType.Meeting,
-            Description = "Conference room for meetings"
+            Description = "Conference room for meetings - Open to all majors"
         },
         new()
         {
@@ -147,7 +159,25 @@ void InitializeSeedData(IServiceProvider serviceProvider)
             Location = "Building C, Floor 2",
             Capacity = 20,
             Type = StudyRoomBooking.Domain.Enums.RoomType.Seminar,
-            Description = "Seminar and workshop room"
+            Description = "Seminar and workshop room - Open to all majors"
+        },
+        new()
+        {
+            Code = "DS001",
+            Name = "Design Studio",
+            Location = "Building D, Floor 1",
+            Capacity = 12,
+            Type = StudyRoomBooking.Domain.Enums.RoomType.Lab,
+            Description = "Design and creative workspace - Business major only"
+        },
+        new()
+        {
+            Code = "EL001",
+            Name = "Engineering Lab",
+            Location = "Building E, Floor 1",
+            Capacity = 25,
+            Type = StudyRoomBooking.Domain.Enums.RoomType.Lab,
+            Description = "Advanced engineering lab - Engineering major only"
         }
     };
 
@@ -159,4 +189,55 @@ void InitializeSeedData(IServiceProvider serviceProvider)
         }
     }
     catch { /* Rooms might already exist */ }
+
+    // Seed room major restrictions
+    var accessRuleService = scope.ServiceProvider.GetRequiredService<StudyRoomBooking.Application.Services.IAccessRuleService>();
+    var unitOfWork = scope.ServiceProvider.GetRequiredService<StudyRoomBooking.Domain.Interfaces.IUnitOfWork>();
+
+    try
+    {
+        // Get the created rooms to add restrictions
+        var allRooms = roomService.GetAllRoomsAsync().Result;
+        var computerLab = allRooms?.FirstOrDefault(r => r.Code == "LB001");
+        var designStudio = allRooms?.FirstOrDefault(r => r.Code == "DS001");
+        var engineeringLab = allRooms?.FirstOrDefault(r => r.Code == "EL001");
+
+        if (computerLab != null)
+        {
+            // Computer Lab: Engineering and Science majors only
+            unitOfWork.RoomMajorRestrictions.AddAsync(new StudyRoomBooking.Domain.Entities.RoomMajorRestriction
+            {
+                RoomId = computerLab.Id,
+                Major = StudyRoomBooking.Domain.Enums.StudentMajor.Engineering
+            }).Wait();
+            unitOfWork.RoomMajorRestrictions.AddAsync(new StudyRoomBooking.Domain.Entities.RoomMajorRestriction
+            {
+                RoomId = computerLab.Id,
+                Major = StudyRoomBooking.Domain.Enums.StudentMajor.Science
+            }).Wait();
+        }
+
+        if (designStudio != null)
+        {
+            // Design Studio: Business majors only
+            unitOfWork.RoomMajorRestrictions.AddAsync(new StudyRoomBooking.Domain.Entities.RoomMajorRestriction
+            {
+                RoomId = designStudio.Id,
+                Major = StudyRoomBooking.Domain.Enums.StudentMajor.Business
+            }).Wait();
+        }
+
+        if (engineeringLab != null)
+        {
+            // Engineering Lab: Engineering majors only
+            unitOfWork.RoomMajorRestrictions.AddAsync(new StudyRoomBooking.Domain.Entities.RoomMajorRestriction
+            {
+                RoomId = engineeringLab.Id,
+                Major = StudyRoomBooking.Domain.Enums.StudentMajor.Engineering
+            }).Wait();
+        }
+
+        unitOfWork.SaveChangesAsync().Wait();
+    }
+    catch { /* Restrictions might already exist */ }
 }

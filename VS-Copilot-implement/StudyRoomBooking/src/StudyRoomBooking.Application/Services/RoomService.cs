@@ -24,6 +24,11 @@ public class RoomService : IRoomService
 
     public async Task<List<Room>> SearchRoomsAsync(DateTime date, TimeSpan? startTime, TimeSpan? endTime, int? capacity = null, RoomType? type = null, string? location = null)
     {
+        return await SearchRoomsAsync(date, startTime, endTime, capacity, type, location, null);
+    }
+
+    public async Task<List<Room>> SearchRoomsAsync(DateTime date, TimeSpan? startTime, TimeSpan? endTime, int? capacity = null, RoomType? type = null, string? location = null, StudentMajor? studentMajor = null)
+    {
         var allRooms = await _unitOfWork.Rooms.GetAllAsync();
 
         var filtered = allRooms.Where(r =>
@@ -32,6 +37,47 @@ public class RoomService : IRoomService
             (!type.HasValue || r.Type == type.Value) &&
             (string.IsNullOrEmpty(location) || r.Location.Contains(location, StringComparison.OrdinalIgnoreCase))
         ).ToList();
+
+        // Filter by student major if provided
+        if (studentMajor.HasValue)
+        {
+            var filteredByMajor = new List<Room>();
+            foreach (var room in filtered)
+            {
+                // When searching with "Any Type", exclude ComputerLab rooms for students
+                if (!type.HasValue && room.Type == RoomType.ComputerLab)
+                {
+                    continue;
+                }
+
+                var allowedMajors = await _unitOfWork.RoomMajorRestrictions.GetAllowedMajorsForRoomAsync(room.Id);
+
+                // Study rooms are always available to all students
+                if (room.Type == RoomType.Study)
+                {
+                    filteredByMajor.Add(room);
+                }
+                // If room type is not specified (Any Type search):
+                // - Students should only see Study rooms and restricted Lab rooms for their major
+                // - Do NOT show unrestricted rooms (Meeting, Seminar, etc.)
+                else if (!type.HasValue && allowedMajors.Count == 0)
+                {
+                    // Skip unrestricted non-Study rooms when doing "Any Type" search
+                    continue;
+                }
+                // If room has no restrictions and a specific type is selected, show it
+                else if (type.HasValue && allowedMajors.Count == 0)
+                {
+                    filteredByMajor.Add(room);
+                }
+                // If room has restrictions, only allowed majors can book it
+                else if (allowedMajors.Contains(studentMajor.Value))
+                {
+                    filteredByMajor.Add(room);
+                }
+            }
+            filtered = filteredByMajor;
+        }
 
         // If both times are not set, return all filtered rooms (no time-based filtering)
         if (!startTime.HasValue && !endTime.HasValue)
@@ -91,4 +137,10 @@ public class RoomService : IRoomService
 
         return conflictingBookings.Count == 0;
     }
+
+    public async Task<List<StudentMajor>> GetAllowedMajorsForRoomAsync(int roomId)
+    {
+        return await _unitOfWork.RoomMajorRestrictions.GetAllowedMajorsForRoomAsync(roomId);
+    }
 }
+

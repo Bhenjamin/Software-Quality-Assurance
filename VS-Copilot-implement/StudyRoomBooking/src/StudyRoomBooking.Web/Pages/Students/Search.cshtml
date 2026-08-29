@@ -79,24 +79,23 @@
 					<label for="capacity" class="form-label">Minimum Capacity</label>
 					<input type="number" id="capacity" name="searchCriteria.Capacity" 
 						   min="1" value="@Model.SearchCriteria.Capacity" class="form-control" />
-				</div>
-			</div>
-			@if (Model.CurrentUserRole == "Staff")
-			{
-				<div class="col-md-3">
-					<div class="form-group">
-						<label for="roomType" class="form-label">Room Type</label>
-						<select id="roomType" name="searchCriteria.RoomType" class="form-select">
-							<option value="">Any Type</option>
-							@foreach (var type in Enum.GetValues(typeof(StudyRoomBooking.Domain.Enums.RoomType)))
-							{
-								var roomType = (StudyRoomBooking.Domain.Enums.RoomType)type;
-								<option value="@type" selected="@(Model.SearchCriteria.RoomType == roomType)">@roomType.ToDisplayName()</option>
-							}
-						</select>
 					</div>
 				</div>
-			}
+				@if (Model.CurrentUserRole == "Staff" || Model.CurrentUserRole == "Student")
+				{
+					<div class="col-md-3">
+						<div class="form-group">
+							<label for="roomType" class="form-label">Room Type</label>
+							<select id="roomType" name="searchCriteria.RoomType" class="form-select">
+								<option value="">Any Type</option>
+								@foreach (var type in Model.AvailableRoomTypes)
+								{
+									<option value="@type" selected="@(Model.SearchCriteria.RoomType == type)">@type.ToDisplayName()</option>
+								}
+							</select>
+						</div>
+					</div>
+				}
 			<div class="col-md-3">
 				<div class="form-group">
 					<label for="location" class="form-label">Location</label>
