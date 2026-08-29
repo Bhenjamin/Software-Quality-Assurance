@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using StudyRoomBooking.Application.Services;
 using StudyRoomBooking.Application.ViewModels;
 using StudyRoomBooking.Domain.Entities;
+using StudyRoomBooking.Domain.Enums;
 
 namespace StudyRoomBooking.Web.Pages.Students;
 
@@ -16,6 +17,7 @@ public class SearchModel : PageModel
 
     public List<Room> SearchResults { get; set; } = new();
     public bool HasSearched { get; set; } = false;
+    public string? CurrentUserRole { get; set; } = null;
 
     public SearchModel(IRoomService roomService, IBookingService bookingService)
     {
@@ -27,6 +29,17 @@ public class SearchModel : PageModel
     {
         SearchCriteria.BookingDate = DateTime.Today;
         // StartTime and EndTime are nullable, so leave them as null (not set)
+
+        // Get the current user role from session
+        CurrentUserRole = HttpContext.Session.GetString("CurrentUserRole");
+
+        // Apply role-based room type filtering
+        if (CurrentUserRole == "Student")
+        {
+            // Students can only search for Study rooms
+            SearchCriteria.RoomType = RoomType.Study;
+        }
+        // Staff can search all room types - no restriction here
     }
 
     public async Task<List<Domain.Entities.Booking>> GetRoomBookingsAsync(int roomId, DateTime date)
@@ -75,6 +88,9 @@ public class SearchModel : PageModel
 
         try
         {
+            // Get the current user role from session
+            CurrentUserRole = HttpContext.Session.GetString("CurrentUserRole");
+
             // Validate booking date is not in the past
             var today = DateTime.Today;
             if (SearchCriteria.BookingDate.Date < today)
@@ -90,6 +106,14 @@ public class SearchModel : PageModel
                 ModelState.AddModelError(string.Empty, $"Bookings can only be made up to 60 days in advance. Your selected date is {daysInAdvance} days away.");
                 return;
             }
+
+            // Apply role-based room type filtering
+            if (CurrentUserRole == "Student")
+            {
+                // Students can only book Study rooms - override any filter selection
+                SearchCriteria.RoomType = RoomType.Study;
+            }
+            // Staff can search all room types - use their selected filter as-is
 
             // Use provided times as-is (nullable) - no defaults
             // When both are null, all rooms will be shown; when one or both are set, filtering applies
