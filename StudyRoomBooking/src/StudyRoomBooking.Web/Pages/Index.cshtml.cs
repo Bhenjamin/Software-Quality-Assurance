@@ -1,45 +1,60 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using StudyRoomBooking.Application.Interfaces;
-using StudyRoomBooking.Domain.Models;
-using StudyRoomBooking.Web.Services;
+using System.Text.Json;
+using StudyRoomBooking.Application.Services;
+using StudyRoomBooking.Domain.Enums;
 
 namespace StudyRoomBooking.Web.Pages;
 
-/// <summary>
-/// Login simulation: the assessment scope explicitly excludes production
-/// authentication, so this page lets you pick which seeded user you are
-/// acting as. Every downstream page uses that identity when calling the
-/// real Application services, so access control still behaves correctly
-/// per role.
-/// </summary>
 public class IndexModel : PageModel
 {
-    private readonly IUserRepository _userRepository;
-    private readonly ICurrentUserAccessor _currentUserAccessor;
+    private readonly ILogger<IndexModel> _logger;
+    private readonly IRoomService _roomService;
 
-    public IndexModel(IUserRepository userRepository, ICurrentUserAccessor currentUserAccessor)
+    public string CurrentUserName { get; set; } = "Guest";
+    public string CurrentUserRole { get; set; } = "N/A";
+    public string RoomsJson { get; set; } = "[]";
+
+    public IndexModel(ILogger<IndexModel> logger, IRoomService roomService)
     {
-        _userRepository = userRepository;
-        _currentUserAccessor = currentUserAccessor;
+        _logger = logger;
+        _roomService = roomService;
     }
 
-    public IReadOnlyList<User> AvailableUsers { get; private set; } = Array.Empty<User>();
-
-    public void OnGet()
+    public async Task<IActionResult> OnGetAsync()
     {
-        AvailableUsers = _userRepository.GetAll().OrderBy(u => u.Role).ThenBy(u => u.FullName).ToList();
-    }
+        // Check if user is logged in
+        var userId = HttpContext.Session.GetString("UserId");
+        if (string.IsNullOrEmpty(userId))
+        {
+            // Redirect to login if not authenticated
+            return RedirectToPage("Login");
+        }
 
-    public IActionResult OnGetSwitchUser()
-    {
-        _currentUserAccessor.ClearCurrentUser();
-        return RedirectToPage("Index");
-    }
+        // Get user info from session
+        CurrentUserName = HttpContext.Session.GetString("CurrentUser") ?? "Guest";
+        CurrentUserRole = HttpContext.Session.GetString("CurrentUserRole") ?? "Student";
 
-    public IActionResult OnPostSelectUser(Guid userId)
-    {
-        _currentUserAccessor.SetCurrentUser(userId);
-        return RedirectToPage("Rooms/Search");
+        // Load rooms
+        try
+        {
+            var rooms = await _roomService.GetAllRoomsAsync();
+            var roomList = rooms.Select(r => new
+            {
+                code = r.Code,
+                name = r.Name,
+                location = r.Location,
+                capacity = r.Capacity,
+                type = r.Type.ToString()
+            }).ToList();
+
+            RoomsJson = JsonSerializer.Serialize(roomList);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading rooms");
+        }
+
+        return Page();
     }
 }

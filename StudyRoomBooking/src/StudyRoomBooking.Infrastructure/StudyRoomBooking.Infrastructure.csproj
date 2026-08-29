@@ -1,14 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>StudyRoomBooking.Infrastructure</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\StudyRoomBooking.Application\StudyRoomBooking.Application.csproj" />
+    <ProjectReference Include="..\StudyRoomBooking.Domain\StudyRoomBooking.Domain.csproj" />
   </ItemGroup>
 
 </Project>

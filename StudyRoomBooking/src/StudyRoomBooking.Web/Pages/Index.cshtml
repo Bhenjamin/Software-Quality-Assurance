@@ -1,26 +1,63 @@
-@page
+﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Select User";
+    ViewData["Title"] = "Dashboard";
 }
 
-<h1>Who are you signing in as?</h1>
-<p class="text-muted">
-    This is a simulated login for the prototype (no production authentication
-    is in scope for Assessment 1) — pick one of the sample university users.
-</p>
-
-<div class="row row-cols-1 row-cols-md-2 g-3">
-    @foreach (var user in Model.AvailableUsers)
-    {
-        <div class="col">
-            <form method="post" asp-page-handler="SelectUser">
-                <input type="hidden" name="userId" value="@user.Id" />
-                <button type="submit" class="btn btn-outline-primary w-100 text-start">
-                    <strong>@user.FullName</strong><br />
-                    <span class="text-muted">@user.Role @(user.Programme is not null ? $"· {user.Programme}" : "")</span>
-                </button>
-            </form>
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1>Welcome to Study Room Booking System</h1>
+            <p class="lead">Book study rooms, labs, and meeting spaces for your academic needs.</p>
         </div>
-    }
+    </div>
+
+
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h3>Available Rooms</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Room Code</th>
+                        <th>Room Name</th>
+                        <th>Location</th>
+                        <th>Capacity</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="roomsTable">
+                    <tr>
+                        <td colspan="6" class="text-center">Loading rooms...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        // This will be populated with room data from the page model
+        document.addEventListener('DOMContentLoaded', function() {
+            var rooms = @Html.Raw(Model.RoomsJson);
+            if (rooms && rooms.length > 0) {
+                var tbody = document.getElementById('roomsTable');
+                tbody.innerHTML = '';
+                rooms.forEach(function(room) {
+                    var row = '<tr>' +
+                        '<td>' + room.code + '</td>' +
+                        '<td>' + room.name + '</td>' +
+                        '<td>' + room.location + '</td>' +
+                        '<td>' + room.capacity + '</td>' +
+                        '<td>' + room.type + '</td>' +
+                        '<td><span class="badge bg-success">Available</span></td>' +
+                        '</tr>';
+                    tbody.innerHTML += row;
+                });
+            }
+        });
+    </script>
+}

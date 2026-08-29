@@ -1,0 +1,26 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Select User";
+}
+
+<h1>Who are you signing in as?</h1>
+<p class="text-muted">
+    This is a simulated login for the prototype (no production authentication
+    is in scope for Assessment 1) — pick one of the sample university users.
+</p>
+
+<div class="row row-cols-1 row-cols-md-2 g-3">
+    @foreach (var user in Model.AvailableUsers)
+    {
+        <div class="col">
+            <form method="post" asp-page-handler="SelectUser">
+                <input type="hidden" name="userId" value="@user.Id" />
+                <button type="submit" class="btn btn-outline-primary w-100 text-start">
+                    <strong>@user.FullName</strong><br />
+                    <span class="text-muted">@user.Role @(user.Programme is not null ? $"· {user.Programme}" : "")</span>
+                </button>
+            </form>
+        </div>
+    }
+</div>

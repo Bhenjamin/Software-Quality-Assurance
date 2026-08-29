@@ -1,199 +1,232 @@
-using StudyRoomBooking.Application.DTOs;
-using StudyRoomBooking.Application.Interfaces;
+using StudyRoomBooking.Domain.Entities;
 using StudyRoomBooking.Domain.Enums;
-using StudyRoomBooking.Domain.Models;
 
 namespace StudyRoomBooking.Application.Services;
 
-/// <summary>
-/// Coordinates booking creation, modification and cancellation. All
-/// validation (room/user existence, access control, time sanity,
-/// double-booking prevention) happens here so that every caller — a
-/// future web API, the console demo, or tests — gets the same rules.
-/// </summary>
 public class BookingService : IBookingService
 {
-    /// <summary>
-    /// How far ahead a booking may be made. Prevents rooms from being
-    /// blocked out indefinitely by speculative bookings. 60 days covers a
-    /// full university term; adjust here if the policy changes.
-    /// </summary>
-    private const int MaxAdvanceBookingDays = 60;
-
-    private readonly IRoomRepository _roomRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IBookingRepository _bookingRepository;
-    private readonly IAccessControlService _accessControlService;
+    private readonly Domain.Interfaces.IUnitOfWork _unitOfWork;
+    private readonly INotificationService _notificationService;
+    private const int MaxAdvanceDaysAllowed = 60;
 
     public BookingService(
-        IRoomRepository roomRepository,
-        IUserRepository userRepository,
-        IBookingRepository bookingRepository,
-        IAccessControlService accessControlService)
+        Domain.Interfaces.IUnitOfWork unitOfWork,
+        INotificationService notificationService
+    )
     {
-        _roomRepository = roomRepository;
-        _userRepository = userRepository;
-        _bookingRepository = bookingRepository;
-        _accessControlService = accessControlService;
+        _unitOfWork = unitOfWork;
+        _notificationService = notificationService;
     }
 
-    public BookingResult CreateBooking(BookingRequest request)
+    public async Task<Booking?> GetBookingByIdAsync(int id)
     {
-        var user = _userRepository.GetById(request.UserId);
-        if (user is null)
-        {
-            return BookingResult.Fail("USER_NOT_FOUND", "The requesting user does not exist.");
-        }
-
-        var room = _roomRepository.GetById(request.RoomId);
-        if (room is null || !room.IsActive)
-        {
-            return BookingResult.Fail("ROOM_NOT_FOUND", "The requested room does not exist or is inactive.");
-        }
-
-        var timeValidation = ValidateTimes(request.StartTime, request.EndTime);
-        if (timeValidation is not null)
-        {
-            return timeValidation;
-        }
-
-        if (!_accessControlService.CanAccessRoom(user, room))
-        {
-            return BookingResult.Fail("ACCESS_DENIED", $"{user.Role} users are not permitted to book {room.Name}.");
-        }
-
-        if (request.OverrideConflict && !_accessControlService.CanPerformAdminAction(user))
-        {
-            return BookingResult.Fail("ACCESS_DENIED", "Only administrators may override a booking conflict.");
-        }
-
-        var hasConflict = HasConflict(room.Id, request.StartTime, request.EndTime, excludingBookingId: null);
-        if (hasConflict && !request.OverrideConflict)
-        {
-            return BookingResult.Fail("DOUBLE_BOOKING", "The room is already booked for an overlapping time slot.");
-        }
-
-        var booking = new Booking
-        {
-            RoomId = room.Id,
-            UserId = user.Id,
-            StartTime = request.StartTime,
-            EndTime = request.EndTime,
-            Purpose = request.Purpose,
-            Status = BookingStatus.Confirmed,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _bookingRepository.Add(booking);
-        return BookingResult.Ok(booking);
+        return await _unitOfWork.Bookings.GetByIdAsync(id);
     }
 
-    public BookingResult ModifyBooking(BookingModificationRequest request)
+    public async Task<List<Booking>> GetAllBookingsAsync()
     {
-        var booking = _bookingRepository.GetById(request.BookingId);
-        if (booking is null)
-        {
-            return BookingResult.Fail("BOOKING_NOT_FOUND", "The booking does not exist.");
-        }
-
-        if (booking.Status == BookingStatus.Cancelled)
-        {
-            return BookingResult.Fail("BOOKING_CANCELLED", "A cancelled booking cannot be modified.");
-        }
-
-        var requestingUser = _userRepository.GetById(request.RequestingUserId);
-        if (requestingUser is null)
-        {
-            return BookingResult.Fail("USER_NOT_FOUND", "The requesting user does not exist.");
-        }
-
-        if (!_accessControlService.CanManageBooking(requestingUser, booking))
-        {
-            return BookingResult.Fail("ACCESS_DENIED", "You are not permitted to modify this booking.");
-        }
-
-        var timeValidation = ValidateTimes(request.NewStartTime, request.NewEndTime);
-        if (timeValidation is not null)
-        {
-            return timeValidation;
-        }
-
-        if (HasConflict(booking.RoomId, request.NewStartTime, request.NewEndTime, excludingBookingId: booking.Id))
-        {
-            return BookingResult.Fail("DOUBLE_BOOKING", "The room is already booked for the requested new time slot.");
-        }
-
-        booking.StartTime = request.NewStartTime;
-        booking.EndTime = request.NewEndTime;
-        booking.Status = BookingStatus.Modified;
-        booking.ModifiedAt = DateTime.UtcNow;
-
-        _bookingRepository.Update(booking);
-        return BookingResult.Ok(booking);
+        return await _unitOfWork.Bookings.GetAllAsync();
     }
 
-    public BookingResult CancelBooking(Guid bookingId, Guid requestingUserId, string? reason = null)
+    public async Task<List<Booking>> GetBookingsByUserIdAsync(int userId)
     {
-        var booking = _bookingRepository.GetById(bookingId);
-        if (booking is null)
-        {
-            return BookingResult.Fail("BOOKING_NOT_FOUND", "The booking does not exist.");
-        }
-
-        if (booking.Status == BookingStatus.Cancelled)
-        {
-            return BookingResult.Fail("ALREADY_CANCELLED", "This booking has already been cancelled.");
-        }
-
-        var requestingUser = _userRepository.GetById(requestingUserId);
-        if (requestingUser is null)
-        {
-            return BookingResult.Fail("USER_NOT_FOUND", "The requesting user does not exist.");
-        }
-
-        if (!_accessControlService.CanManageBooking(requestingUser, booking))
-        {
-            return BookingResult.Fail("ACCESS_DENIED", "You are not permitted to cancel this booking.");
-        }
-
-        booking.Status = BookingStatus.Cancelled;
-        booking.CancelledAt = DateTime.UtcNow;
-        booking.CancellationReason = reason;
-
-        _bookingRepository.Update(booking);
-        return BookingResult.Ok(booking);
+        return await _unitOfWork.Bookings.GetByUserIdAsync(userId);
     }
 
-    public IEnumerable<Booking> GetBookingHistory(Guid userId) =>
-        _bookingRepository.GetByUserId(userId).OrderByDescending(b => b.StartTime);
-
-    private static BookingResult? ValidateTimes(DateTime start, DateTime end)
+    public async Task<List<Booking>> GetBookingsByRoomIdAsync(int roomId)
     {
-        if (end <= start)
-        {
-            return BookingResult.Fail("INVALID_TIME_RANGE", "The end time must be after the start time.");
-        }
-
-        if (start < DateTime.UtcNow.AddMinutes(-1))
-        {
-            return BookingResult.Fail("INVALID_TIME_RANGE", "Bookings cannot be made in the past.");
-        }
-
-        if (start > DateTime.UtcNow.AddDays(MaxAdvanceBookingDays))
-        {
-            return BookingResult.Fail(
-                "TOO_FAR_IN_ADVANCE",
-                $"Bookings cannot be made more than {MaxAdvanceBookingDays} days in advance.");
-        }
-
-        return null;
+        return await _unitOfWork.Bookings.GetByRoomIdAsync(roomId);
     }
 
-    private bool HasConflict(Guid roomId, DateTime start, DateTime end, Guid? excludingBookingId)
+    public async Task<List<Booking>> SearchBookingsAsync(
+        DateTime date,
+        int? roomId = null,
+        int? userId = null
+    )
     {
-        return _bookingRepository.GetByRoomId(roomId)
-            .Where(b => b.Status != BookingStatus.Cancelled)
-            .Where(b => excludingBookingId is null || b.Id != excludingBookingId.Value)
-            .Any(b => b.OverlapsWith(start, end));
+        var allBookings = await _unitOfWork.Bookings.GetAllAsync();
+
+        var filtered = allBookings
+            .Where(b =>
+                b.BookingDate.Date == date.Date
+                && b.Status != BookingStatus.Cancelled
+                && (!roomId.HasValue || b.RoomId == roomId.Value)
+                && (!userId.HasValue || b.UserId == userId.Value)
+            )
+            .ToList();
+
+        return filtered;
+    }
+
+    public async Task<Booking> CreateBookingAsync(Booking booking)
+    {
+        if (booking.UserId <= 0)
+        {
+            throw new ArgumentException(
+                "A valid student must be attached to the booking.",
+                nameof(booking)
+            );
+        }
+
+        var init_user = await _unitOfWork.Users.GetByIdAsync(booking.UserId);
+        if (init_user == null)
+        {
+            throw new ArgumentException("The specified student does not exist.", nameof(booking));
+        }
+
+        booking.ConfirmationNumber = Guid.NewGuid().ToString("N").Substring(0, 10).ToUpper();
+        booking.Status = BookingStatus.Confirmed;
+        booking.CreatedAt = DateTime.UtcNow;
+
+        await _unitOfWork.Bookings.AddAsync(booking);
+        await _unitOfWork.SaveChangesAsync();
+
+        // Send confirmation notification
+        var user = await _unitOfWork.Users.GetByIdAsync(booking.UserId);
+        var room = await _unitOfWork.Rooms.GetByIdAsync(booking.RoomId);
+
+        if (user != null && room != null)
+        {
+            await _notificationService.SendBookingConfirmationAsync(
+                user.Email,
+                room.Name,
+                booking.BookingDate,
+                booking.ConfirmationNumber
+            );
+        }
+
+        return booking;
+    }
+
+    public async Task<Booking> UpdateBookingAsync(Booking booking)
+    {
+        booking.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.Bookings.UpdateAsync(booking);
+        await _unitOfWork.SaveChangesAsync();
+        return booking;
+    }
+
+    public async Task CancelBookingAsync(int bookingId)
+    {
+        var booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId);
+        if (booking != null)
+        {
+            booking.Status = BookingStatus.Cancelled;
+            booking.UpdatedAt = DateTime.UtcNow;
+            await _unitOfWork.Bookings.UpdateAsync(booking);
+            await _unitOfWork.SaveChangesAsync();
+        }
+    }
+
+    public async Task<(bool IsValid, string ErrorMessage)> ValidateBookingAsync(
+        int roomId,
+        DateTime bookingDate,
+        TimeSpan startTime,
+        TimeSpan endTime,
+        int? bookingIdToExclude = null,
+        bool skipAdvanceDaysCheck = false
+    )
+    {
+        // Validation 0: Check if start time is before end time
+        if (startTime >= endTime)
+        {
+            return (false, "Start hour must be before end hour. Please select a valid time range.");
+        }
+
+        // Get today's date in local time zone
+        var today = DateTime.Today; // Midnight today in local timezone
+        var selectedDate = bookingDate.Date; // Ensure we're comparing just the date part
+
+        // Validation 1: Check if booking date is in the past (strictly before today)
+        if (selectedDate < today)
+        {
+            var daysInPast = (today - selectedDate).Days;
+            return (
+                false,
+                $"Cannot book rooms in the past. The date you selected is {daysInPast} days ago. Please select today or a future date."
+            );
+        }
+
+        // Validation 2: Check if booking is more than 60 days in advance (skip for recurring bookings)
+        if (!skipAdvanceDaysCheck)
+        {
+            var daysInAdvance = (selectedDate - today).Days;
+            if (daysInAdvance > MaxAdvanceDaysAllowed)
+            {
+                return (
+                    false,
+                    $"Bookings can only be made up to {MaxAdvanceDaysAllowed} days in advance. Your selected date is {daysInAdvance} days away."
+                );
+            }
+        }
+
+        // Validation 3: Check for double bookings (same room, overlapping time)
+        var existingBookings = await _unitOfWork.Bookings.GetByRoomIdAsync(roomId);
+        var conflictingBookings = existingBookings
+            .Where(b =>
+                b.BookingDate.Date == selectedDate
+                && b.Status != BookingStatus.Cancelled
+                && b.Id != bookingIdToExclude
+                && // Exclude the booking being modified
+                !(b.EndTime <= startTime || b.StartTime >= endTime) // Check for time overlap
+            )
+            .ToList();
+        if (conflictingBookings.Any())
+        {
+            // Build a detailed error message with conflicting booking times
+            var conflictTimes = conflictingBookings
+                .OrderBy(b => b.StartTime)
+                .Select(b => $"- {b.StartTime:hh\\:mm} - {b.EndTime:hh\\:mm}");
+            var errorMessage =
+                "This room is already booked during the selected time. Please choose a different time or room.\n\nConflicting bookings:\n"
+                + string.Join("\n", conflictTimes);
+            return (false, errorMessage);
+        }
+        return (true, string.Empty);
+    }
+
+    /// <summary>
+    /// Generates a list of dates based on the recurrence pattern between the start date and end date.
+    /// </summary>
+    public List<DateTime> GenerateRecurrenceDates(
+        DateTime startDate,
+        DateTime endDate,
+        RecurrencePattern pattern
+    )
+    {
+        var dates = new List<DateTime>();
+
+        if (pattern == RecurrencePattern.None)
+        {
+            dates.Add(startDate);
+            return dates;
+        }
+
+        var currentDate = startDate;
+
+        while (currentDate <= endDate)
+        {
+            dates.Add(currentDate);
+
+            switch (pattern)
+            {
+                case RecurrencePattern.Daily:
+                    currentDate = currentDate.AddDays(1);
+                    break;
+                case RecurrencePattern.Weekly:
+                    currentDate = currentDate.AddDays(7);
+                    break;
+                case RecurrencePattern.BiWeekly:
+                    currentDate = currentDate.AddDays(14);
+                    break;
+                case RecurrencePattern.Monthly:
+                    currentDate = currentDate.AddMonths(1);
+                    break;
+                default:
+                    throw new ArgumentException($"Unknown recurrence pattern: {pattern}");
+            }
+        }
+
+        return dates;
     }
 }
