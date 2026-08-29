@@ -14,6 +14,13 @@ public class CreateRecurringModel : PageModel
 
     public List<Room> AvailableRooms { get; set; } = new();
 
+    // Pre-populated fields from recurring booking link
+    public int? PreSelectedRoomId { get; set; }
+    public string? PreSelectedStartDate { get; set; }
+    public string? PreSelectedStartTime { get; set; }
+    public string? PreSelectedEndTime { get; set; }
+    public string? PreSelectedRecurrenceEndDate { get; set; }
+
     public CreateRecurringModel(IRoomService roomService, IBookingService bookingService, IUserService userService)
     {
         _roomService = roomService;
@@ -21,9 +28,17 @@ public class CreateRecurringModel : PageModel
         _userService = userService;
     }
 
-    public async Task OnGetAsync()
+    public async Task OnGetAsync(int? roomId = null, string? startDate = null, string? startTime = null, 
+        string? endTime = null, string? recurrenceEndDate = null)
     {
         AvailableRooms = await _roomService.GetAllRoomsAsync();
+
+        // Store pre-populated values from recurring booking search
+        PreSelectedRoomId = roomId;
+        PreSelectedStartDate = startDate;
+        PreSelectedStartTime = startTime;
+        PreSelectedEndTime = endTime;
+        PreSelectedRecurrenceEndDate = recurrenceEndDate;
     }
 
     public async Task<IActionResult> OnPostAsync(int roomId, string startDate, string startTime, string endTime, 
@@ -39,8 +54,16 @@ public class CreateRecurringModel : PageModel
                 return Page();
             }
 
-            // Get current user (staff member)
-            var user = await _userService.GetUserByUserIdAsync("ST101");
+            // Get current user (staff member) from session
+            var currentUserName = HttpContext.Session.GetString("CurrentUser");
+            if (string.IsNullOrEmpty(currentUserName))
+            {
+                ModelState.AddModelError(string.Empty, "User session expired. Please login again.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            var user = await _userService.GetUserByUserIdAsync(currentUserName);
             if (user == null)
             {
                 ModelState.AddModelError(string.Empty, "User not found.");
@@ -101,15 +124,6 @@ public class CreateRecurringModel : PageModel
                     await OnGetAsync();
                     return Page();
                 }
-
-                // Validate recurrence end date is not more than 60 days in advance
-                var recurrenceDaysInAdvance = (recurrenceEnd.Value.Date - today).Days;
-                if (recurrenceDaysInAdvance > 60)
-                {
-                    ModelState.AddModelError(string.Empty, $"Recurrence end date can only be up to 60 days in advance. Your selected date is {recurrenceDaysInAdvance} days away.");
-                    await OnGetAsync();
-                    return Page();
-                }
             }
 
             // Validate booking date and time constraints for the start date
@@ -130,23 +144,55 @@ public class CreateRecurringModel : PageModel
                 return Page();
             }
 
-            // Create recurring booking
-            var booking = new Booking
+            // Generate all recurrence dates
+            DateTime endDateForRecurrence = recurrenceEnd ?? date;
+            var recurrenceDates = _bookingService.GenerateRecurrenceDates(date, endDateForRecurrence, recurrencePattern);
+
+            // Validate availability and constraints for all recurrence dates (skip 60-day limit for recurring bookings)
+            foreach (var occurrenceDate in recurrenceDates)
             {
-                RoomId = roomId,
-                UserId = user.Id,
-                BookingDate = date,
-                StartTime = start,
-                EndTime = end,
-                RecurrencePattern = recurrencePattern,
-                RecurrenceEndDate = recurrenceEnd,
-                Notes = notes,
-                Status = BookingStatus.Confirmed
-            };
+                // Validate constraints for each date (skipAdvanceDaysCheck=true for recurring bookings)
+                var (dateIsValid, dateErrorMessage) = await _bookingService.ValidateBookingAsync(roomId, occurrenceDate, start, end, skipAdvanceDaysCheck: true);
+                if (!dateIsValid)
+                {
+                    ModelState.AddModelError(string.Empty, $"Cannot create recurring booking: {dateErrorMessage} (Date: {occurrenceDate:yyyy-MM-dd})");
+                    await OnGetAsync();
+                    return Page();
+                }
 
-            await _bookingService.CreateBookingAsync(booking);
+                // Check availability for each date
+                var dateIsAvailable = await _roomService.IsRoomAvailableAsync(roomId, occurrenceDate, start, end);
+                if (!dateIsAvailable)
+                {
+                    ModelState.AddModelError(string.Empty, $"Selected time slot is not available on {occurrenceDate:yyyy-MM-dd}.");
+                    await OnGetAsync();
+                    return Page();
+                }
+            }
 
-            return RedirectToPage("/Students/Search", new { message = "Recurring booking created successfully!" });
+            // Create individual bookings for each recurrence date
+            foreach (var occurrenceDate in recurrenceDates)
+            {
+                var booking = new Booking
+                {
+                    RoomId = roomId,
+                    UserId = user.Id,
+                    BookingDate = occurrenceDate,
+                    StartTime = start,
+                    EndTime = end,
+                    RecurrencePattern = RecurrencePattern.None,  // Each booking is standalone, not recurring
+                    RecurrenceEndDate = null,
+                    Notes = notes,
+                    Status = BookingStatus.Confirmed
+                };
+
+                await _bookingService.CreateBookingAsync(booking);
+            }
+
+            // Build success message
+            var message = $"Recurring booking created successfully with {recurrenceDates.Count} bookings!";
+
+            return RedirectToPage("/Students/MyBookings", new { message = message });
         }
         catch (Exception ex)
         {

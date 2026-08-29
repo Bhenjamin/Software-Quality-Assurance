@@ -123,7 +123,8 @@ public class BookingService : IBookingService
         DateTime bookingDate,
         TimeSpan startTime,
         TimeSpan endTime,
-        int? bookingIdToExclude = null
+        int? bookingIdToExclude = null,
+        bool skipAdvanceDaysCheck = false
     )
     {
         // Validation 0: Check if start time is before end time
@@ -146,14 +147,17 @@ public class BookingService : IBookingService
             );
         }
 
-        // Validation 2: Check if booking is more than 60 days in advance
-        var daysInAdvance = (selectedDate - today).Days;
-        if (daysInAdvance > MaxAdvanceDaysAllowed)
+        // Validation 2: Check if booking is more than 60 days in advance (skip for recurring bookings)
+        if (!skipAdvanceDaysCheck)
         {
-            return (
-                false,
-                $"Bookings can only be made up to {MaxAdvanceDaysAllowed} days in advance. Your selected date is {daysInAdvance} days away."
-            );
+            var daysInAdvance = (selectedDate - today).Days;
+            if (daysInAdvance > MaxAdvanceDaysAllowed)
+            {
+                return (
+                    false,
+                    $"Bookings can only be made up to {MaxAdvanceDaysAllowed} days in advance. Your selected date is {daysInAdvance} days away."
+                );
+            }
         }
 
         // Validation 3: Check for double bookings (same room, overlapping time)
@@ -167,21 +171,62 @@ public class BookingService : IBookingService
                 !(b.EndTime <= startTime || b.StartTime >= endTime) // Check for time overlap
             )
             .ToList();
-
         if (conflictingBookings.Any())
         {
             // Build a detailed error message with conflicting booking times
             var conflictTimes = conflictingBookings
                 .OrderBy(b => b.StartTime)
                 .Select(b => $"- {b.StartTime:hh\\:mm} - {b.EndTime:hh\\:mm}");
-
             var errorMessage =
                 "This room is already booked during the selected time. Please choose a different time or room.\n\nConflicting bookings:\n"
                 + string.Join("\n", conflictTimes);
-
             return (false, errorMessage);
         }
-
         return (true, string.Empty);
+    }
+
+    /// <summary>
+    /// Generates a list of dates based on the recurrence pattern between the start date and end date.
+    /// </summary>
+    public List<DateTime> GenerateRecurrenceDates(
+        DateTime startDate,
+        DateTime endDate,
+        RecurrencePattern pattern
+    )
+    {
+        var dates = new List<DateTime>();
+
+        if (pattern == RecurrencePattern.None)
+        {
+            dates.Add(startDate);
+            return dates;
+        }
+
+        var currentDate = startDate;
+
+        while (currentDate <= endDate)
+        {
+            dates.Add(currentDate);
+
+            switch (pattern)
+            {
+                case RecurrencePattern.Daily:
+                    currentDate = currentDate.AddDays(1);
+                    break;
+                case RecurrencePattern.Weekly:
+                    currentDate = currentDate.AddDays(7);
+                    break;
+                case RecurrencePattern.BiWeekly:
+                    currentDate = currentDate.AddDays(14);
+                    break;
+                case RecurrencePattern.Monthly:
+                    currentDate = currentDate.AddMonths(1);
+                    break;
+                default:
+                    throw new ArgumentException($"Unknown recurrence pattern: {pattern}");
+            }
+        }
+
+        return dates;
     }
 }
