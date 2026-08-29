@@ -14,6 +14,13 @@ public class CreateRecurringModel : PageModel
 
     public List<Room> AvailableRooms { get; set; } = new();
 
+    // Pre-populated fields from recurring booking link
+    public int? PreSelectedRoomId { get; set; }
+    public string? PreSelectedStartDate { get; set; }
+    public string? PreSelectedStartTime { get; set; }
+    public string? PreSelectedEndTime { get; set; }
+    public string? PreSelectedRecurrenceEndDate { get; set; }
+
     public CreateRecurringModel(IRoomService roomService, IBookingService bookingService, IUserService userService)
     {
         _roomService = roomService;
@@ -21,9 +28,17 @@ public class CreateRecurringModel : PageModel
         _userService = userService;
     }
 
-    public async Task OnGetAsync()
+    public async Task OnGetAsync(int? roomId = null, string? startDate = null, string? startTime = null, 
+        string? endTime = null, string? recurrenceEndDate = null)
     {
         AvailableRooms = await _roomService.GetAllRoomsAsync();
+
+        // Store pre-populated values from recurring booking search
+        PreSelectedRoomId = roomId;
+        PreSelectedStartDate = startDate;
+        PreSelectedStartTime = startTime;
+        PreSelectedEndTime = endTime;
+        PreSelectedRecurrenceEndDate = recurrenceEndDate;
     }
 
     public async Task<IActionResult> OnPostAsync(int roomId, string startDate, string startTime, string endTime, 
@@ -39,8 +54,16 @@ public class CreateRecurringModel : PageModel
                 return Page();
             }
 
-            // Get current user (staff member)
-            var user = await _userService.GetUserByUserIdAsync("ST101");
+            // Get current user (staff member) from session
+            var currentUserName = HttpContext.Session.GetString("CurrentUser");
+            if (string.IsNullOrEmpty(currentUserName))
+            {
+                ModelState.AddModelError(string.Empty, "User session expired. Please login again.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            var user = await _userService.GetUserByUserIdAsync(currentUserName);
             if (user == null)
             {
                 ModelState.AddModelError(string.Empty, "User not found.");
@@ -146,7 +169,7 @@ public class CreateRecurringModel : PageModel
 
             await _bookingService.CreateBookingAsync(booking);
 
-            return RedirectToPage("/Students/Search", new { message = "Recurring booking created successfully!" });
+            return RedirectToPage("/Students/MyBookings", new { message = "Recurring booking created successfully!" });
         }
         catch (Exception ex)
         {
