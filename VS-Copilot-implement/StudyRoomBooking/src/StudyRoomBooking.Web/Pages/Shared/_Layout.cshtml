@@ -69,13 +69,13 @@
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Students/Search">@localizationService.GetString("Navigation", "SearchRooms")</a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Staff/RecurringBooking">@localizationService.GetString("Navigation", "RecurringBookings")</a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Students/MyBookings">@localizationService.GetString("Navigation", "MyBookings")</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-page="/Students/BookingHistory">@localizationService.GetString("Navigation", "BookingHistory")</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Staff/CreateRecurring">@localizationService.GetString("Navigation", "RecurringBookings")</a>
                             </li>
                         }
                         @if (userRole == "Admin")

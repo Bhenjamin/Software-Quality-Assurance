@@ -20,3 +20,30 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+/* Ensure navbar dropdown menus appear above form elements */
+.navbar {
+  position: relative;
+  z-index: 1000;
+}
+
+.navbar-collapse {
+  position: relative;
+  z-index: 1001;
+}
+
+.navbar .dropdown-menu {
+  position: absolute;
+  z-index: 1002;
+}
+
+/* Ensure form elements don't hide navigation dropdowns */
+.card {
+  position: relative;
+  z-index: 1;
+}
+
+.form-select, select {
+  position: relative;
+  z-index: auto;
+}

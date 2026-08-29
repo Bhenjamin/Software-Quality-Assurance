@@ -1,0 +1,257 @@
+@page
+@model RecurringBookingModel
+@{
+	ViewData["Title"] = "Search Recurring Bookings";
+	var minDate = DateTime.Today.ToString("yyyy-MM-dd");
+	var maxDate = DateTime.Today.AddDays(60).ToString("yyyy-MM-dd");
+}
+
+<style>
+	.time-validation-error {
+		display: none;
+		color: #dc3545;
+		font-size: 0.875rem;
+		margin-top: 0.25rem;
+	}
+	.time-validation-error.show {
+		display: block;
+	}
+</style>
+
+<div class="container mt-4">
+	<h2>Search Recurring Bookings</h2>
+
+	@if (!ViewData.ModelState.IsValid)
+	{
+		<div class="alert alert-danger alert-dismissible fade show" role="alert">
+			<strong>Search Error!</strong>
+			<ul class="mb-0">
+				@foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+				{
+					<li>@error.ErrorMessage</li>
+				}
+			</ul>
+			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+		</div>
+	}
+
+	<form method="post" class="card p-4 mb-4">
+		<div class="row">
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="startDate" class="form-label">Start Date *</label>
+					<input type="date" id="startDate" name="searchCriteria.StartDate" 
+						   min="@minDate" max="@maxDate"
+						   value="@Model.SearchCriteria.StartDate.ToString("yyyy-MM-dd")" class="form-control" required />
+					<small class="text-muted">Today to 60 days in advance</small>
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="recurrenceEndDate" class="form-label">Recurrence End Date *</label>
+					<input type="date" id="recurrenceEndDate" name="searchCriteria.RecurrenceEndDate" 
+						   min="@minDate" 
+						   value="@Model.SearchCriteria.RecurrenceEndDate.ToString("yyyy-MM-dd")" class="form-control" required />
+					<small class="text-muted">Must be on or after start date</small>
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="startTime" class="form-label">Start Hour</label>
+					<select id="startTime" name="searchCriteria.StartTime" class="form-select">
+						<option value="" selected="@(!Model.SearchCriteria.StartTime.HasValue)">--:--</option>
+						@for (int hour = 8; hour <= 21; hour++)
+						{
+							<option value="@hour:00" selected="@(Model.SearchCriteria.StartTime.HasValue && Model.SearchCriteria.StartTime.Value.Hours == hour)">@hour:00</option>
+						}
+					</select>
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="endTime" class="form-label">End Hour</label>
+					<select id="endTime" name="searchCriteria.EndTime" class="form-select">
+						<option value="" selected="@(!Model.SearchCriteria.EndTime.HasValue)">--:--</option>
+						@for (int hour = 9; hour <= 22; hour++)
+						{
+							<option value="@hour:00" selected="@(Model.SearchCriteria.EndTime.HasValue && Model.SearchCriteria.EndTime.Value.Hours == hour)">@hour:00</option>
+						}
+					</select>
+					<div id="timeValidationError" class="time-validation-error">Start hour must be before end hour.</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="capacity" class="form-label">Minimum Capacity</label>
+					<input type="number" id="capacity" name="searchCriteria.Capacity" 
+						   min="1" value="@Model.SearchCriteria.Capacity" class="form-control" />
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="roomType" class="form-label">Room Type</label>
+					<select id="roomType" name="searchCriteria.RoomType" class="form-select">
+						<option value="">Any Type</option>
+						@foreach (var type in Enum.GetValues(typeof(StudyRoomBooking.Domain.Enums.RoomType)))
+						{
+							var roomType = (StudyRoomBooking.Domain.Enums.RoomType)type;
+							<option value="@type" selected="@(Model.SearchCriteria.RoomType == roomType)">@roomType.ToDisplayName()</option>
+						}
+					</select>
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<label for="location" class="form-label">Location</label>
+					<input type="text" id="location" name="searchCriteria.Location" 
+						   value="@Model.SearchCriteria.Location" placeholder="e.g., Building A" class="form-control" />
+				</div>
+			</div>
+			<div class="col-md-3">
+				<div class="form-group">
+					<label>&nbsp;</label>
+					<button type="submit" class="btn btn-primary form-control">Search</button>
+				</div>
+			</div>
+		</div>
+	</form>
+
+	@if (Model.SearchResults.Any())
+	{
+		<div class="card mt-4">
+			<div class="card-header">
+				<h5 class="mb-0">Room Availability Matrix for @Model.SearchCriteria.StartDate.ToString("dddd, MMMM dd, yyyy")</h5>
+				<small class="text-muted">Recurring from @Model.SearchCriteria.StartDate.ToString("MMM dd") to @Model.SearchCriteria.RecurrenceEndDate.ToString("MMM dd, yyyy") | Time Range: 08:00 - 22:00
+					@if (Model.SearchCriteria.StartTime.HasValue || Model.SearchCriteria.EndTime.HasValue)
+					{
+						<br /><strong style="color: #0c63e4;">✓ Filtered: Showing only rooms available at specified hours across the entire date range</strong>
+					}
+				</small>
+			</div>
+			<div class="card-body">
+				<div class="table-responsive">
+					<table class="table table-bordered text-center">
+						<thead>
+							<tr class="table-light">
+								<th style="width: 200px;">Room Details</th>
+								@{
+									var startTime = new TimeSpan(8, 0, 0);  // Always start from 8:00
+									var endTime = new TimeSpan(22, 0, 0);  // Always end at 22:00
+									var interval = TimeSpan.FromHours(1);
+									var currentTime = startTime;
+									var timeSlots = new List<TimeSpan>();
+
+									while (currentTime < endTime)
+									{
+										timeSlots.Add(currentTime);
+										currentTime = currentTime.Add(interval);
+									}
+								}
+								@foreach (var timeSlot in timeSlots)
+								{
+									<th>@timeSlot.ToString(@"hh\:mm")</th>
+								}
+								</tr>
+						</thead>
+						<tbody>
+							@foreach (var room in Model.SearchResults)
+							{
+
+								<tr>
+									<td class="text-start" style="vertical-align: middle;">
+										<div>
+											<strong>@room.Name</strong><br />
+											<small class="text-muted">@room.Code<br />@room.Location<br />Cap: @room.Capacity</small>
+										</div>
+									</td>
+									@{
+										var bookingsForRoom = await Model.GetRoomBookingsAsync(room.Id, Model.SearchCriteria.StartDate);
+									}
+									@foreach (var timeSlot in timeSlots)
+									{
+										var nextTime = timeSlot.Add(interval);
+										var isBooked = bookingsForRoom.Any(b => 
+											!(b.EndTime <= timeSlot || b.StartTime >= nextTime) && 
+											b.Status != StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled);
+										var isInSearchRange = Model.IsTimeSlotInSearchRange(timeSlot);
+										var startHour = timeSlot.Hours;
+										var endHour = nextTime.Hours;
+
+										<td style="padding: 4px;">
+											@if (isInSearchRange)
+											{
+												@if (isBooked)
+												{
+													<span class="badge bg-danger w-100">Booked</span>
+												}
+												else
+												{
+													<a asp-page="/Staff/CreateRecurring" 
+													   asp-route-roomId="@room.Id"
+													   asp-route-startDate="@Model.SearchCriteria.StartDate.ToString("yyyy-MM-dd")"
+													   asp-route-startTime="@startHour:00"
+													   asp-route-endTime="@endHour:00"
+													   asp-route-recurrenceEndDate="@Model.SearchCriteria.RecurrenceEndDate.ToString("yyyy-MM-dd")"
+													   class="badge bg-success w-100" style="text-decoration: none; display: block; padding: 4px 8px; cursor: pointer;">Free</a>
+												}
+											}
+											else
+											{
+												<span class="badge bg-secondary w-100" style="opacity: 0.5;">--</span>
+											}
+										</td>
+											}
+									</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<div class="mt-4 mb-4">
+			<a href="#" class="btn btn-secondary">Clear Search</a>
+		</div>
+	}
+	else if (Model.HasSearched)
+	{
+		<div class="alert alert-info">
+			No rooms found matching your search criteria. Please try adjusting your filters.
+		</div>
+	}
+</div>
+
+<script>
+	document.addEventListener('DOMContentLoaded', function () {
+		const startTimeSelect = document.getElementById('startTime');
+		const endTimeSelect = document.getElementById('endTime');
+		const timeValidationError = document.getElementById('timeValidationError');
+
+		function validateTimes() {
+			const startTime = startTimeSelect.value;
+			const endTime = endTimeSelect.value;
+
+			if (startTime && endTime) {
+				const startHour = parseInt(startTime.split(':')[0]);
+				const endHour = parseInt(endTime.split(':')[0]);
+
+				if (startHour >= endHour) {
+					timeValidationError.classList.add('show');
+				} else {
+					timeValidationError.classList.remove('show');
+				}
+			} else {
+				timeValidationError.classList.remove('show');
+			}
+		}
+
+		startTimeSelect.addEventListener('change', validateTimes);
+		endTimeSelect.addEventListener('change', validateTimes);
+
+		// Validate on page load
+		validateTimes();
+	});
+</script>
