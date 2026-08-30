@@ -102,15 +102,6 @@ public class CreateRecurringModel : PageModel
                 return Page();
             }
 
-            // Validate booking date is not more than 60 days in advance
-            var daysInAdvance = (date.Date - today).Days;
-            if (daysInAdvance > 60)
-            {
-                ModelState.AddModelError(string.Empty, $"Bookings can only be made up to 60 days in advance. Your selected date is {daysInAdvance} days away.");
-                await OnGetAsync();
-                return Page();
-            }
-
             // Parse recurrence end date if provided
             DateTime? recurrenceEnd = null;
             if (!string.IsNullOrEmpty(recurrenceEndDate))
@@ -127,7 +118,7 @@ public class CreateRecurringModel : PageModel
             }
 
             // Validate booking date and time constraints for the start date
-            var (isValid, errorMessage) = await _bookingService.ValidateBookingAsync(roomId, date, start, end);
+            var (isValid, errorMessage) = await _bookingService.ValidateBookingAsync(roomId, date, start, end, skipAdvanceDaysCheck: true);
             if (!isValid)
             {
                 ModelState.AddModelError(string.Empty, errorMessage);
