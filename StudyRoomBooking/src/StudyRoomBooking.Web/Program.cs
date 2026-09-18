@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using StudyRoomBooking.Infrastructure.Persistence;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -20,11 +23,38 @@ builder.Services.AddScoped<StudyRoomBooking.Application.Services.IReportService,
 builder.Services.AddScoped<StudyRoomBooking.Application.Services.INotificationService, StudyRoomBooking.Application.Services.NotificationService>();
 builder.Services.AddScoped<StudyRoomBooking.Application.Services.IAuthenticationService, StudyRoomBooking.Application.Services.AuthenticationService>();
 
-// Add infrastructure services
-builder.Services.AddSingleton<StudyRoomBooking.Domain.Interfaces.IUnitOfWork, StudyRoomBooking.Infrastructure.Repositories.InMemoryUnitOfWork>();
+var supabaseUrl = builder.Configuration["Supabase:Url"];
+var supabaseAnonKey = builder.Configuration["Supabase:AnonKey"];
+if (string.IsNullOrWhiteSpace(supabaseUrl) || string.IsNullOrWhiteSpace(supabaseAnonKey))
+{
+    throw new InvalidOperationException("Supabase:Url and Supabase:AnonKey are required for authentication.");
+}
+
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<StudyRoomBooking.Application.Services.SupabaseAuthClient>(serviceProvider =>
+    new StudyRoomBooking.Application.Services.SupabaseAuthClient(
+        serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient(),
+        supabaseUrl,
+        supabaseAnonKey));
+
+var supabaseConnectionString = builder.Configuration.GetConnectionString("Supabase")
+    ?? builder.Configuration["SUPABASE_CONNECTION_STRING"];
+if (string.IsNullOrWhiteSpace(supabaseConnectionString))
+{
+    throw new InvalidOperationException("ConnectionStrings:Supabase is required. Configure it with dotnet user-secrets or the SUPABASE_CONNECTION_STRING environment variable.");
+}
+
+builder.Services.AddDbContext<StudyRoomBookingDbContext>(options => options.UseNpgsql(supabaseConnectionString));
+builder.Services.AddScoped<StudyRoomBooking.Domain.Interfaces.IUnitOfWork, StudyRoomBooking.Infrastructure.Repositories.EfUnitOfWork>();
 builder.Services.AddSingleton<StudyRoomBooking.Infrastructure.Localization.ILocalizationService, StudyRoomBooking.Infrastructure.Localization.LocalizationService>();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<StudyRoomBookingDbContext>();
+    db.Database.EnsureCreated();
+}
 
 // Initialize seed data
 InitializeSeedData(app.Services);
@@ -57,6 +87,11 @@ void InitializeSeedData(IServiceProvider serviceProvider)
     using var scope = serviceProvider.CreateScope();
     var userService = scope.ServiceProvider.GetRequiredService<StudyRoomBooking.Application.Services.IUserService>();
     var roomService = scope.ServiceProvider.GetRequiredService<StudyRoomBooking.Application.Services.IRoomService>();
+
+    if (userService.GetAllUsersAsync().Result.Count > 0 || roomService.GetAllRoomsAsync().Result.Count > 0)
+    {
+        return;
+    }
 
     // Seed users
     var student1 = new StudyRoomBooking.Domain.Entities.User

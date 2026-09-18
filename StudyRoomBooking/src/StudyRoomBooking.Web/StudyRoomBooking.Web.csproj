@@ -1,14 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>f2c4440b-6d62-4170-bc86-24458f10b44c</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\StudyRoomBooking.Application\StudyRoomBooking.Application.csproj" />
     <ProjectReference Include="..\StudyRoomBooking.Infrastructure\StudyRoomBooking.Infrastructure.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.8" />
   </ItemGroup>
 
 </Project>

@@ -3,19 +3,12 @@ namespace StudyRoomBooking.Application.Services;
 public class AuthenticationService : IAuthenticationService
 {
     private readonly IUserService _userService;
+    private readonly SupabaseAuthClient _supabaseAuthClient;
 
-    // Demo credentials - in a real app, these would be in a database with hashed passwords
-    private static readonly Dictionary<string, (string Password, string Role)> DemoAccounts = new()
-    {
-        { "student1@university.edu", ("password123", "Student") },
-        { "student2@university.edu", ("password123", "Student") },
-        { "staff@university.edu", ("password123", "Staff") },
-        { "admin@university.edu", ("password123", "Admin") }
-    };
-
-    public AuthenticationService(IUserService userService)
+    public AuthenticationService(IUserService userService, SupabaseAuthClient supabaseAuthClient)
     {
         _userService = userService;
+        _supabaseAuthClient = supabaseAuthClient;
     }
 
     public async Task<(bool Success, int UserId, string UserName, string Role, string Message)> LoginAsync(string email, string password)
@@ -25,19 +18,14 @@ public class AuthenticationService : IAuthenticationService
             return (false, 0, "", "", "Email and password are required.");
         }
 
-        // Check demo credentials
-        if (!DemoAccounts.TryGetValue(email.ToLower(), out var account))
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var authResult = await _supabaseAuthClient.SignInAsync(normalizedEmail, password);
+        if (!authResult.Success)
         {
-            return (false, 0, "", "", "Invalid email or password.");
+            return (false, 0, "", "", authResult.Error ?? "Invalid email or password.");
         }
 
-        if (account.Password != password)
-        {
-            return (false, 0, "", "", "Invalid email or password.");
-        }
-
-        // Get user from database
-        var user = await _userService.GetUserByUserIdAsync(email.ToLower());
+        var user = await _userService.GetUserByUserIdAsync(normalizedEmail);
 
         if (user == null)
         {

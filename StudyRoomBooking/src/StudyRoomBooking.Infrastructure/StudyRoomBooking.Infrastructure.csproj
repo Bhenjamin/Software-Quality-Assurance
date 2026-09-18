@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\StudyRoomBooking.Domain\StudyRoomBooking.Domain.csproj" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.8" />
   </ItemGroup>
 
 </Project>
