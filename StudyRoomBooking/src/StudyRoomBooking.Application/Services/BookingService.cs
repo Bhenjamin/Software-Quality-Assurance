@@ -76,6 +76,7 @@ public class BookingService : IBookingService
 
         booking.ConfirmationNumber = Guid.NewGuid().ToString("N").Substring(0, 10).ToUpper();
         booking.Status = BookingStatus.Confirmed;
+        booking.BookingDate = DateTime.SpecifyKind(booking.BookingDate.Date, DateTimeKind.Utc);
         booking.CreatedAt = DateTime.UtcNow;
 
         await _unitOfWork.Bookings.AddAsync(booking);
@@ -91,6 +92,8 @@ public class BookingService : IBookingService
                 user.Email,
                 room.Name,
                 booking.BookingDate,
+                booking.StartTime,
+                booking.EndTime,
                 booking.ConfirmationNumber
             );
         }

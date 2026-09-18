@@ -20,6 +20,9 @@ builder.Services.AddScoped<StudyRoomBooking.Application.Services.IRoomService, S
 builder.Services.AddScoped<StudyRoomBooking.Application.Services.IUserService, StudyRoomBooking.Application.Services.UserService>();
 builder.Services.AddScoped<StudyRoomBooking.Application.Services.IAccessRuleService, StudyRoomBooking.Application.Services.AccessRuleService>();
 builder.Services.AddScoped<StudyRoomBooking.Application.Services.IReportService, StudyRoomBooking.Application.Services.ReportService>();
+var emailOptions = new StudyRoomBooking.Application.Services.EmailOptions();
+builder.Configuration.GetSection("Email").Bind(emailOptions);
+builder.Services.AddSingleton(emailOptions);
 builder.Services.AddScoped<StudyRoomBooking.Application.Services.INotificationService, StudyRoomBooking.Application.Services.NotificationService>();
 builder.Services.AddScoped<StudyRoomBooking.Application.Services.IAuthenticationService, StudyRoomBooking.Application.Services.AuthenticationService>();
 

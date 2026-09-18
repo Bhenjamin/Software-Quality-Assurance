@@ -85,6 +85,13 @@ public class BookingServiceTests
         Assert.AreEqual(BookingStatus.Confirmed, result.Status);
         Assert.IsFalse(string.IsNullOrEmpty(result.ConfirmationNumber));
         _bookingRepoMock.Verify(r => r.AddAsync(It.IsAny<Booking>()), Times.Once);
+        _notificationServiceMock.Verify(n => n.SendBookingConfirmationAsync(
+            "student@uni.edu",
+            "Study Room A",
+            bookingDate,
+            new TimeSpan(9, 0, 0),
+            new TimeSpan(10, 0, 0),
+            result.ConfirmationNumber!), Times.Once);
     }
 
     // TC-02: Reject a double-booking for the same room and time slot (FR3, NFR2)
