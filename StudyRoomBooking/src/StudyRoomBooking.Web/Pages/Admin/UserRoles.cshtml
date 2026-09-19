@@ -33,15 +33,15 @@
 							<td>
 								@if (user.Role == StudyRoomBooking.Domain.Enums.UserRole.Student)
 								{
-									<span class="badge bg-primary">Student</span>
+									<span class="badge role-student">Student</span>
 								}
 								else if (user.Role == StudyRoomBooking.Domain.Enums.UserRole.Staff)
 								{
-									<span class="badge bg-info">Staff</span>
+									<span class="badge role-staff">Staff</span>
 								}
 								else
 								{
-									<span class="badge bg-danger">Admin</span>
+									<span class="badge role-admin">Admin</span>
 								}
 							</td>
 							<td>
@@ -85,8 +85,4 @@
 	{
 		<div class="alert alert-info">No users found.</div>
 	}
-
-	<div class="mt-3">
-		<a asp-page="/Index" class="btn btn-secondary">Back to Admin Dashboard</a>
-	</div>
 </div>

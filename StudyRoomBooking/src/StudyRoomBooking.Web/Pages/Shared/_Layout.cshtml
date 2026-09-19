@@ -68,7 +68,7 @@
                         }
                         @if (userRole == "Admin")
                         {
-                            <li class="nav-item">
+                            <li class="nav-item admin-nav-start">
                                 <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/RoomManagement") ? "active" : "")" asp-area="" asp-page="/Admin/RoomManagement">@localizationService.GetString("Navigation", "RoomManagement")</a>
                             </li>
                             <li class="nav-item">

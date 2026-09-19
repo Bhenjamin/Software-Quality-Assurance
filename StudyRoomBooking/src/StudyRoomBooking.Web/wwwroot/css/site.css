@@ -64,7 +64,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .navbar .nav-link {
   border-bottom: 4px solid transparent;
-  padding: 1rem 0.75rem 0.75rem;
+  padding: 1rem 1.1rem 0.75rem;
   font-weight: 500;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
@@ -81,7 +81,18 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .navbar .nav-link:hover {
-  border-bottom-color: var(--primary);
+  border-bottom-color: transparent;
+  background-color: #F1F5F3;
+}
+
+.navbar-nav {
+  gap: 0.45rem;
+}
+
+.navbar .admin-nav-start {
+  margin-left: 1.25rem;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--border);
 }
 
 .btn {
@@ -91,6 +102,37 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-sm {
   border-radius: 0.3rem;
+}
+
+.btn-filter {
+  font-weight: 700;
+}
+
+.btn-search {
+  font-weight: 700;
+}
+
+.badge {
+  border-radius: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.25;
+  padding: 0.45rem 0.7rem;
+}
+
+.role-student {
+  background-color: var(--student);
+  color: var(--surface);
+}
+
+.role-staff {
+  background-color: var(--staff);
+  color: var(--surface);
+}
+
+.role-admin {
+  background-color: var(--admin);
+  color: var(--surface);
 }
 
 .form-control,
@@ -132,7 +174,13 @@ h1, h2, h3, h4, h5, h6 {
 
 .table th {
   font-weight: 700;
-  color: var(--primary);
+  color: var(--surface);
+}
+
+.table thead th {
+  background-color: var(--primary) !important;
+  border-color: var(--primary-hover);
+  color: var(--surface) !important;
 }
 
 .table td,
@@ -250,4 +298,12 @@ h1, h2, h3, h4, h5, h6 {
 .form-select, select {
   position: relative;
   z-index: auto;
+}
+
+@media (max-width: 575.98px) {
+  .navbar .admin-nav-start {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
 }

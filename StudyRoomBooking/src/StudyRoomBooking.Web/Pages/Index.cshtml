@@ -74,16 +74,9 @@
 		</div>
 
 		<div class="row">
-			<div class="col-md-3">
-				<div class="form-group">
-					<label for="capacity" class="form-label">Minimum Capacity</label>
-					<input type="number" id="capacity" name="searchCriteria.Capacity" 
-						   min="1" value="@Model.SearchCriteria.Capacity" class="form-control" />
-					</div>
-				</div>
 				@if (Model.CurrentUserRole == "Staff" || Model.CurrentUserRole == "Student")
 				{
-					<div class="col-md-3">
+					<div class="col-md-4">
 						<div class="form-group">
 							<label for="roomType" class="form-label">Room Type</label>
 							<select id="roomType" name="searchCriteria.RoomType" class="form-select">
@@ -96,17 +89,17 @@
 						</div>
 					</div>
 				}
-			<div class="col-md-3">
+			<div class="col-md-4">
 				<div class="form-group">
 					<label for="location" class="form-label">Location</label>
 					<input type="text" id="location" name="searchCriteria.Location" 
 						   value="@Model.SearchCriteria.Location" placeholder="e.g., Building A" class="form-control" />
 				</div>
 			</div>
-			<div class="col-md-3">
+			<div class="col-md-4">
 				<div class="form-group">
 					<label>&nbsp;</label>
-					<button type="submit" class="btn btn-primary form-control">Find Available Rooms</button>
+					<button type="submit" class="btn btn-primary btn-search form-control">Find Available Rooms</button>
 				</div>
 			</div>
 		</div>
