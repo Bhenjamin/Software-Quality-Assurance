@@ -5,6 +5,7 @@
 }
 
 <div class="container mt-4">
+	<div asp-validation-summary="All" class="text-danger"></div>
 	<h2>User Roles Management</h2>
 
 	@if (Model.Users.Any())
@@ -54,7 +55,13 @@
 							</td>
 							<td>
 								<form method="post" class="d-inline">
-									<button type="submit" class="btn btn-sm btn-warning" asp-page-handler="Edit" asp-route-id="@user.Id">Edit</button>
+									<select name="role" class="form-select form-select-sm d-inline w-auto">
+										@foreach (var role in Enum.GetValues<StudyRoomBooking.Domain.Enums.UserRole>())
+										{
+											<option value="@role" selected="@(user.Role == role)">@role</option>
+										}
+									</select>
+									<button type="submit" class="btn btn-sm btn-warning" asp-page-handler="Edit" asp-route-id="@user.Id">Save</button>
 								</form>
 							</td>
 						</tr>

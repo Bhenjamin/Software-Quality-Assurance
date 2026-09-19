@@ -5,22 +5,26 @@ using StudyRoomBooking.Domain.Entities;
 
 namespace StudyRoomBooking.Web.Pages.Admin;
 
-public class AccessRulesModel : PageModel
+public class AccessRulesModel : AdminPageModel
 {
     private readonly IRoomService _roomService;
+    private readonly IAccessRuleService _accessRuleService;
 
     public List<Room> AvailableRooms { get; set; } = new();
     public List<AccessRule> AccessRules { get; set; } = new();
+    public Dictionary<int, string> RoomNames { get; set; } = new();
 
-    public AccessRulesModel(IRoomService roomService)
+    public AccessRulesModel(IRoomService roomService, IAccessRuleService accessRuleService)
     {
         _roomService = roomService;
+        _accessRuleService = accessRuleService;
     }
 
     public async Task OnGetAsync()
     {
         AvailableRooms = await _roomService.GetAllRoomsAsync();
-        // In a real implementation, we'd load access rules from the database
+        AccessRules = await _accessRuleService.GetAllAsync();
+        RoomNames = AvailableRooms.ToDictionary(room => room.Id, room => room.Name);
     }
 
     public async Task<IActionResult> OnPostAsync(int roomId, string ruleName, string description, 
@@ -28,18 +32,20 @@ public class AccessRulesModel : PageModel
     {
         try
         {
-            // Create access rule
-            TimeSpan? start = null;
-            TimeSpan? end = null;
-
-            if (!string.IsNullOrEmpty(startTime))
+            if (string.IsNullOrWhiteSpace(ruleName) || !await RoomExists(roomId))
             {
-                start = TimeSpan.ParseExact(startTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+                ModelState.AddModelError(string.Empty, "Select a valid room and enter a rule name.");
+                await LoadData();
+                return Page();
             }
 
-            if (!string.IsNullOrEmpty(endTime))
+            TimeSpan? start = ParseTime(startTime);
+            TimeSpan? end = ParseTime(endTime);
+            if (start.HasValue != end.HasValue || (start.HasValue && start >= end))
             {
-                end = TimeSpan.ParseExact(endTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+                ModelState.AddModelError(string.Empty, "Provide both times, with the start before the end.");
+                await LoadData();
+                return Page();
             }
 
             var rule = new AccessRule
@@ -52,7 +58,7 @@ public class AccessRulesModel : PageModel
                 IsActive = true
             };
 
-            AccessRules.Add(rule);
+            await _accessRuleService.CreateAsync(rule);
 
             return RedirectToPage();
         }
@@ -62,5 +68,21 @@ public class AccessRulesModel : PageModel
             AvailableRooms = await _roomService.GetAllRoomsAsync();
             return Page();
         }
+    }
+
+    public async Task<IActionResult> OnPostDeleteAsync(int id)
+    {
+        await _accessRuleService.DeleteAsync(id);
+        return RedirectToPage();
+    }
+
+    private async Task<bool> RoomExists(int id) => id > 0 && await _roomService.GetRoomByIdAsync(id) is not null;
+    private static TimeSpan? ParseTime(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : TimeSpan.TryParse(value, out var time) ? time : null;
+    private async Task LoadData()
+    {
+        AvailableRooms = await _roomService.GetAllRoomsAsync();
+        AccessRules = await _accessRuleService.GetAllAsync();
+        RoomNames = AvailableRooms.ToDictionary(room => room.Id, room => room.Name);
     }
 }

@@ -5,6 +5,7 @@
 }
 
 <div class="container mt-4">
+	<div asp-validation-summary="All" class="text-danger"></div>
 	<h2>Access Rules Management</h2>
 
 	<div class="card mb-4">
@@ -86,6 +87,7 @@
 							@foreach (var rule in Model.AccessRules)
 							{
 								<tr>
+									<td>@Model.RoomNames.GetValueOrDefault(rule.RoomId, "Unknown")</td>
 									<td>@rule.RuleName</td>
 									<td>@rule.Description</td>
 									<td>
@@ -107,6 +109,11 @@
 										{
 											<span class="badge bg-secondary">Inactive</span>
 										}
+									</td>
+									<td>
+										<form method="post">
+											<button type="submit" class="btn btn-sm btn-danger" asp-page-handler="Delete" asp-route-id="@rule.Id">Remove</button>
+										</form>
 									</td>
 								</tr>
 							}

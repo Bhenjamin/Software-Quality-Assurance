@@ -6,25 +6,28 @@ using StudyRoomBooking.Domain.Entities;
 
 namespace StudyRoomBooking.Web.Pages.Admin;
 
-public class OverridesModel : PageModel
+public class OverridesModel : AdminPageModel
 {
     private readonly IBookingService _bookingService;
     private readonly IRoomService _roomService;
     private readonly IUserService _userService;
+    private readonly Domain.Interfaces.IUnitOfWork _unitOfWork;
 
     public List<BookingViewModel> AvailableBookings { get; set; } = new();
     public List<BookingOverride> Overrides { get; set; } = new();
 
-    public OverridesModel(IBookingService bookingService, IRoomService roomService, IUserService userService)
+    public OverridesModel(IBookingService bookingService, IRoomService roomService, IUserService userService, Domain.Interfaces.IUnitOfWork unitOfWork)
     {
         _bookingService = bookingService;
         _roomService = roomService;
         _userService = userService;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task OnGetAsync()
     {
         await LoadBookings();
+        Overrides = await _unitOfWork.BookingOverrides.GetAllAsync();
     }
 
     public async Task<IActionResult> OnPostAsync(int bookingId, string reason, bool allowException)
@@ -41,7 +44,16 @@ public class OverridesModel : PageModel
                 AllowsExceptionToRule = allowException
             };
 
-            Overrides.Add(@override);
+            if (bookingId <= 0 || string.IsNullOrWhiteSpace(reason) || await _bookingService.GetBookingByIdAsync(bookingId) is null)
+            {
+                ModelState.AddModelError(string.Empty, "Select a valid booking and provide a reason.");
+                await LoadBookings();
+                Overrides = await _unitOfWork.BookingOverrides.GetAllAsync();
+                return Page();
+            }
+
+            await _unitOfWork.BookingOverrides.AddAsync(@override);
+            await _unitOfWork.SaveChangesAsync();
 
             return RedirectToPage();
         }
@@ -49,8 +61,16 @@ public class OverridesModel : PageModel
         {
             ModelState.AddModelError(string.Empty, $"Error creating override: {ex.Message}");
             await LoadBookings();
+            Overrides = await _unitOfWork.BookingOverrides.GetAllAsync();
             return Page();
         }
+    }
+
+    public async Task<IActionResult> OnPostDeleteAsync(int id)
+    {
+        await _unitOfWork.BookingOverrides.DeleteAsync(id);
+        await _unitOfWork.SaveChangesAsync();
+        return RedirectToPage();
     }
 
     private async Task LoadBookings()

@@ -6,7 +6,7 @@ using StudyRoomBooking.Domain.Enums;
 
 namespace StudyRoomBooking.Web.Pages.Admin;
 
-public class RoomManagementModel : PageModel
+public class RoomManagementModel : AdminPageModel
 {
     private readonly IRoomService _roomService;
 
@@ -48,6 +48,18 @@ public class RoomManagementModel : PageModel
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name) ||
+                string.IsNullOrWhiteSpace(location) || capacity < 1 ||
+                !Enum.IsDefined(type))
+            {
+                ModelState.AddModelError(string.Empty, "Code, name, location, a valid type, and a positive capacity are required.");
+                Rooms = await _roomService.GetAllRoomsAsync();
+                EditingRoom = roomId.HasValue ? await _roomService.GetRoomByIdAsync(roomId.Value) : new Room { IsAvailable = true };
+                ShowForm = true;
+                IsEdit = roomId.HasValue;
+                return Page();
+            }
+
             // Read checkbox value directly from form (more reliable than model binding)
             bool isAvailable = Request.Form.ContainsKey("isAvailable") && 
                               Request.Form["isAvailable"].ToString().Equals("true", StringComparison.OrdinalIgnoreCase);
@@ -67,6 +79,14 @@ public class RoomManagementModel : PageModel
                     room.IsAvailable = isAvailable;
 
                     await _roomService.UpdateRoomAsync(room);
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, "The room could not be found.");
+                    Rooms = await _roomService.GetAllRoomsAsync();
+                    ShowForm = true;
+                    IsEdit = true;
+                    return Page();
                 }
             }
             else

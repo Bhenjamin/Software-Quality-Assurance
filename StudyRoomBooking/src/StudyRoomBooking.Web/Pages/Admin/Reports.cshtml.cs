@@ -3,7 +3,7 @@ using StudyRoomBooking.Application.Services;
 
 namespace StudyRoomBooking.Web.Pages.Admin;
 
-public class ReportsModel : PageModel
+public class ReportsModel : AdminPageModel
 {
     private readonly IReportService _reportService;
 
@@ -29,6 +29,12 @@ public class ReportsModel : PageModel
     {
         StartDate = startDate;
         EndDate = endDate;
+
+        if (StartDate.Date > EndDate.Date)
+        {
+            ModelState.AddModelError(string.Empty, "Start date must be on or before end date.");
+            return;
+        }
 
         await LoadReports();
     }

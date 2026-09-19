@@ -48,3 +48,21 @@ public sealed class EfRoomMajorRestrictionRepository(StudyRoomBookingDbContext d
     public Task UpdateAsync(RoomMajorRestriction restriction) { db.RoomMajorRestrictions.Update(restriction); return Task.CompletedTask; }
     public async Task DeleteAsync(int id) { var restriction = await db.RoomMajorRestrictions.FindAsync(id); if (restriction is not null) db.RoomMajorRestrictions.Remove(restriction); }
 }
+
+public sealed class EfAccessRuleRepository(StudyRoomBookingDbContext db) : IAccessRuleRepository
+{
+    public Task<AccessRule?> GetByIdAsync(int id) => db.AccessRules.FindAsync(id).AsTask();
+    public Task<List<AccessRule>> GetAllAsync() => db.AccessRules.AsNoTracking().ToListAsync();
+    public Task AddAsync(AccessRule rule) => db.AccessRules.AddAsync(rule).AsTask();
+    public Task UpdateAsync(AccessRule rule) { db.AccessRules.Update(rule); return Task.CompletedTask; }
+    public async Task DeleteAsync(int id) { var rule = await db.AccessRules.FindAsync(id); if (rule is not null) db.AccessRules.Remove(rule); }
+}
+
+public sealed class EfBookingOverrideRepository(StudyRoomBookingDbContext db) : IBookingOverrideRepository
+{
+    public Task<BookingOverride?> GetByIdAsync(int id) => db.BookingOverrides.FindAsync(id).AsTask();
+    public Task<List<BookingOverride>> GetAllAsync() => db.BookingOverrides.AsNoTracking().ToListAsync();
+    public Task AddAsync(BookingOverride bookingOverride) => db.BookingOverrides.AddAsync(bookingOverride).AsTask();
+    public Task UpdateAsync(BookingOverride bookingOverride) { db.BookingOverrides.Update(bookingOverride); return Task.CompletedTask; }
+    public async Task DeleteAsync(int id) { var item = await db.BookingOverrides.FindAsync(id); if (item is not null) db.BookingOverrides.Remove(item); }
+}

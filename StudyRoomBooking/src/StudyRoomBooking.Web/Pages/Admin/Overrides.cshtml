@@ -5,6 +5,7 @@
 }
 
 <div class="container mt-4">
+	<div asp-validation-summary="All" class="text-danger"></div>
 	<h2>Booking Overrides Management</h2>
 
 	<div class="card mb-4">
@@ -58,6 +59,7 @@
 					<table class="table table-striped">
 						<thead>
 							<tr>
+								<th>Actions</th>
 								<th>Booking ID</th>
 								<th>Reason</th>
 								<th>Exception Allowed</th>
@@ -69,6 +71,7 @@
 							@foreach (var bookingOverride in Model.Overrides)
 							{
 								<tr>
+									<td><form method="post"><button type="submit" class="btn btn-sm btn-danger" asp-page-handler="Delete" asp-route-id="@bookingOverride.Id">Remove</button></form></td>
 									<td>@bookingOverride.BookingId</td>
 									<td>@bookingOverride.Reason</td>
 									<td>

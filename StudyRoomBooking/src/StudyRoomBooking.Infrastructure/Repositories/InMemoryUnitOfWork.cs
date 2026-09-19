@@ -8,6 +8,8 @@ public class InMemoryUnitOfWork : IUnitOfWork
     public IRoomRepository Rooms { get; }
     public IUserRepository Users { get; }
     public IRoomMajorRestrictionRepository RoomMajorRestrictions { get; }
+    public IAccessRuleRepository AccessRules { get; }
+    public IBookingOverrideRepository BookingOverrides { get; }
 
     public InMemoryUnitOfWork()
     {
@@ -15,6 +17,8 @@ public class InMemoryUnitOfWork : IUnitOfWork
         Rooms = new InMemoryRoomRepository();
         Users = new InMemoryUserRepository();
         RoomMajorRestrictions = new InMemoryRoomMajorRestrictionRepository();
+        AccessRules = new InMemoryAccessRuleRepository();
+        BookingOverrides = new InMemoryBookingOverrideRepository();
     }
 
     public Task SaveChangesAsync()

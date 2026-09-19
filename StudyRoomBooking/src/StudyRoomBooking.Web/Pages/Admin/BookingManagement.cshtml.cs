@@ -6,7 +6,7 @@ using StudyRoomBooking.Domain.Enums;
 
 namespace StudyRoomBooking.Web.Pages.Admin;
 
-public class BookingManagementModel : PageModel
+public class BookingManagementModel : AdminPageModel
 {
     private readonly IBookingService _bookingService;
     private readonly IRoomService _roomService;
@@ -37,10 +37,21 @@ public class BookingManagementModel : PageModel
         await LoadBookings();
     }
 
-    public async Task<IActionResult> OnPostCancelBookingAsync(int id)
+    public async Task<IActionResult> OnPostCancelBookingAsync(int id, DateTime? filterDate = null, BookingStatus? filterStatus = null)
     {
         try
         {
+            if (id <= 0 || await _bookingService.GetBookingByIdAsync(id) is null)
+            {
+                ModelState.AddModelError(string.Empty, "The selected booking was not found.");
+                FilterDate = filterDate;
+                FilterStatus = filterStatus;
+                await LoadBookings();
+                return Page();
+            }
+
+            FilterDate = filterDate;
+            FilterStatus = filterStatus;
             await _bookingService.CancelBookingAsync(id);
             return RedirectToPage(new { filterDate = FilterDate?.ToString("yyyy-MM-dd"), filterStatus = FilterStatus });
         }
