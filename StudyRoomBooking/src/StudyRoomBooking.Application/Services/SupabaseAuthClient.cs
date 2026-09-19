@@ -51,4 +51,40 @@ public sealed class SupabaseAuthClient
             return (false, null);
         }
     }
+
+    public async Task<(bool Success, string? Error)> SignUpAsync(string email, string password)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"{_supabaseUrl}/auth/v1/signup")
+        {
+            Content = JsonContent.Create(new { email, password })
+        };
+
+        request.Headers.Add("apikey", _anonKey);
+
+        using var response = await _httpClient.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            return (true, null);
+        }
+
+        var body = await response.Content.ReadAsStringAsync();
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            var error = document.RootElement.TryGetProperty("message", out var message)
+                ? message.GetString()
+                : document.RootElement.TryGetProperty("msg", out var msg)
+                    ? msg.GetString()
+                    : document.RootElement.TryGetProperty("error_description", out var description)
+                        ? description.GetString()
+                        : null;
+            return (false, error);
+        }
+        catch (JsonException)
+        {
+            return (false, null);
+        }
+    }
 }

@@ -1,0 +1,286 @@
+@page
+@model SignupModel
+@{
+	ViewData["Title"] = "Sign Up";
+	Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>@ViewData["Title"] - Study Room Booking System</title>
+	<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+	<style>
+		body {
+			background: #F8FAF8;
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+		}
+		.signup-container {
+			width: 100%;
+			max-width: 600px;
+			background: white;
+			border-radius: 10px;
+			box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+			overflow: hidden;
+		}
+		.signup-header {
+			background: #1E3A5F;
+			color: white;
+			padding: 30px 20px;
+			text-align: center;
+		}
+		.signup-header h2 {
+			margin: 0;
+			font-weight: 600;
+			font-size: 28px;
+		}
+		.signup-header p {
+			margin: 10px 0 0 0;
+			font-size: 14px;
+			opacity: 0.9;
+		}
+		.signup-body {
+			padding: 30px;
+		}
+		.form-group {
+			margin-bottom: 20px;
+		}
+		.form-label {
+			font-weight: 500;
+			color: #333;
+			margin-bottom: 8px;
+			display: block;
+		}
+		.form-control {
+			border: 1px solid #ddd;
+			border-radius: 5px;
+			padding: 10px 12px;
+			font-size: 14px;
+			transition: border-color 0.3s;
+		}
+		.form-control:focus {
+			border-color: #1E3A5F;
+			box-shadow: 0 0 0 0.2rem rgba(30, 58, 95, 0.25);
+		}
+		.form-row {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 15px;
+		}
+		@@media (max-width: 576px) {
+			.form-row {
+				grid-template-columns: 1fr;
+			}
+		}
+		.alert {
+			margin-bottom: 20px;
+			border-radius: 5px;
+		}
+		.btn-signup {
+			width: 100%;
+			padding: 12px;
+			background: #1E3A5F;
+			color: white;
+			border: none;
+			border-radius: 5px;
+			font-weight: 600;
+			cursor: pointer;
+			font-size: 16px;
+			transition: background 0.3s;
+		}
+		.btn-signup:hover {
+			background: #152d47;
+			color: white;
+		}
+		.login-link {
+			text-align: center;
+			margin-top: 20px;
+			font-size: 14px;
+		}
+		.login-link a {
+			color: #1E3A5F;
+			text-decoration: none;
+			font-weight: 600;
+		}
+		.login-link a:hover {
+			text-decoration: underline;
+		}
+		.password-requirements {
+			font-size: 12px;
+			color: #666;
+			margin-top: 5px;
+		}
+		.major-field {
+			display: none;
+		}
+		.major-field.show {
+			display: block;
+		}
+		.required {
+			color: #dc3545;
+		}
+	</style>
+</head>
+<body>
+	<div class="signup-container">
+		<div class="signup-header">
+			<h2>Create Account</h2>
+			<p>Join our Study Room Booking System</p>
+		</div>
+		<div class="signup-body">
+			@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+			{
+				<div class="alert alert-danger alert-dismissible fade show" role="alert">
+					@Model.ErrorMessage
+					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+				</div>
+			}
+
+			@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+			{
+				<div class="alert alert-success alert-dismissible fade show" role="alert">
+					@Model.SuccessMessage
+					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+				</div>
+			}
+
+			<form method="post">
+				<!-- Name & Email Row -->
+				<div class="form-row">
+					<div class="form-group">
+						<label class="form-label" for="Name">
+							Full Name <span class="required">*</span>
+						</label>
+						<input type="text" class="form-control" id="Name" asp-for="Name" 
+							   placeholder="Enter your full name" required />
+					</div>
+					<div class="form-group">
+						<label class="form-label" for="Email">
+							Email <span class="required">*</span>
+						</label>
+						<input type="email" class="form-control" id="Email" asp-for="Email" 
+							   placeholder="student@university.edu" required />
+					</div>
+				</div>
+
+				<!-- Password Row -->
+				<div class="form-row">
+					<div class="form-group">
+						<label class="form-label" for="Password">
+							Password <span class="required">*</span>
+						</label>
+						<input type="password" class="form-control" id="Password" asp-for="Password" 
+							   placeholder="At least 6 characters" required />
+						<div class="password-requirements">
+							Password must be at least 6 characters long
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="form-label" for="ConfirmPassword">
+							Confirm Password <span class="required">*</span>
+						</label>
+						<input type="password" class="form-control" id="ConfirmPassword" asp-for="ConfirmPassword" 
+							   placeholder="Re-enter your password" required />
+					</div>
+				</div>
+
+				<!-- Role & Major Row -->
+				<div class="form-row">
+					<div class="form-group">
+						<label class="form-label" for="Role">
+							User Role <span class="required">*</span>
+						</label>
+						<select class="form-control" id="Role" asp-for="Role" required 
+								onchange="toggleMajorField()">
+							<option value="">-- Select Role --</option>
+							@foreach (var role in Model.Roles)
+							{
+								<option value="@role">@role</option>
+							}
+						</select>
+					</div>
+					<div class="form-group major-field" id="majorFieldContainer">
+						<label class="form-label" for="Major">
+							Major <span class="required">*</span>
+						</label>
+						<select class="form-control" id="Major" asp-for="Major">
+							<option value="">-- Select Major --</option>
+							@foreach (var major in Model.Majors)
+							{
+								<option value="@major">@major</option>
+							}
+						</select>
+					</div>
+				</div>
+
+				<!-- Agreement -->
+				<div class="form-group" style="margin-bottom: 25px; margin-top: 20px;">
+					<div class="form-check">
+						<input type="checkbox" class="form-check-input" id="agree" required />
+						<label class="form-check-label" for="agree">
+							I agree to the terms and conditions
+						</label>
+					</div>
+				</div>
+
+				<!-- Submit Button -->
+				<button type="submit" class="btn-signup">Create Account</button>
+
+				<!-- Login Link -->
+				<div class="login-link">
+					Already have an account? <a href="/Login">Log in here</a>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+	<script>
+		function toggleMajorField() {
+			const roleSelect = document.getElementById('Role');
+			const majorFieldContainer = document.getElementById('majorFieldContainer');
+			const majorSelect = document.getElementById('Major');
+
+			if (roleSelect.value === 'Student') {
+				majorFieldContainer.classList.add('show');
+				majorSelect.required = true;
+			} else {
+				majorFieldContainer.classList.remove('show');
+				majorSelect.required = false;
+				majorSelect.value = '';
+			}
+		}
+
+		// Initialize on page load
+		document.addEventListener('DOMContentLoaded', function () {
+			toggleMajorField();
+		});
+
+		// Validate passwords match
+		document.getElementById('ConfirmPassword').addEventListener('blur', function () {
+			const password = document.getElementById('Password').value;
+			const confirmPassword = this.value;
+			if (password && confirmPassword && password !== confirmPassword) {
+				this.classList.add('is-invalid');
+				if (!document.getElementById('passwordMismatchMessage')) {
+					const msg = document.createElement('small');
+					msg.id = 'passwordMismatchMessage';
+					msg.className = 'text-danger';
+					msg.textContent = 'Passwords do not match';
+					this.parentElement.appendChild(msg);
+				}
+			} else {
+				this.classList.remove('is-invalid');
+				const msg = document.getElementById('passwordMismatchMessage');
+				if (msg) msg.remove();
+			}
+		});
+	</script>
+</body>
+</html>
