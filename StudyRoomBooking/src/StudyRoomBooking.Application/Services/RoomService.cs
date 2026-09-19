@@ -151,5 +151,25 @@ public class RoomService : IRoomService
     {
         return await _unitOfWork.RoomMajorRestrictions.GetAllowedMajorsForRoomAsync(roomId);
     }
-}
 
+    public async Task SetAllowedMajorsForRoomAsync(int roomId, IEnumerable<StudentMajor> majors)
+    {
+        var existing = await _unitOfWork.RoomMajorRestrictions.GetByRoomIdAsync(roomId);
+        foreach (var restriction in existing)
+        {
+            await _unitOfWork.RoomMajorRestrictions.DeleteAsync(restriction.Id);
+        }
+
+        foreach (var major in majors.Distinct())
+        {
+            await _unitOfWork.RoomMajorRestrictions.AddAsync(new RoomMajorRestriction
+            {
+                RoomId = roomId,
+                Major = major,
+                IsActive = true
+            });
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+    }
+}

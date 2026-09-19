@@ -14,6 +14,10 @@ public class RoomManagementModel : AdminPageModel
     public Room? EditingRoom { get; set; }
     public bool ShowForm { get; set; } = false;
     public bool IsEdit { get; set; } = false;
+    public Dictionary<int, List<StudentMajor>> RoomAllowedMajors { get; set; } = new();
+    public List<StudentMajor> EditingAllowedMajors { get; set; } = new();
+    public StudentMajor[] AvailableMajors { get; } = Enum.GetValues<StudentMajor>();
+    public bool EditingAllMajors => EditingAllowedMajors.Count == 0;
 
     public RoomManagementModel(IRoomService roomService)
     {
@@ -22,12 +26,12 @@ public class RoomManagementModel : AdminPageModel
 
     public async Task OnGetAsync()
     {
-        Rooms = await _roomService.GetAllRoomsAsync();
+        await LoadRoomsAsync();
     }
 
     public async Task<IActionResult> OnGetCreateAsync()
     {
-        Rooms = await _roomService.GetAllRoomsAsync();
+        await LoadRoomsAsync();
         ShowForm = true;
         IsEdit = false;
         EditingRoom = new Room { IsAvailable = true };
@@ -36,25 +40,31 @@ public class RoomManagementModel : AdminPageModel
 
     public async Task<IActionResult> OnGetEditAsync(int id)
     {
-        Rooms = await _roomService.GetAllRoomsAsync();
+        await LoadRoomsAsync();
         EditingRoom = await _roomService.GetRoomByIdAsync(id);
+        EditingAllowedMajors = await _roomService.GetAllowedMajorsForRoomAsync(id);
         ShowForm = true;
         IsEdit = true;
         return Page();
     }
 
-    public async Task<IActionResult> OnPostSaveAsync(int? roomId, string code, string name, string location, 
-        int capacity, RoomType type, string description)
+    public async Task<IActionResult> OnPostSaveAsync(int? roomId, string code, string name, string location,
+        int capacity, RoomType type, string description, string studentAccess = "all",
+        StudentMajor[]? allowedMajors = null)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name) ||
                 string.IsNullOrWhiteSpace(location) || capacity < 1 ||
-                !Enum.IsDefined(type))
+                !Enum.IsDefined(type) ||
+                (studentAccess != "all" && studentAccess != "specific") ||
+                (studentAccess == "specific" && (allowedMajors is null || allowedMajors.Length == 0 ||
+                    allowedMajors.Any(major => !Enum.IsDefined(major)))))
             {
                 ModelState.AddModelError(string.Empty, "Code, name, location, a valid type, and a positive capacity are required.");
-                Rooms = await _roomService.GetAllRoomsAsync();
+                await LoadRoomsAsync();
                 EditingRoom = roomId.HasValue ? await _roomService.GetRoomByIdAsync(roomId.Value) : new Room { IsAvailable = true };
+                EditingAllowedMajors = allowedMajors?.ToList() ?? new();
                 ShowForm = true;
                 IsEdit = roomId.HasValue;
                 return Page();
@@ -79,6 +89,7 @@ public class RoomManagementModel : AdminPageModel
                     room.IsAvailable = isAvailable;
 
                     await _roomService.UpdateRoomAsync(room);
+                    await _roomService.SetAllowedMajorsForRoomAsync(room.Id, studentAccess == "specific" ? allowedMajors ?? Array.Empty<StudentMajor>() : Array.Empty<StudentMajor>());
                 }
                 else
                 {
@@ -104,6 +115,7 @@ public class RoomManagementModel : AdminPageModel
                 };
 
                 await _roomService.CreateRoomAsync(newRoom);
+                await _roomService.SetAllowedMajorsForRoomAsync(newRoom.Id, studentAccess == "specific" ? allowedMajors ?? Array.Empty<StudentMajor>() : Array.Empty<StudentMajor>());
             }
 
             return RedirectToPage();
@@ -111,9 +123,10 @@ public class RoomManagementModel : AdminPageModel
         catch (Exception ex)
         {
             ModelState.AddModelError(string.Empty, $"Error saving room: {ex.Message}");
-            Rooms = await _roomService.GetAllRoomsAsync();
+            await LoadRoomsAsync();
             ShowForm = true;
             IsEdit = roomId.HasValue;
+            EditingAllowedMajors = allowedMajors?.ToList() ?? new();
             return Page();
         }
     }
@@ -128,8 +141,18 @@ public class RoomManagementModel : AdminPageModel
         catch (Exception ex)
         {
             ModelState.AddModelError(string.Empty, $"Error deleting room: {ex.Message}");
-            Rooms = await _roomService.GetAllRoomsAsync();
+            await LoadRoomsAsync();
             return Page();
+        }
+    }
+
+    private async Task LoadRoomsAsync()
+    {
+        Rooms = await _roomService.GetAllRoomsAsync();
+        RoomAllowedMajors = new();
+        foreach (var room in Rooms)
+        {
+            RoomAllowedMajors[room.Id] = await _roomService.GetAllowedMajorsForRoomAsync(room.Id);
         }
     }
 }

@@ -14,16 +14,12 @@ public sealed class EfUnitOfWork : IUnitOfWork
         Rooms = new EfRoomRepository(db);
         Users = new EfUserRepository(db);
         RoomMajorRestrictions = new EfRoomMajorRestrictionRepository(db);
-        AccessRules = new EfAccessRuleRepository(db);
-        BookingOverrides = new EfBookingOverrideRepository(db);
     }
 
     public IBookingRepository Bookings { get; }
     public IRoomRepository Rooms { get; }
     public IUserRepository Users { get; }
     public IRoomMajorRestrictionRepository RoomMajorRestrictions { get; }
-    public IAccessRuleRepository AccessRules { get; }
-    public IBookingOverrideRepository BookingOverrides { get; }
 
     public Task SaveChangesAsync() => _db.SaveChangesAsync();
 }

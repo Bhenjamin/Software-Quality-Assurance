@@ -14,8 +14,6 @@ public class StudyRoomBookingDbContext : DbContext
     public DbSet<Room> Rooms => Set<Room>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<RoomMajorRestriction> RoomMajorRestrictions => Set<RoomMajorRestriction>();
-    public DbSet<AccessRule> AccessRules => Set<AccessRule>();
-    public DbSet<BookingOverride> BookingOverrides => Set<BookingOverride>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,10 +28,6 @@ public class StudyRoomBookingDbContext : DbContext
         modelBuilder.Entity<Booking>().Property(booking => booking.Status).HasConversion<int>();
         modelBuilder.Entity<Booking>().Property(booking => booking.RecurrencePattern).HasConversion<int>();
         modelBuilder.Entity<RoomMajorRestriction>().Property(restriction => restriction.Major).HasConversion<int>();
-        modelBuilder.Entity<AccessRule>().HasOne<Room>().WithMany().HasForeignKey(rule => rule.RoomId);
-        modelBuilder.Entity<BookingOverride>().HasOne<Booking>().WithMany().HasForeignKey(bookingOverride => bookingOverride.BookingId);
-        modelBuilder.Entity<BookingOverride>().HasOne<User>().WithMany().HasForeignKey(bookingOverride => bookingOverride.AdminId);
-
         modelBuilder.Entity<Booking>().HasOne<Room>().WithMany().HasForeignKey(booking => booking.RoomId);
         modelBuilder.Entity<Booking>().HasOne<User>().WithMany().HasForeignKey(booking => booking.UserId);
         modelBuilder.Entity<RoomMajorRestriction>().HasOne<Room>().WithMany().HasForeignKey(restriction => restriction.RoomId);

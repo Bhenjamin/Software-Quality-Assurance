@@ -26,6 +26,7 @@
 						<th>Location</th>
 						<th>Capacity</th>
 						<th>Type</th>
+						<th>Student Access</th>
 						<th>Status</th>
 						<th>Actions</th>
 					</tr>
@@ -39,6 +40,19 @@
 							<td>@room.Location</td>
 							<td>@room.Capacity</td>
 							<td>@room.Type.ToDisplayName()</td>
+							<td>
+								@{
+									var roomMajors = Model.RoomAllowedMajors.GetValueOrDefault(room.Id) ?? new List<StudyRoomBooking.Domain.Enums.StudentMajor>();
+								}
+								@if (roomMajors.Count == 0)
+								{
+									<span>All majors</span>
+								}
+								else
+								{
+									<span>@string.Join(", ", roomMajors)</span>
+								}
+							</td>
 							<td>
 								@if (room.IsAvailable)
 								{
@@ -124,6 +138,31 @@
 					<div class="form-group">
 						<label for="description" class="form-label">Description</label>
 						<textarea id="description" name="description" class="form-control" rows="3">@Model.EditingRoom?.Description</textarea>
+					</div>
+
+					<div class="form-group mt-3">
+						<label class="form-label">Student Access *</label>
+						<div class="form-check">
+							<input class="form-check-input" type="radio" id="allMajors" name="studentAccess" value="all" @(Model.EditingAllMajors ? "checked" : null) />
+							<label class="form-check-label" for="allMajors">All majors</label>
+						</div>
+						<div class="form-check">
+							<input class="form-check-input" type="radio" id="specificMajors" name="studentAccess" value="specific" @(!Model.EditingAllMajors ? "checked" : null) />
+							<label class="form-check-label" for="specificMajors">Specific majors</label>
+						</div>
+						<div class="row mt-2">
+							@foreach (var major in Model.AvailableMajors)
+							{
+								<div class="col-md-3">
+									<div class="form-check">
+										<input class="form-check-input" type="checkbox" name="allowedMajors" value="@major"
+											   @(Model.EditingAllowedMajors.Contains(major) ? "checked" : null) />
+										<label class="form-check-label">@major</label>
+									</div>
+								</div>
+							}
+						</div>
+						<small class="text-muted">Staff and Admin users can access all rooms. This setting controls Student access.</small>
 					</div>
 
 					<div class="form-group">

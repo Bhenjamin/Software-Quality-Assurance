@@ -14,4 +14,5 @@ public interface IRoomService
     Task DeleteRoomAsync(int roomId);
     Task<bool> IsRoomAvailableAsync(int roomId, DateTime date, TimeSpan startTime, TimeSpan endTime);
     Task<List<StudentMajor>> GetAllowedMajorsForRoomAsync(int roomId);
+    Task SetAllowedMajorsForRoomAsync(int roomId, IEnumerable<StudentMajor> majors);
 }

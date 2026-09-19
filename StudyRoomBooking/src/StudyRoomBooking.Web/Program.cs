@@ -18,8 +18,6 @@ builder.Services.AddSession(options =>
 builder.Services.AddScoped<StudyRoomBooking.Application.Services.IBookingService, StudyRoomBooking.Application.Services.BookingService>();
 builder.Services.AddScoped<StudyRoomBooking.Application.Services.IRoomService, StudyRoomBooking.Application.Services.RoomService>();
 builder.Services.AddScoped<StudyRoomBooking.Application.Services.IUserService, StudyRoomBooking.Application.Services.UserService>();
-builder.Services.AddScoped<StudyRoomBooking.Application.Services.IAccessRuleService, StudyRoomBooking.Application.Services.AccessRuleService>();
-builder.Services.AddScoped<StudyRoomBooking.Application.Services.IReportService, StudyRoomBooking.Application.Services.ReportService>();
 var emailOptions = new StudyRoomBooking.Application.Services.EmailOptions();
 builder.Configuration.GetSection("Email").Bind(emailOptions);
 builder.Services.AddSingleton(emailOptions);
@@ -229,7 +227,6 @@ void InitializeSeedData(IServiceProvider serviceProvider)
     catch { /* Rooms might already exist */ }
 
     // Seed room major restrictions
-    var accessRuleService = scope.ServiceProvider.GetRequiredService<StudyRoomBooking.Application.Services.IAccessRuleService>();
     var unitOfWork = scope.ServiceProvider.GetRequiredService<StudyRoomBooking.Domain.Interfaces.IUnitOfWork>();
 
     try
