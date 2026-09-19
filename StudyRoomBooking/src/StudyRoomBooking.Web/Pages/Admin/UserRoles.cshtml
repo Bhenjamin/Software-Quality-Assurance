@@ -66,13 +66,13 @@
 							</td>
 							<td>
 								<form method="post" class="d-inline">
-									<select name="role" class="form-select form-select-sm d-inline w-auto">
+									<select name="role" class="form-select role-select d-inline w-auto">
 										@foreach (var role in Enum.GetValues<StudyRoomBooking.Domain.Enums.UserRole>())
 										{
 											<option value="@role" selected="@(user.Role == role)">@role</option>
 										}
 									</select>
-									<button type="submit" class="btn btn-sm btn-warning" asp-page-handler="Edit" asp-route-id="@user.Id">Save</button>
+									<button type="submit" class="btn btn-sm btn-primary" asp-page-handler="Edit" asp-route-id="@user.Id">Save</button>
 								</form>
 							</td>
 						</tr>

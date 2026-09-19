@@ -104,9 +104,8 @@
 				</div>
 			</div>
 			<div class="col-md-3">
-				<div class="form-group">
-					<label>&nbsp;</label>
-					<button type="submit" class="btn btn-primary form-control">Search</button>
+				<div class="form-group search-action">
+					<button type="submit" class="btn btn-primary btn-search form-control">Search</button>
 				</div>
 			</div>
 		</div>
@@ -178,7 +177,7 @@
 											{
 												@if (isBooked)
 												{
-													<span class="badge bg-danger w-100">Booked</span>
+													<span class="badge calendar-slot calendar-slot-booked">Booked</span>
 												}
 												else
 												{
@@ -188,12 +187,12 @@
 													   asp-route-startTime="@startHour:00"
 													   asp-route-endTime="@endHour:00"
 													   asp-route-recurrenceEndDate="@Model.SearchCriteria.RecurrenceEndDate.ToString("yyyy-MM-dd")"
-													   class="badge bg-success w-100" style="text-decoration: none; display: block; padding: 4px 8px; cursor: pointer;">Free</a>
+													   class="badge calendar-slot calendar-slot-free">Free</a>
 												}
 											}
 											else
 											{
-												<span class="badge bg-secondary w-100" style="opacity: 0.5;">--</span>
+												<span class="badge calendar-slot calendar-slot-unavailable">--</span>
 											}
 										</td>
 											}

@@ -97,8 +97,7 @@
 				</div>
 			</div>
 			<div class="col-md-4">
-				<div class="form-group">
-					<label>&nbsp;</label>
+				<div class="form-group search-action">
 					<button type="submit" class="btn btn-primary btn-search form-control">Find Available Rooms</button>
 				</div>
 			</div>
@@ -165,16 +164,16 @@
 											{
 												@if (isBooked)
 												{
-													<span class="badge bg-danger w-100">Booked</span>
+													<span class="badge calendar-slot calendar-slot-booked">Booked</span>
 												}
 												else
 												{
-													<a asp-page="/Students/RoomDetails" asp-route-id="@room.Id" asp-route-bookingDate="@Model.SearchCriteria.BookingDate.ToString("yyyy-MM-dd")" asp-route-startTime="@startHour:00" asp-route-endTime="@endHour:00" class="badge bg-success w-100" style="text-decoration: none; display: block; padding: 4px 8px; cursor: pointer;">Free</a>
+													<a asp-page="/Students/RoomDetails" asp-route-id="@room.Id" asp-route-bookingDate="@Model.SearchCriteria.BookingDate.ToString("yyyy-MM-dd")" asp-route-startTime="@startHour:00" asp-route-endTime="@endHour:00" class="badge calendar-slot calendar-slot-free">Free</a>
 												}
 											}
 											else
 											{
-												<span class="badge bg-secondary w-100" style="opacity: 0.5;">--</span>
+												<span class="badge calendar-slot calendar-slot-unavailable">--</span>
 											}
 										</td>
 												}

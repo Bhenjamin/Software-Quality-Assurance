@@ -63,6 +63,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .navbar .nav-link {
+  white-space: nowrap;
+  word-spacing: 0.12em;
+}
+
+.navbar .nav-link {
   border-bottom: 4px solid transparent;
   padding: 1rem 1.1rem 0.75rem;
   font-weight: 500;
@@ -105,11 +110,132 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-filter {
+  background-color: var(--secondary);
+  border-color: var(--secondary);
+  color: var(--surface);
   font-weight: 700;
 }
 
+.btn-filter:hover,
+.btn-filter:focus {
+  background-color: #526275;
+  border-color: #526275;
+  color: var(--surface);
+}
+
 .btn-search {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: var(--surface) !important;
   font-weight: 700;
+}
+
+.btn-primary {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: var(--surface) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  color: var(--surface) !important;
+}
+
+.btn-search:hover,
+.btn-search:focus {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  color: var(--surface) !important;
+}
+
+.search-action {
+  padding-top: 1.9rem;
+}
+
+.btn-edit,
+.btn-warning {
+  --bs-btn-bg: var(--edit);
+  --bs-btn-border-color: var(--edit);
+  --bs-btn-color: var(--surface);
+  --bs-btn-hover-bg: #1D4ED8;
+  --bs-btn-hover-border-color: #1D4ED8;
+  --bs-btn-hover-color: var(--surface);
+}
+
+.btn-edit {
+  background-color: var(--edit) !important;
+  border-color: var(--edit) !important;
+  color: var(--surface) !important;
+}
+
+.btn-edit:hover,
+.btn-edit:focus {
+  background-color: #1D4ED8 !important;
+  border-color: #1D4ED8 !important;
+  color: var(--surface) !important;
+}
+
+.btn-info {
+  --bs-btn-bg: var(--secondary);
+  --bs-btn-border-color: var(--secondary);
+  --bs-btn-color: var(--surface);
+  --bs-btn-hover-bg: #526275;
+  --bs-btn-hover-border-color: #526275;
+  --bs-btn-hover-color: var(--surface);
+}
+
+.btn-outline-info {
+  --bs-btn-color: var(--primary);
+  --bs-btn-border-color: var(--primary);
+  --bs-btn-hover-bg: var(--primary);
+  --bs-btn-hover-border-color: var(--primary);
+  --bs-btn-hover-color: var(--surface);
+}
+
+.booking-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.role-select {
+  min-width: 125px;
+}
+
+.nav-control {
+  border-radius: 0.35rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-language {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--primary);
+}
+
+.nav-language:hover,
+.nav-language:focus {
+  background-color: #F1F5F3;
+  border-color: var(--primary);
+  color: var(--primary-hover);
+}
+
+.nav-profile {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: var(--surface);
+}
+
+.nav-profile:hover,
+.nav-profile:focus {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: var(--surface);
 }
 
 .badge {
@@ -118,6 +244,39 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
   line-height: 1.25;
   padding: 0.45rem 0.7rem;
+}
+
+.calendar-slot {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0.45rem 0.3rem;
+  text-decoration: none;
+  width: 100%;
+}
+
+.calendar-slot-booked {
+  background-color: var(--delete) !important;
+  color: var(--surface) !important;
+}
+
+.calendar-slot-free {
+  background-color: var(--success) !important;
+  color: var(--surface) !important;
+  cursor: pointer;
+}
+
+.calendar-slot-free:hover,
+.calendar-slot-free:focus {
+  background-color: #2F6046 !important;
+  color: var(--surface) !important;
+}
+
+.calendar-slot-unavailable {
+  background-color: var(--secondary) !important;
+  color: var(--surface) !important;
+  opacity: 0.5;
 }
 
 .role-student {
@@ -248,9 +407,19 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .alert-info {
-  --bs-alert-color: var(--primary);
-  --bs-alert-bg: #EDF4F8;
-  --bs-alert-border-color: #B8D1DE;
+  background-color: #F1F5F3 !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+.alert-info a {
+  color: var(--primary) !important;
+  font-weight: 700;
+}
+
+.alert-info a:hover,
+.alert-info a:focus {
+  color: var(--primary-hover) !important;
 }
 
 .form-control,

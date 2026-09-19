@@ -57,25 +57,25 @@
                                 <a class="nav-link text-dark @(Context.Request.Path == "/" ? "active" : "")" asp-area="" asp-page="/Index">Book a Room</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Students/MyBookings") ? "active" : "")" asp-area="" asp-page="/Students/MyBookings">@localizationService.GetString("Navigation", "MyBookings")</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Students/MyBookings") ? "active" : "")" asp-area="" asp-page="/Students/MyBookings">My Bookings</a>
                             </li>
                         }
                         @if (userRole == "Staff")
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Staff/RecurringBooking") ? "active" : "")" asp-area="" asp-page="/Staff/RecurringBooking">@localizationService.GetString("Navigation", "RecurringBookings")</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Staff/RecurringBooking") ? "active" : "")" asp-area="" asp-page="/Staff/RecurringBooking">Recurring Bookings</a>
                             </li>
                         }
                         @if (userRole == "Admin")
                         {
                             <li class="nav-item admin-nav-start">
-                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/RoomManagement") ? "active" : "")" asp-area="" asp-page="/Admin/RoomManagement">@localizationService.GetString("Navigation", "RoomManagement")</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/RoomManagement") ? "active" : "")" asp-area="" asp-page="/Admin/RoomManagement">Room Management</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/UserRoles") ? "active" : "")" asp-area="" asp-page="/Admin/UserRoles">@localizationService.GetString("Navigation", "UserRoles")</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/UserRoles") ? "active" : "")" asp-area="" asp-page="/Admin/UserRoles">User Roles</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/BookingManagement") ? "active" : "")" asp-area="" asp-page="/Admin/BookingManagement">@localizationService.GetString("Navigation", "BookingManagement")</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/BookingManagement") ? "active" : "")" asp-area="" asp-page="/Admin/BookingManagement">Booking Management</a>
                             </li>
                         }
                     </ul>
@@ -86,8 +86,8 @@
                             var langDisplay = currentLang.ToUpper();
                         }
                         <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="languageMenu" data-bs-toggle="dropdown" aria-expanded="false">
-                                @langDisplay
+                            <button class="btn btn-sm nav-control nav-language dropdown-toggle" type="button" id="languageMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                                Language: @langDisplay
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="languageMenu">
                                 <li><a class="dropdown-item" href="?lang=en">English (EN)</a></li>
@@ -99,8 +99,8 @@
                         @if (Context.Session.GetString("CurrentUser") != null)
                         {
                             <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
-                                    @Context.Session.GetString("CurrentUser")
+                                <button class="btn btn-sm nav-control nav-profile dropdown-toggle" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Profile: @Context.Session.GetString("CurrentUser")
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
                                     <li>

@@ -21,7 +21,7 @@
 
 <div class="container mt-4">
 	<div class="row">
-		<div class="col-md-8">
+		<div class="col-md-12">
 			@if (Model.Room != null)
 			{
 				<div class="card mb-4">
@@ -121,9 +121,9 @@
 									<textarea id="notes" name="notes" class="form-control" rows="3"></textarea>
 								</div>
 
-								<div class="mt-3">
-									<button type="submit" class="btn btn-primary" asp-page-handler="BookRoom">Book this Room</button>
+								<div class="booking-actions mt-3">
 									<a asp-page="/Index" class="btn btn-secondary">Back to Book a Room</a>
+									<button type="submit" class="btn btn-primary" asp-page-handler="BookRoom">Book this Room</button>
 								</div>
 							</form>
 						}
@@ -141,21 +141,6 @@
 			}
 		</div>
 
-		<div class="col-md-4">
-			<div class="card">
-				<div class="card-header">
-					<h5 class="mb-0">Availability</h5>
-				</div>
-				<div class="card-body">
-					<p class="text-muted">Today's schedule:</p>
-					<div id="availabilityInfo">
-						<p class="text-center">
-							<span class="badge bg-success">Available for booking</span>
-						</p>
-					</div>
-				</div>
-			</div>
-		</div>
 	</div>
 </div>
 
