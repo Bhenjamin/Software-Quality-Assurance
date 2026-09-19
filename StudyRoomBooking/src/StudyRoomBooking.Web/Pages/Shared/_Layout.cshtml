@@ -31,6 +31,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Study Room Booking System</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/StudyRoomBooking.Web.styles.css" asp-append-version="true" />
 </head>
@@ -51,28 +54,28 @@
                         @if (userRole == "Student" || userRole == "Staff" || userRole == "Admin")
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Index">Book a Room</a>
+                                <a class="nav-link text-dark @(Context.Request.Path == "/" ? "active" : "")" asp-area="" asp-page="/Index">Book a Room</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Students/MyBookings">@localizationService.GetString("Navigation", "MyBookings")</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Students/MyBookings") ? "active" : "")" asp-area="" asp-page="/Students/MyBookings">@localizationService.GetString("Navigation", "MyBookings")</a>
                             </li>
                         }
                         @if (userRole == "Staff")
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Staff/RecurringBooking">@localizationService.GetString("Navigation", "RecurringBookings")</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Staff/RecurringBooking") ? "active" : "")" asp-area="" asp-page="/Staff/RecurringBooking">@localizationService.GetString("Navigation", "RecurringBookings")</a>
                             </li>
                         }
                         @if (userRole == "Admin")
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/RoomManagement">@localizationService.GetString("Navigation", "RoomManagement")</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/RoomManagement") ? "active" : "")" asp-area="" asp-page="/Admin/RoomManagement">@localizationService.GetString("Navigation", "RoomManagement")</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/UserRoles">@localizationService.GetString("Navigation", "UserRoles")</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/UserRoles") ? "active" : "")" asp-area="" asp-page="/Admin/UserRoles">@localizationService.GetString("Navigation", "UserRoles")</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Admin/BookingManagement">@localizationService.GetString("Navigation", "BookingManagement")</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/BookingManagement") ? "active" : "")" asp-area="" asp-page="/Admin/BookingManagement">@localizationService.GetString("Navigation", "BookingManagement")</a>
                             </li>
                         }
                     </ul>
@@ -97,12 +100,12 @@
                         {
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
-                                    👤 @Context.Session.GetString("CurrentUser")
+                                    @Context.Session.GetString("CurrentUser")
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
                                     <li>
                                         <a class="dropdown-item" asp-page="/Logout">
-                                            🚪 @localizationService.GetString("Common", "Logout")
+                                            @localizationService.GetString("Common", "Logout")
                                         </a>
                                     </li>
                                 </ul>

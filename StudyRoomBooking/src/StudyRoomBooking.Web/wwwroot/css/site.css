@@ -2,6 +2,7 @@ html {
   font-size: 14px;
   position: relative;
   min-height: 100%;
+  scroll-behavior: smooth;
 }
 
 @media (min-width: 768px) {
@@ -15,9 +16,16 @@ html {
 }
 
 body {
+  font-family: "Roboto", Arial, sans-serif;
   margin-bottom: 60px;
   background-color: #F8FAF8;
   color: #17202A;
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  color: var(--text);
 }
 
 :root {
@@ -41,6 +49,7 @@ body {
 .navbar {
   background-color: var(--surface) !important;
   border-bottom-color: var(--border) !important;
+  min-height: 64px;
 }
 
 .navbar-brand,
@@ -48,9 +57,56 @@ body {
   color: var(--primary) !important;
 }
 
+.navbar-brand {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.navbar .nav-link {
+  border-bottom: 4px solid transparent;
+  padding: 1rem 0.75rem 0.75rem;
+  font-weight: 500;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.navbar .nav-link.active {
+  border-bottom-color: var(--primary);
+  color: var(--primary-hover) !important;
+  font-weight: 700;
+}
+
 .nav-link:hover,
 .navbar-brand:hover {
   color: var(--primary-hover) !important;
+}
+
+.navbar .nav-link:hover {
+  border-bottom-color: var(--primary);
+}
+
+.btn {
+  border-radius: 0.35rem;
+  font-weight: 500;
+}
+
+.btn-sm {
+  border-radius: 0.3rem;
+}
+
+.form-control,
+.form-select {
+  border-radius: 0.35rem;
+  min-height: 40px;
+}
+
+.card {
+  border-color: var(--border);
+  border-radius: 0.45rem;
+  box-shadow: 0 2px 8px rgba(23, 32, 42, 0.05);
+}
+
+.card-header {
+  font-weight: 700;
 }
 
 .card,
@@ -68,6 +124,20 @@ body {
   --bs-table-striped-bg: #F4F7F5;
   --bs-table-border-color: var(--border);
   color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.table th {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.table td,
+.table th {
+  padding: 0.75rem;
 }
 
 .text-muted {
@@ -160,6 +230,15 @@ body {
 .navbar .dropdown-menu {
   position: absolute;
   z-index: 1002;
+  border-color: var(--border);
+  border-radius: 0.35rem;
+  box-shadow: 0 4px 12px rgba(23, 32, 42, 0.12);
+}
+
+.dropdown-item:active,
+.dropdown-item:focus {
+  background-color: var(--primary);
+  color: var(--surface);
 }
 
 /* Ensure form elements don't hide navigation dropdowns */
