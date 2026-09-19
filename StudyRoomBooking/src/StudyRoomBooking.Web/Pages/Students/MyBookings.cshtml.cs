@@ -13,6 +13,7 @@ public class MyBookingsModel : PageModel
     private readonly IUserService _userService;
 
     public List<BookingViewModel> Bookings { get; set; } = new();
+    public List<BookingViewModel> PreviousBookings { get; set; } = new();
     public string? Message { get; set; }
 
     public MyBookingsModel(IBookingService bookingService, IRoomService roomService, IUserService userService)
@@ -60,7 +61,7 @@ public class MyBookingsModel : PageModel
             foreach (var booking in bookings.OrderByDescending(b => b.BookingDate))
             {
                 var room = await _roomService.GetRoomByIdAsync(booking.RoomId);
-                Bookings.Add(new BookingViewModel
+                var viewModel = new BookingViewModel
                 {
                     Id = booking.Id,
                     RoomId = booking.RoomId,
@@ -71,8 +72,18 @@ public class MyBookingsModel : PageModel
                     StartTime = booking.StartTime,
                     EndTime = booking.EndTime,
                     Status = booking.Status,
-                    ConfirmationNumber = booking.ConfirmationNumber
-                });
+                    ConfirmationNumber = booking.ConfirmationNumber,
+                    CreatedAt = booking.CreatedAt
+                };
+
+                if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Confirmed)
+                {
+                    Bookings.Add(viewModel);
+                }
+                else
+                {
+                    PreviousBookings.Add(viewModel);
+                }
             }
         }
         catch (Exception ex)

@@ -123,14 +123,14 @@
 
 								<div class="mt-3">
 									<button type="submit" class="btn btn-primary" asp-page-handler="BookRoom">Book this Room</button>
-									<a asp-page="Search" class="btn btn-secondary">Back to Search</a>
+									<a asp-page="/Index" class="btn btn-secondary">Back to Book a Room</a>
 								</div>
 							</form>
 						}
 						else
 						{
 							<div class="alert alert-danger mt-3">This room is currently not available.</div>
-							<a asp-page="Search" class="btn btn-secondary">Back to Search</a>
+							<a asp-page="/Index" class="btn btn-secondary">Back to Book a Room</a>
 						}
 					</div>
 				</div>

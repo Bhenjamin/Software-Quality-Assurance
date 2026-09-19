@@ -15,6 +15,7 @@
 		</div>
 	}
 
+	<h3 class="mt-4">Current Bookings</h3>
 	@if (Model.Bookings.Any())
 	{
 		<div class="table-responsive">
@@ -68,11 +69,59 @@
 	}
 	else
 	{
-		<div class="alert alert-info">You don't have any bookings yet. <a asp-page="Search">Start booking a room</a></div>
+		<div class="alert alert-info">You don't have any current bookings. <a asp-page="/Index">Book a room</a></div>
+	}
+
+	<h3 class="mt-5">Previous Bookings</h3>
+	@if (Model.PreviousBookings.Any())
+	{
+		<div class="table-responsive">
+			<table class="table table-striped">
+				<thead>
+					<tr>
+						<th>Room Name</th>
+						<th>Date</th>
+						<th>Time</th>
+						<th>Status</th>
+						<th>Confirmation</th>
+						<th>Created</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var booking in Model.PreviousBookings)
+					{
+						<tr>
+							<td>@booking.RoomName</td>
+							<td>@booking.BookingDate.ToString("dd/MM/yyyy")</td>
+							<td>@booking.StartTime.ToString(@"hh\:mm") - @booking.EndTime.ToString(@"hh\:mm")</td>
+							<td>
+								@if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled)
+								{
+									<span class="badge bg-danger">Cancelled</span>
+								}
+								else if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Completed)
+								{
+									<span class="badge bg-secondary">Completed</span>
+								}
+								else
+								{
+									<span class="badge bg-warning">@booking.Status</span>
+								}
+							</td>
+							<td>@booking.ConfirmationNumber</td>
+							<td>@booking.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+	else
+	{
+		<div class="alert alert-info">No previous bookings found.</div>
 	}
 
 	<div class="mt-3">
-		<a asp-page="Search" class="btn btn-primary">Search for Rooms</a>
-		<a asp-page="/Index" class="btn btn-secondary">Back to Dashboard</a>
+		<a asp-page="/Index" class="btn btn-primary">Book a Room</a>
 	</div>
 </div>
