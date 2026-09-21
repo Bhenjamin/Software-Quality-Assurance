@@ -125,9 +125,54 @@
 		.required {
 			color: #dc3545;
 		}
+
+		/* Hide Google Translate banner and elements */
+		.goog-te-banner-frame {
+			display: none !important;
+			visibility: hidden !important;
+			height: 0 !important;
+			position: fixed !important;
+			top: -9999px !important;
+		}
+
+		.skiptranslate {
+			display: none !important;
+			visibility: hidden !important;
+			height: 0 !important;
+		}
+
+		.goog-te-tooltip {
+			display: none !important;
+			visibility: hidden !important;
+		}
+
+		#google_translate_element {
+			display: none !important;
+			visibility: hidden !important;
+			height: 0 !important;
+		}
+
+		iframe.goog-te-banner-frame,
+		.goog-te-banner-frame iframe {
+			display: none !important;
+			visibility: hidden !important;
+			height: 0 !important;
+			width: 0 !important;
+			border: none !important;
+		}
+
+		body .notranslate {
+			opacity: 1 !important;
+		}
 	</style>
 </head>
 <body>
+	<div style="position: absolute; top: 20px; right: 20px;">
+		<select id="languageSelector" class="form-select form-select-sm" style="width: 120px;">
+			<option value="en">English</option>
+			<option value="vi">Vietnamese</option>
+		</select>
+	</div>
 	<div class="signup-container">
 		<div class="signup-header">
 			<h2>Create Account</h2>
@@ -280,6 +325,120 @@
 				const msg = document.getElementById('passwordMismatchMessage');
 				if (msg) msg.remove();
 			}
+		});
+	</script>
+
+	<!-- Hidden Google Translate Widget -->
+	<div id="google_translate_element" style="display: none;"></div>
+
+	<script type="text/javascript">
+		function googleTranslateElementInit() {
+			new google.translate.TranslateElement({
+				pageLanguage: 'en',
+				includedLanguages: 'en,vi'
+			}, 'google_translate_element');
+		}
+	</script>
+
+	<script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+	<script>
+		// Remove Google Translate banner
+		function removeGoogleTranslateBanner() {
+			// Remove the banner frame iframe
+			var bannerFrames = document.querySelectorAll('.goog-te-banner-frame');
+			bannerFrames.forEach(function(frame) {
+				frame.style.display = 'none';
+				frame.style.visibility = 'hidden';
+				if (frame.parentNode) {
+					frame.parentNode.removeChild(frame);
+				}
+			});
+
+			// Reset body position
+			document.body.style.top = '0px';
+			document.body.style.marginTop = '0px';
+
+			// Hide any Google Translate tooltips
+			var tooltips = document.querySelectorAll('.goog-te-tooltip');
+			tooltips.forEach(function(tooltip) {
+				tooltip.style.display = 'none';
+			});
+		}
+
+		// Initial removal on page load
+		window.addEventListener('load', function() {
+			setTimeout(removeGoogleTranslateBanner, 500);
+		});
+
+		// Use MutationObserver to catch banner if it appears after load
+		var observer = new MutationObserver(function(mutations) {
+			removeGoogleTranslateBanner();
+		});
+
+		observer.observe(document.body, {
+			childList: true,
+			subtree: true,
+			attributes: true
+		});
+
+		// Also run every 100ms for the first second
+		var checkCount = 0;
+		var bannerCheckInterval = setInterval(function() {
+			removeGoogleTranslateBanner();
+			checkCount++;
+			if (checkCount > 10) {
+				clearInterval(bannerCheckInterval);
+			}
+		}, 100);
+	</script>
+
+	<!-- Custom Language Selector -->
+	<script>
+		document.addEventListener("DOMContentLoaded", function() {
+			const selector = document.getElementById("languageSelector");
+
+			if (!selector) {
+				return;
+			}
+
+			// Read the current Google Translate cookie
+			function getGoogleLanguage() {
+				const cookies = document.cookie.split("; ");
+				const cookie = cookies.find(function(row) {
+					return row.startsWith("googtrans=");
+				});
+
+				if (!cookie) {
+					return "en";
+				}
+
+				const value = decodeURIComponent(
+					cookie.substring("googtrans=".length)
+				);
+
+				return value.split("/")[2] || "en";
+			}
+
+			// Set initial language
+			selector.value = getGoogleLanguage();
+
+			// Listen for changes
+			selector.addEventListener("change", function() {
+				const lang = this.value;
+				if (lang === "en") {
+					// Clear Google Translate cookie when selecting English
+					document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+					location.href = location.protocol + "//" + location.host + location.pathname;
+				} else {
+					// Trigger Google Translate to change language
+					const selectElement = document.querySelector('.goog-te-combo');
+					if (selectElement) {
+						selectElement.value = lang;
+						selectElement.dispatchEvent(new Event('change'));
+					}
+				}
+			});
 		});
 	</script>
 </body>

@@ -476,3 +476,88 @@ h1, h2, h3, h4, h5, h6 {
     border-left: 0;
   }
 }
+
+/* Language Selector Styling */
+#languageSelector {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%231E3A5F' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1.25rem 1.25rem;
+  padding-right: 2rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+#languageSelector:hover {
+  background-color: #F1F5F3;
+  border-color: var(--primary) !important;
+  color: var(--primary-hover);
+}
+
+#languageSelector:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(30, 58, 95, 0.15);
+  background-color: #F1F5F3;
+  border-color: var(--primary) !important;
+}
+
+#languageSelector option {
+  color: var(--text);
+  background-color: var(--surface);
+  padding: 0.5rem;
+}
+
+/* Hide Google Translate top bar - Multiple methods */
+.goog-te-banner-frame {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  position: fixed !important;
+  top: -9999px !important;
+}
+
+.skiptranslate {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+}
+
+body {
+  top: 0 !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.goog-te-tooltip {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Hide Google Translate element itself (we control it via our selector) */
+#google_translate_element {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+}
+
+/* Hide any Google Translate frames or divs */
+iframe.goog-te-banner-frame,
+.goog-te-banner-frame iframe {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  border: none !important;
+}
+
+/* Additional Google Translate hiding */
+body .notranslate {
+  opacity: 1 !important;
+}
+
+.goog-te-combo {
+  cursor: pointer;
+}

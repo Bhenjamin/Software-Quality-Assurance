@@ -1,103 +1,160 @@
-﻿@{
-    // Handle language selection from query parameter
-    var langParam = Context.Request.Query["lang"].ToString();
-    if (!string.IsNullOrEmpty(langParam) && (langParam == "en" || langParam == "vi"))
-    {
-        Context.Session.SetString("CurrentLanguage", langParam.ToUpper());
-    }
-
-    // Ensure CurrentLanguage is always set (default to EN)
-    if (string.IsNullOrEmpty(Context.Session.GetString("CurrentLanguage")))
-    {
-        Context.Session.SetString("CurrentLanguage", "EN");
-    }
-}
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Study Room Booking System</title>
+
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/StudyRoomBooking.Web.styles.css" asp-append-version="true" />
 </head>
+
 <body>
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container">
+
                 <span class="navbar-brand">Study Room Booking</span>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+
+                <button class="navbar-toggler"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target=".navbar-collapse"
+                        aria-controls="navbarSupportedContent"
+                        aria-expanded="false"
+                        aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+
+                    <!-- Navigation -->
                     <ul class="navbar-nav flex-grow-1">
                         @{
                             var userRole = Context.Session.GetString("CurrentUserRole") ?? "";
                         }
+
                         @if (userRole == "Student" || userRole == "Staff" || userRole == "Admin")
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark @(Context.Request.Path == "/" ? "active" : "")" asp-area="" asp-page="/Index">Book a Room</a>
+                                <a class="nav-link text-dark @(Context.Request.Path == "/" ? "active" : "")"
+                                   asp-area=""
+                                   asp-page="/Index">
+                                    Book a Room
+                                </a>
                             </li>
+
                             <li class="nav-item">
-                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Students/MyBookings") ? "active" : "")" asp-area="" asp-page="/Students/MyBookings">My Bookings</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Students/MyBookings") ? "active" : "")"
+                                   asp-area=""
+                                   asp-page="/Students/MyBookings">
+                                    My Bookings
+                                </a>
                             </li>
                         }
+
                         @if (userRole == "Staff")
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Staff/RecurringBooking") ? "active" : "")" asp-area="" asp-page="/Staff/RecurringBooking">Recurring Bookings</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Staff/RecurringBooking") ? "active" : "")"
+                                   asp-area=""
+                                   asp-page="/Staff/RecurringBooking">
+                                    Recurring Bookings
+                                </a>
                             </li>
                         }
+
                         @if (userRole == "Admin")
                         {
                             <li class="nav-item admin-nav-start">
-                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/RoomManagement") ? "active" : "")" asp-area="" asp-page="/Admin/RoomManagement">Room Management</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/RoomManagement") ? "active" : "")"
+                                   asp-area=""
+                                   asp-page="/Admin/RoomManagement">
+                                    Room Management
+                                </a>
                             </li>
+
                             <li class="nav-item">
-                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/UserRoles") ? "active" : "")" asp-area="" asp-page="/Admin/UserRoles">User Roles</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/UserRoles") ? "active" : "")"
+                                   asp-area=""
+                                   asp-page="/Admin/UserRoles">
+                                    User Roles
+                                </a>
                             </li>
+
                             <li class="nav-item">
-                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/BookingManagement") ? "active" : "")" asp-area="" asp-page="/Admin/BookingManagement">Booking Management</a>
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Admin/BookingManagement") ? "active" : "")"
+                                   asp-area=""
+                                   asp-page="/Admin/BookingManagement">
+                                    Booking Management
+                                </a>
                             </li>
                         }
                     </ul>
-                    <div class="d-flex align-items-center gap-3 ms-auto">
-                        <!-- Google Translate Widget -->
-                        <div id="google_translate_element"></div>
 
-                        <!-- User Account Menu (shows when logged in) -->
+                    <!-- Right side controls -->
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+
+                        <!-- Custom Language Selector -->
+                        <div class="d-flex align-items-center">
+                            <select id="languageSelector"
+                                    class="btn btn-sm nav-control nav-language"
+                                    style="width: 110px; padding: 0.375rem 0.75rem; border: 1px solid var(--border); text-align: left;">
+                                <option value="en">English</option>
+                                <option value="vi">Vietnamese</option>
+                            </select>
+                        </div>
+
+                        <!-- User Account Menu -->
                         @if (Context.Session.GetString("CurrentUser") != null)
                         {
                             <div class="dropdown">
-                                <button class="btn btn-sm nav-control nav-profile dropdown-toggle" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                                <button class="btn btn-sm nav-control nav-profile dropdown-toggle"
+                                        type="button"
+                                        id="userMenu"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false">
                                     Profile: @Context.Session.GetString("CurrentUser")
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
+
+                                <ul class="dropdown-menu dropdown-menu-end"
+                                    aria-labelledby="userMenu">
+
                                     <li>
                                         <a class="dropdown-item" asp-page="/Logout">
                                             Logout
                                         </a>
                                     </li>
+
                                 </ul>
                             </div>
                         }
                         else
                         {
-                            <!-- Login and Sign Up buttons (shows when not logged in) -->
-                            <a class="btn btn-sm btn-outline-primary" asp-page="/Login">Login</a>
-                            <a class="btn btn-sm btn-primary" asp-page="/Signup">Sign Up</a>
-                        }
-                    </div>
+                            <!-- Login and Sign Up Buttons -->
+                            <a class="btn btn-sm btn-outline-primary"
+                               asp-page="/Login">
+                                Login
+                            </a>
 
+                            <a class="btn btn-sm btn-primary"
+                               asp-page="/Signup">
+                                Sign Up
+                            </a>
+                        }
+
+                    </div>
+                </div>
             </div>
         </nav>
     </header>
+
     <div class="container">
         <main role="main" class="pb-3">
             @RenderBody()
@@ -110,20 +167,145 @@
         </div>
     </footer>
 
+    <!-- jQuery -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
+    <!-- Bootstrap -->
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Site JavaScript -->
     <script src="~/js/site.js" asp-append-version="true"></script>
 
-    <!-- Google Translate Widget -->
+    <!-- Hidden Google Translate Widget -->
+    <div id="google_translate_element" style="display: none;"></div>
+
     <script type="text/javascript">
-        function googleTranslateElementInit() {
-            new google.translate.TranslateElement(
-                {pageLanguage: 'en', includedLanguages: 'en,vi', layout: google.translate.TranslateElement.InlineLayout.SIMPLE},
-                'google_translate_element'
-            );
-        }
+            function googleTranslateElementInit() {
+                new google.translate.TranslateElement({
+                    pageLanguage: 'en',
+                    includedLanguages: 'en,vi'
+                }, 'google_translate_element');
+            }
     </script>
-    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <script type="text/javascript"
+            src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+    </script>
+
+    <script>
+        // Remove Google Translate banner
+        function removeGoogleTranslateBanner() {
+            // Remove the banner frame iframe
+            var bannerFrames = document.querySelectorAll('.goog-te-banner-frame');
+            bannerFrames.forEach(function(frame) {
+                frame.style.display = 'none';
+                frame.style.visibility = 'hidden';
+                frame.parentNode.removeChild(frame);
+            });
+
+            // Reset body position
+            document.body.style.top = '0px';
+            document.body.style.marginTop = '0px';
+
+            // Hide any Google Translate tooltips
+            var tooltips = document.querySelectorAll('.goog-te-tooltip');
+            tooltips.forEach(function(tooltip) {
+                tooltip.style.display = 'none';
+            });
+        }
+
+        // Initial removal on page load
+        window.addEventListener('load', function() {
+            setTimeout(removeGoogleTranslateBanner, 500);
+        });
+
+        // Use MutationObserver to catch banner if it appears after load
+        var observer = new MutationObserver(function(mutations) {
+            removeGoogleTranslateBanner();
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true
+        });
+
+        // Also run every 100ms for the first second
+        var checkCount = 0;
+        var bannerCheckInterval = setInterval(function() {
+            removeGoogleTranslateBanner();
+            checkCount++;
+            if (checkCount > 10) {
+                clearInterval(bannerCheckInterval);
+            }
+        }, 100);
+    </script>
+
+    <!-- Custom Language Selector -->
+    <script>
+            document.addEventListener("DOMContentLoaded", function() {
+
+                const selector = document.getElementById("languageSelector");
+
+                if (!selector) {
+                    return;
+                }
+
+                // Read the current Google Translate cookie
+                function getGoogleLanguage() {
+
+                    const cookies = document.cookie.split("; ");
+
+                    const cookie = cookies.find(function(row) {
+                        return row.startsWith("googtrans=");
+                    });
+
+                    if (!cookie) {
+                        return "en";
+                    }
+
+                    const value = decodeURIComponent(
+                        cookie.substring("googtrans=".length)
+                    );
+
+                    if (value === "/en/vi") {
+                        return "vi";
+                    }
+
+                    return "en";
+                }
+
+                // Set the selector to the current language
+                selector.value = getGoogleLanguage();
+
+                // Change language
+                selector.addEventListener("change", function() {
+
+                    const language = this.value;
+
+                    // Remove existing Google Translate cookie
+                    document.cookie =
+                        "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+                    document.cookie =
+                        "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" +
+                        window.location.hostname;
+
+                    // Set the new Google Translate language
+                    document.cookie =
+                        "googtrans=/en/" + language + "; path=/;";
+
+                    document.cookie =
+                        "googtrans=/en/" + language +
+                        "; path=/; domain=" +
+                        window.location.hostname + ";";
+
+                    // Reload the page
+                    window.location.reload();
+                });
+
+            });
+    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
