@@ -47,7 +47,6 @@ if (string.IsNullOrWhiteSpace(supabaseConnectionString))
 
 builder.Services.AddDbContext<StudyRoomBookingDbContext>(options => options.UseNpgsql(supabaseConnectionString));
 builder.Services.AddScoped<StudyRoomBooking.Domain.Interfaces.IUnitOfWork, StudyRoomBooking.Infrastructure.Repositories.EfUnitOfWork>();
-builder.Services.AddSingleton<StudyRoomBooking.Infrastructure.Localization.ILocalizationService, StudyRoomBooking.Infrastructure.Localization.LocalizationService>();
 
 var app = builder.Build();
 

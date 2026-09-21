@@ -1,27 +1,15 @@
-﻿@inject StudyRoomBooking.Infrastructure.Localization.ILocalizationService localizationService
-@{
+﻿@{
     // Handle language selection from query parameter
     var langParam = Context.Request.Query["lang"].ToString();
     if (!string.IsNullOrEmpty(langParam) && (langParam == "en" || langParam == "vi"))
     {
         Context.Session.SetString("CurrentLanguage", langParam.ToUpper());
-        localizationService.SetLanguage(langParam); // Update localization service
     }
 
     // Ensure CurrentLanguage is always set (default to EN)
     if (string.IsNullOrEmpty(Context.Session.GetString("CurrentLanguage")))
     {
         Context.Session.SetString("CurrentLanguage", "EN");
-        localizationService.SetLanguage("en");
-    }
-    else
-    {
-        // Set the localization service to match the session language
-        var sessionLang = Context.Session.GetString("CurrentLanguage")?.ToLower();
-        if (!string.IsNullOrEmpty(sessionLang))
-        {
-            localizationService.SetLanguage(sessionLang);
-        }
     }
 }
 <!DOCTYPE html>
@@ -80,20 +68,8 @@
                         }
                     </ul>
                     <div class="d-flex align-items-center gap-3 ms-auto">
-                        <!-- Language Selector -->
-                        @{
-                            var currentLang = Context.Session.GetString("CurrentLanguage") ?? "EN";
-                            var langDisplay = currentLang.ToUpper();
-                        }
-                        <div class="dropdown">
-                            <button class="btn btn-sm nav-control nav-language dropdown-toggle" type="button" id="languageMenu" data-bs-toggle="dropdown" aria-expanded="false">
-                                Language: @langDisplay
-                            </button>
-                            <ul class="dropdown-menu" aria-labelledby="languageMenu">
-                                <li><a class="dropdown-item" href="?lang=en">English (EN)</a></li>
-                                <li><a class="dropdown-item" href="?lang=vi">Tiếng Việt (VI)</a></li>
-                            </ul>
-                        </div>
+                        <!-- Google Translate Widget -->
+                        <div id="google_translate_element"></div>
 
                         <!-- User Account Menu (shows when logged in) -->
                         @if (Context.Session.GetString("CurrentUser") != null)
@@ -105,7 +81,7 @@
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
                                     <li>
                                         <a class="dropdown-item" asp-page="/Logout">
-                                            @localizationService.GetString("Common", "Logout")
+                                            Logout
                                         </a>
                                     </li>
                                 </ul>
@@ -137,6 +113,17 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <!-- Google Translate Widget -->
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement(
+                {pageLanguage: 'en', includedLanguages: 'en,vi', layout: google.translate.TranslateElement.InlineLayout.SIMPLE},
+                'google_translate_element'
+            );
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
