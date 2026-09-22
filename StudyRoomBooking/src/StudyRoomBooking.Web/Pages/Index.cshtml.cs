@@ -163,6 +163,26 @@ public class IndexModel : PageModel
         }
     }
 
+    /// <summary>
+    /// Determines if a time slot is in the past for today's date.
+    /// Returns true only if the booking date is today AND the time slot is before current time.
+    /// For future dates, this always returns false (no slots are in the past).
+    /// </summary>
+    public bool IsTimeSlotInPast(TimeSpan timeSlot)
+    {
+        // Only check for past times if the booking date is today
+        if (SearchCriteria.BookingDate.Date == DateTime.Today)
+        {
+            var currentTime = DateTime.Now.TimeOfDay;
+            var roundedCurrentTime = TimeSpan.FromHours(Math.Floor(currentTime.TotalHours));
+            // A slot is in the past if its start time is before rounded current time
+            return timeSlot < roundedCurrentTime;
+        }
+
+        // For future dates, no slots are in the past
+        return false;
+    }
+
     public async Task<IActionResult> OnPostAsync()
     {
         if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserId")))

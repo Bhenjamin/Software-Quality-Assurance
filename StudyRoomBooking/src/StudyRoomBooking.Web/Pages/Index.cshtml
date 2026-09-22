@@ -180,22 +180,23 @@
 										var isBooked = bookedSlot != null;
 										var isOwnBooking = isBooked && bookedSlot.UserId == Model.CurrentUserId;
 										var isInSearchRange = Model.IsTimeSlotInSearchRange(timeSlot);
+										var isInPast = Model.IsTimeSlotInPast(timeSlot);
 										var startHour = timeSlot.Hours;
 										var endHour = nextTime.Hours;
 
 										<td style="padding: 4px;">
-											@if (isInSearchRange)
+											@if (isInSearchRange && !isInPast)
 											{
 												@if (isBooked)
-																{
-																	@if (isOwnBooking)
-																	{
-																		<a asp-page="/Students/ModifyBooking" asp-route-id="@bookedSlot.Id" class="badge calendar-slot calendar-slot-booked-self" style="text-decoration: none; cursor: pointer;"></a>
-																	}
-																	else
-																	{
-																		<span class="badge calendar-slot calendar-slot-booked"></span>
-																	}
+												{
+													@if (isOwnBooking)
+													{
+														<a asp-page="/Students/ModifyBooking" asp-route-id="@bookedSlot.Id" class="badge calendar-slot calendar-slot-booked-self" style="text-decoration: none; cursor: pointer;"></a>
+													}
+													else
+													{
+														<span class="badge calendar-slot calendar-slot-booked"></span>
+													}
 												}
 												else
 												{

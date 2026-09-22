@@ -151,6 +151,20 @@ public class BookingService : IBookingService
             );
         }
 
+        // Validation 1.5: Check if booking time is in the past for today's date
+        if (selectedDate == today)
+        {
+            var currentTime = DateTime.Now.TimeOfDay;
+            var roundedCurrentTime = TimeSpan.FromHours(Math.Floor(currentTime.TotalHours));
+            if (startTime < roundedCurrentTime)
+            {
+                return (
+                    false,
+                    "Cannot book rooms for past times on today's date. The start time must be after the current time."
+                );
+            }
+        }
+
         // Validation 2: Check if booking is more than 60 days ahead (skip for recurring bookings)
         if (!skipAdvanceDaysCheck)
         {
