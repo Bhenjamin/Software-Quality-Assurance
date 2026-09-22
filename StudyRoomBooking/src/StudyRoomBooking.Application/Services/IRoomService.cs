@@ -12,7 +12,7 @@ public interface IRoomService
     Task<Room> CreateRoomAsync(Room room);
     Task<Room> UpdateRoomAsync(Room room);
     Task DeleteRoomAsync(int roomId);
-    Task<bool> IsRoomAvailableAsync(int roomId, DateTime date, TimeSpan startTime, TimeSpan endTime);
+    Task<bool> IsRoomAvailableAsync(int roomId, DateTime date, TimeSpan startTime, TimeSpan endTime, int? bookingIdToExclude = null);
     Task<List<StudentMajor>> GetAllowedMajorsForRoomAsync(int roomId);
     Task SetAllowedMajorsForRoomAsync(int roomId, IEnumerable<StudentMajor> majors);
 }

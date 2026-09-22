@@ -104,6 +104,7 @@ public class BookingService : IBookingService
     public async Task<Booking> UpdateBookingAsync(Booking booking)
     {
         booking.UpdatedAt = DateTime.UtcNow;
+        booking.BookingDate = DateTime.SpecifyKind(booking.BookingDate.Date, DateTimeKind.Utc);
         await _unitOfWork.Bookings.UpdateAsync(booking);
         await _unitOfWork.SaveChangesAsync();
         return booking;

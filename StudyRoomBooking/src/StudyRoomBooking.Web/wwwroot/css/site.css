@@ -250,15 +250,67 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   display: inline-flex;
   justify-content: center;
-  min-height: 32px;
-  padding: 0.45rem 0.3rem;
+  min-height: 28px;
+  padding: 0.3rem 0.2rem;
   text-decoration: none;
   width: 100%;
+}
+
+/* Room matrix table styling to fix column widths */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.table.text-center {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.table.text-center th:first-child,
+.table.text-center td:first-child {
+  width: 300px;
+  min-width: 300px;
+  max-width: 300px;
+  word-wrap: break-word;
+}
+
+.table.text-center th:not(:first-child),
+.table.text-center td:not(:first-child) {
+  width: 45px;
+  min-width: 45px;
+  max-width: 45px;
+}
+
+.table.text-center th:not(:first-child) {
+  padding: 0.5rem 0.25rem !important;
+  font-size: 0.8rem;
+}
+
+.table.text-center td:not(:first-child) {
+  padding: 2px !important;
+}
+
+.table.text-center td:not(:first-child) .badge {
+  display: block;
+  margin: 0 auto;
 }
 
 .calendar-slot-booked {
   background-color: var(--delete) !important;
   color: var(--surface) !important;
+}
+
+.calendar-slot-booked-self {
+  background-color: #2563EB !important;
+  color: var(--surface) !important;
+  cursor: pointer;
+}
+
+.calendar-slot-booked-self:hover,
+.calendar-slot-booked-self:focus {
+  background-color: #1d4ed8 !important;
+  color: var(--surface) !important;
+  text-decoration: none;
 }
 
 .calendar-slot-free {
@@ -274,9 +326,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .calendar-slot-unavailable {
-  background-color: var(--secondary) !important;
+  background-color: #9CA3AF !important;
   color: var(--surface) !important;
-  opacity: 0.5;
 }
 
 .role-student {

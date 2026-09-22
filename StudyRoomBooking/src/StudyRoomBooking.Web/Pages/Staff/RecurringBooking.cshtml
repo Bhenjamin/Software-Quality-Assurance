@@ -115,20 +115,42 @@
 	{
 		<div class="card mt-4">
 			<div class="card-header">
-				<h5 class="mb-0">Available Rooms for @Model.SearchCriteria.StartDate.ToString("dddd, MMMM dd, yyyy")</h5>
-				<small class="text-muted">Recurring from @Model.SearchCriteria.StartDate.ToString("MMM dd") to @Model.SearchCriteria.RecurrenceEndDate.ToString("MMM dd, yyyy") | Time Range: 08:00 - 22:00
-					@if (Model.SearchCriteria.StartTime.HasValue || Model.SearchCriteria.EndTime.HasValue)
-					{
-						<br /><strong style="color: #0c63e4;">✓ Filtered: Showing only rooms available at specified hours across the entire date range</strong>
-					}
-				</small>
+				<div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
+					<div>
+						<h5 class="mb-0">Available Rooms for @Model.SearchCriteria.StartDate.ToString("dddd, MMMM dd, yyyy")</h5>
+						<small class="text-muted">Recurring from @Model.SearchCriteria.StartDate.ToString("MMM dd") to @Model.SearchCriteria.RecurrenceEndDate.ToString("MMM dd, yyyy") | Time Range: 08:00 - 22:00
+							@if (Model.SearchCriteria.StartTime.HasValue || Model.SearchCriteria.EndTime.HasValue)
+							{
+								<br /><strong style="color: #0c63e4;">✓ Filtered: Showing only rooms available at specified hours across the entire date range</strong>
+							}
+						</small>
+					</div>
+					<div style="display: flex; gap: 15px; font-size: 0.9rem;">
+						<div style="display: flex; align-items: center; gap: 5px;">
+							<span style="display: inline-block; width: 20px; height: 20px; background-color: var(--success); border-radius: 3px;"></span>
+							<span>Available</span>
+						</div>
+						<div style="display: flex; align-items: center; gap: 5px;">
+							<span style="display: inline-block; width: 20px; height: 20px; background-color: var(--delete); border-radius: 3px;"></span>
+							<span>Booked</span>
+						</div>
+						<div style="display: flex; align-items: center; gap: 5px;">
+							<span style="display: inline-block; width: 20px; height: 20px; background-color: #2563EB; border-radius: 3px;"></span>
+							<span>Your Booking</span>
+						</div>
+						<div style="display: flex; align-items: center; gap: 5px;">
+							<span style="display: inline-block; width: 20px; height: 20px; background-color: #9CA3AF; border-radius: 3px;"></span>
+							<span>Unavailable</span>
+						</div>
+					</div>
+				</div>
 			</div>
 			<div class="card-body">
 				<div class="table-responsive">
 					<table class="table table-bordered text-center">
 						<thead>
 							<tr class="table-light">
-								<th style="width: 200px;">Room Details</th>
+								<th style="width: 120px;">Room Details</th>
 								@{
 									var startTime = new TimeSpan(8, 0, 0);  // Always start from 8:00
 									var endTime = new TimeSpan(22, 0, 0);  // Always end at 22:00
@@ -165,9 +187,11 @@
 									@foreach (var timeSlot in timeSlots)
 									{
 										var nextTime = timeSlot.Add(interval);
-										var isBooked = bookingsForRoom.Any(b => 
+										var bookedSlot = bookingsForRoom.FirstOrDefault(b => 
 											!(b.EndTime <= timeSlot || b.StartTime >= nextTime) && 
 											b.Status != StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled);
+										var isBooked = bookedSlot != null;
+										var isOwnBooking = isBooked && bookedSlot.UserId == Model.CurrentUserId;
 										var isInSearchRange = Model.IsTimeSlotInSearchRange(timeSlot);
 										var startHour = timeSlot.Hours;
 										var endHour = nextTime.Hours;
@@ -176,8 +200,15 @@
 											@if (isInSearchRange)
 											{
 												@if (isBooked)
-												{
-													<span class="badge calendar-slot calendar-slot-booked">Booked</span>
+															{
+																@if (isOwnBooking)
+																{
+																	<a asp-page="/Students/ModifyBooking" asp-route-id="@bookedSlot.Id" class="badge calendar-slot calendar-slot-booked-self" style="text-decoration: none; cursor: pointer;"></a>
+																}
+																else
+																{
+																	<span class="badge calendar-slot calendar-slot-booked"></span>
+																}
 												}
 												else
 												{
@@ -187,12 +218,12 @@
 													   asp-route-startTime="@startHour:00"
 													   asp-route-endTime="@endHour:00"
 													   asp-route-recurrenceEndDate="@Model.SearchCriteria.RecurrenceEndDate.ToString("yyyy-MM-dd")"
-													   class="badge calendar-slot calendar-slot-free">Free</a>
+													   class="badge calendar-slot calendar-slot-free"> </a>
 												}
 											}
 											else
 											{
-												<span class="badge calendar-slot calendar-slot-unavailable">--</span>
+												<span class="badge calendar-slot calendar-slot-unavailable"> </span>
 											}
 										</td>
 											}
@@ -205,7 +236,7 @@
 		</div>
 
 		<div class="mt-4 mb-4">
-			<a href="#" class="btn btn-secondary">Clear Search</a>
+			<a href="@Url.Page("/Staff/RecurringBooking")" class="btn btn-secondary">Clear Search</a>
 		</div>
 	}
 	else if (Model.HasSearched)

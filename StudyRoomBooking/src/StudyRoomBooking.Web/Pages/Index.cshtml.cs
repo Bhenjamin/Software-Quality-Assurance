@@ -21,6 +21,7 @@ public class IndexModel : PageModel
     public string? CurrentUserRole { get; set; } = null;
     public StudentMajor? CurrentUserMajor { get; set; } = null;
     public string? CurrentUserName { get; set; } = null;
+    public int CurrentUserId { get; set; } = 0;
     public List<RoomType> AvailableRoomTypes { get; set; } = new();
 
     public IndexModel(IRoomService roomService, IBookingService bookingService, IUserService userService)
@@ -35,6 +36,13 @@ public class IndexModel : PageModel
         if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserId")))
         {
             return RedirectToPage("Login");
+        }
+
+        // Get current user ID
+        var userIdStr = HttpContext.Session.GetString("UserId");
+        if (int.TryParse(userIdStr, out int userId))
+        {
+            CurrentUserId = userId;
         }
 
         SearchCriteria.BookingDate = DateTime.Today;
@@ -160,6 +168,13 @@ public class IndexModel : PageModel
         if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserId")))
         {
             return RedirectToPage("Login");
+        }
+
+        // Get current user ID
+        var userIdStr = HttpContext.Session.GetString("UserId");
+        if (int.TryParse(userIdStr, out int userId))
+        {
+            CurrentUserId = userId;
         }
 
         HasSearched = true;

@@ -12,6 +12,7 @@ public class ModifyBookingModel : PageModel
     private readonly IRoomService _roomService;
 
     public BookingViewModel? Booking { get; set; }
+    public string? ReturnUrl { get; set; }
 
     public ModifyBookingModel(IBookingService bookingService, IRoomService roomService)
     {
@@ -21,6 +22,10 @@ public class ModifyBookingModel : PageModel
 
     public async Task OnGetAsync(int id)
     {
+        // Get the referrer URL (previous page) from the HTTP request header
+        var referrer = Request.Headers["Referer"].ToString();
+        ReturnUrl = !string.IsNullOrEmpty(referrer) ? referrer : Url.Page("BookingHistory");
+
         var booking = await _bookingService.GetBookingByIdAsync(id);
         if (booking != null)
         {
@@ -53,6 +58,7 @@ public class ModifyBookingModel : PageModel
     {
         try
         {
+            // Get the booking fresh from the database with tracking
             var booking = await _bookingService.GetBookingByIdAsync(bookingId);
             if (booking == null)
             {
@@ -68,6 +74,7 @@ public class ModifyBookingModel : PageModel
                 await OnGetAsync(bookingId);
                 return Page();
             }
+
 
             var date = DateTime.ParseExact(bookingDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 
@@ -91,6 +98,14 @@ public class ModifyBookingModel : PageModel
                 end = TimeSpan.ParseExact(endHour, @"h\:mm", System.Globalization.CultureInfo.InvariantCulture);
             }
 
+            // Validate time constraints
+            if (start >= end)
+            {
+                ModelState.AddModelError(string.Empty, "Start time must be before end time.");
+                await OnGetAsync(bookingId);
+                return Page();
+            }
+
             // Validate booking date and time constraints only if date or time has changed
             bool dateOrTimeChanged = date.Date != booking.BookingDate.Date || start != booking.StartTime || end != booking.EndTime;
 
@@ -105,7 +120,7 @@ public class ModifyBookingModel : PageModel
                 }
 
                 // Check availability (excluding current booking)
-                var isAvailable = await _roomService.IsRoomAvailableAsync(booking.RoomId, date, start, end);
+                var isAvailable = await _roomService.IsRoomAvailableAsync(booking.RoomId, date, start, end, bookingId);
                 if (!isAvailable)
                 {
                     ModelState.AddModelError(string.Empty, "Selected time slot is not available.");
@@ -114,6 +129,7 @@ public class ModifyBookingModel : PageModel
                 }
             }
 
+            // Update only the properties that can be modified
             booking.BookingDate = date;
             booking.StartTime = start;
             booking.EndTime = end;
@@ -125,7 +141,27 @@ public class ModifyBookingModel : PageModel
         }
         catch (Exception ex)
         {
-            ModelState.AddModelError(string.Empty, $"Error updating booking: {ex.Message}");
+            var errorMessage = $"Error updating booking: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorMessage += $" | Inner error: {ex.InnerException.Message}";
+            }
+            ModelState.AddModelError(string.Empty, errorMessage);
+            await OnGetAsync(bookingId);
+            return Page();
+        }
+    }
+
+    public async Task<IActionResult> OnPostCancelBookingAsync(int bookingId)
+    {
+        try
+        {
+            await _bookingService.CancelBookingAsync(bookingId);
+            return RedirectToPage("BookingHistory", new { message = "Booking cancelled successfully!" });
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError(string.Empty, $"Error cancelling booking: {ex.Message}");
             await OnGetAsync(bookingId);
             return Page();
         }

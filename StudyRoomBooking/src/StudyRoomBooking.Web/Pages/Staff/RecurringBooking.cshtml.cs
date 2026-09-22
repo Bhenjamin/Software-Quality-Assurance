@@ -18,6 +18,7 @@ public class RecurringBookingModel : PageModel
     public List<Room> SearchResults { get; set; } = new();
     public bool HasSearched { get; set; } = false;
     public string? CurrentUserRole { get; set; } = null;
+    public int CurrentUserId { get; set; } = 0;
 
     public RecurringBookingModel(IRoomService roomService, IBookingService bookingService)
     {
@@ -25,16 +26,32 @@ public class RecurringBookingModel : PageModel
         _bookingService = bookingService;
     }
 
-    public void OnGet()
+    public async Task OnGetAsync()
     {
         SearchCriteria.StartDate = DateTime.Today;
         SearchCriteria.RecurrenceEndDate = DateTime.Today.AddDays(30);
         // StartTime and EndTime are nullable, so leave them as null (not set)
 
+        // Get current user ID
+        var userIdStr = HttpContext.Session.GetString("UserId");
+        if (int.TryParse(userIdStr, out int userId))
+        {
+            CurrentUserId = userId;
+        }
+
         // Get the current user role from session
         CurrentUserRole = HttpContext.Session.GetString("CurrentUserRole");
 
-        // Staff can search all room types - no restriction here
+        // Run search on page load to show room-time matrix
+        HasSearched = true;
+        SearchResults = await _roomService.SearchRoomsAsync(
+            SearchCriteria.StartDate,
+            SearchCriteria.StartTime,
+            SearchCriteria.EndTime,
+            SearchCriteria.Capacity,
+            SearchCriteria.RoomType,
+            SearchCriteria.Location
+        );
     }
 
     public async Task<List<Domain.Entities.Booking>> GetRoomBookingsAsync(int roomId, DateTime date)
@@ -134,6 +151,13 @@ public class RecurringBookingModel : PageModel
 
         try
         {
+            // Get current user ID
+            var userIdStr = HttpContext.Session.GetString("UserId");
+            if (int.TryParse(userIdStr, out int userId))
+            {
+                CurrentUserId = userId;
+            }
+
             // Get the current user role from session
             CurrentUserRole = HttpContext.Session.GetString("CurrentUserRole");
 

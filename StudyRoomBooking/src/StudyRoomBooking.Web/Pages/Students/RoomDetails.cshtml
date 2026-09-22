@@ -122,15 +122,15 @@
 								</div>
 
 								<div class="booking-actions mt-3">
-									<a asp-page="/Index" class="btn btn-secondary">Back to Book a Room</a>
-									<button type="submit" class="btn btn-primary" asp-page-handler="BookRoom">Book this Room</button>
+									<button type="submit" class="btn btn-primary" asp-page-handler="BookRoom">Book this room</button>
+									<a asp-page="/Index" class="btn btn-secondary">Back</a>
 								</div>
 							</form>
 						}
 						else
 						{
 							<div class="alert alert-danger mt-3">This room is currently not available.</div>
-							<a asp-page="/Index" class="btn btn-secondary">Back to Book a Room</a>
+							<a asp-page="/Index" class="btn btn-secondary">Back</a>
 						}
 					</div>
 				</div>

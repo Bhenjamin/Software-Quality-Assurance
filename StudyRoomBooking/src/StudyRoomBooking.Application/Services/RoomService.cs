@@ -134,12 +134,13 @@ public class RoomService : IRoomService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    public async Task<bool> IsRoomAvailableAsync(int roomId, DateTime date, TimeSpan startTime, TimeSpan endTime)
+    public async Task<bool> IsRoomAvailableAsync(int roomId, DateTime date, TimeSpan startTime, TimeSpan endTime, int? bookingIdToExclude = null)
     {
         var bookings = await _unitOfWork.Bookings.GetByRoomIdAsync(roomId);
         var conflictingBookings = bookings.Where(b =>
             b.BookingDate.Date == date.Date &&
             b.Status != BookingStatus.Cancelled &&
+            (bookingIdToExclude == null || b.Id != bookingIdToExclude) &&
             // Check for time overlap
             !(b.EndTime <= startTime || b.StartTime >= endTime)
         ).ToList();
