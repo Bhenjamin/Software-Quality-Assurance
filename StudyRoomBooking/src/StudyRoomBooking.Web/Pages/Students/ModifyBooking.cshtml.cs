@@ -28,7 +28,7 @@ public class ModifyBookingModel : PageModel
             if (booking.Status == Domain.Enums.BookingStatus.Cancelled)
             {
                 TempData["ErrorMessage"] = "Cannot modify a cancelled booking.";
-                RedirectToPage("MyBookings");
+                RedirectToPage("BookingHistory");
                 return;
             }
 
@@ -121,7 +121,7 @@ public class ModifyBookingModel : PageModel
 
             await _bookingService.UpdateBookingAsync(booking);
 
-            return RedirectToPage("MyBookings", new { message = "Booking updated successfully!" });
+            return RedirectToPage("BookingHistory", new { message = "Booking updated successfully!" });
         }
         catch (Exception ex)
         {

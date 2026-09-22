@@ -98,7 +98,7 @@ public class CreateBookingModel : PageModel
 
             await _bookingService.CreateBookingAsync(booking);
 
-            return RedirectToPage("MyBookings", new { message = "Booking created successfully!" });
+            return RedirectToPage("BookingHistory", new { message = "Booking created successfully!" });
         }
         catch (Exception ex)
         {

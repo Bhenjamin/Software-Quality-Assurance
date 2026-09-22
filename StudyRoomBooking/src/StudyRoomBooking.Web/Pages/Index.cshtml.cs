@@ -188,11 +188,11 @@ public class IndexModel : PageModel
                 return Page();
             }
 
-            // Validate booking date is not more than 60 days in advance
+            // Validate booking date is not more than 60 days ahead
             var daysInAdvance = (SearchCriteria.BookingDate.Date - today).Days;
             if (daysInAdvance > 60)
             {
-                ModelState.AddModelError(string.Empty, $"Bookings can only be made up to 60 days in advance. Your selected date is {daysInAdvance} days away.");
+                ModelState.AddModelError(string.Empty, $"Bookings can only be made up to 60 days ahead. Your selected date is {daysInAdvance} days away.");
                 return Page();
             }
 

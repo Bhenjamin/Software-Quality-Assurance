@@ -152,11 +152,11 @@ public class RecurringBookingModel : PageModel
                 return;
             }
 
-            // Validate start date is not more than 60 days in advance
+            // Validate start date is not more than 60 days ahead
             var daysInAdvance = (SearchCriteria.StartDate.Date - today).Days;
             if (daysInAdvance > 60)
             {
-                ModelState.AddModelError(string.Empty, $"Start date can only be up to 60 days in advance. Your selected date is {daysInAdvance} days away.");
+                ModelState.AddModelError(string.Empty, $"Start date can only be up to 60 days ahead. Your selected date is {daysInAdvance} days away.");
                 return;
             }
 

@@ -39,11 +39,11 @@
 		<div class="row">
 			<div class="col-md-3">
 				<div class="form-group">
-					<label for="bookingDate" class="form-label">Booking Date *</label>
+					<label for="bookingDate" class="form-label">Date *</label>
 					<input type="date" id="bookingDate" name="searchCriteria.BookingDate" 
 						   min="@minDate" max="@maxDate"
 						   value="@Model.SearchCriteria.BookingDate.ToString("yyyy-MM-dd")" class="form-control" required />
-					<small class="text-muted">Today to 60 days in advance</small>
+					<small class="text-muted">Today to 60 days ahead</small>
 				</div>
 			</div>
 			<div class="col-md-3">
@@ -80,7 +80,7 @@
 						<div class="form-group">
 							<label for="roomType" class="form-label">Room Type</label>
 							<select id="roomType" name="searchCriteria.RoomType" class="form-select">
-								<option value="">Any Type</option>
+								<option value="">Any</option>
 								@foreach (var type in Model.AvailableRoomTypes)
 								{
 									<option value="@type" selected="@(Model.SearchCriteria.RoomType == type)">@type.ToDisplayName()</option>

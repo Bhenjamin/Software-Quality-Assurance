@@ -51,10 +51,10 @@
                             </li>
 
                             <li class="nav-item">
-                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Students/MyBookings") ? "active" : "")"
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Students/BookingHistory") ? "active" : "")"
                                    asp-area=""
-                                   asp-page="/Students/MyBookings">
-                                    My Bookings
+                                   asp-page="/Students/BookingHistory">
+                                    Booking History
                                 </a>
                             </li>
                         }
@@ -103,11 +103,9 @@
 
                         <!-- Custom Language Selector -->
                         <div class="d-flex align-items-center">
-                            <select id="languageSelector"
-                                    class="btn btn-sm nav-control nav-language"
-                                    style="width: 110px; padding: 0.375rem 0.75rem; border: 1px solid var(--border); text-align: left;">
-                                <option value="en">English</option>
-                                <option value="vi">Vietnamese</option>
+                            <select id="languageSelector" class="form-select form-select-sm" style="width: 62px;">
+                                <option value="en">EN</option>
+                                <option value="vi">VI</option>
                             </select>
                         </div>
 
@@ -120,7 +118,7 @@
                                         id="userMenu"
                                         data-bs-toggle="dropdown"
                                         aria-expanded="false">
-                                    Profile: @Context.Session.GetString("CurrentUser")
+                                    @Context.Session.GetString("CurrentUser")
                                 </button>
 
                                 <ul class="dropdown-menu dropdown-menu-end"

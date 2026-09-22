@@ -1,11 +1,11 @@
 @page
-@model MyBookingsModel
+@model BookingHistoryModel
 @{
-	ViewData["Title"] = "My Bookings";
+	ViewData["Title"] = "Booking History";
 }
 
 <div class="container mt-4">
-	<h2>My Bookings</h2>
+	<h2>Booking History</h2>
 
 	@if (!string.IsNullOrEmpty(Model.Message))
 	{
@@ -26,7 +26,7 @@
 						<th>Date</th>
 						<th>Time</th>
 						<th>Status</th>
-						<th>Confirmation</th>
+						<th>Confirmation Number</th>
 						<th>Actions</th>
 					</tr>
 				</thead>
@@ -83,7 +83,7 @@
 						<th>Date</th>
 						<th>Time</th>
 						<th>Status</th>
-						<th>Confirmation</th>
+						<th>Confirmation Number</th>
 						<th>Created</th>
 					</tr>
 				</thead>

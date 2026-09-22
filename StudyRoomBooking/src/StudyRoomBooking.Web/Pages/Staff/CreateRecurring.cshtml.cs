@@ -183,7 +183,7 @@ public class CreateRecurringModel : PageModel
             // Build success message
             var message = $"Recurring booking created successfully with {recurrenceDates.Count} bookings!";
 
-            return RedirectToPage("/Students/MyBookings", new { message = message });
+            return RedirectToPage("/Students/BookingHistory", new { message = message });
         }
         catch (Exception ex)
         {

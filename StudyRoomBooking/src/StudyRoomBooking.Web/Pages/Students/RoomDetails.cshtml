@@ -73,11 +73,11 @@
 								<div class="row mt-4">
 									<div class="col-md-6">
 										<div class="form-group">
-											<label for="bookingDate" class="form-label">Booking Date *</label>
+											<label for="bookingDate" class="form-label">Date *</label>
 											<input type="date" id="bookingDate" name="bookingDate" 
 												   min="@minDate" max="@maxDate"
 												   value="@(Model.SubmittedBookingDate ?? Model.DefaultBookingDate)" class="form-control" required />
-											<small class="text-muted">Today to 60 days in advance</small>
+											<small class="text-muted">Today to 60 days ahead</small>
 										</div>
 									</div>
 								</div>

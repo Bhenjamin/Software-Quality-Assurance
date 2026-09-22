@@ -6,7 +6,7 @@ using StudyRoomBooking.Domain.Entities;
 
 namespace StudyRoomBooking.Web.Pages.Students;
 
-public class MyBookingsModel : PageModel
+public class BookingHistoryModel : PageModel
 {
     private readonly IBookingService _bookingService;
     private readonly IRoomService _roomService;
@@ -16,7 +16,7 @@ public class MyBookingsModel : PageModel
     public List<BookingViewModel> PreviousBookings { get; set; } = new();
     public string? Message { get; set; }
 
-    public MyBookingsModel(IBookingService bookingService, IRoomService roomService, IUserService userService)
+    public BookingHistoryModel(IBookingService bookingService, IRoomService roomService, IUserService userService)
     {
         _bookingService = bookingService;
         _roomService = roomService;

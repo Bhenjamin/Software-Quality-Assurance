@@ -150,7 +150,7 @@ public class BookingService : IBookingService
             );
         }
 
-        // Validation 2: Check if booking is more than 60 days in advance (skip for recurring bookings)
+        // Validation 2: Check if booking is more than 60 days ahead (skip for recurring bookings)
         if (!skipAdvanceDaysCheck)
         {
             var daysInAdvance = (selectedDate - today).Days;
@@ -158,7 +158,7 @@ public class BookingService : IBookingService
             {
                 return (
                     false,
-                    $"Bookings can only be made up to {MaxAdvanceDaysAllowed} days in advance. Your selected date is {daysInAdvance} days away."
+                    $"Bookings can only be made up to {MaxAdvanceDaysAllowed} days ahead. Your selected date is {daysInAdvance} days away."
                 );
             }
         }

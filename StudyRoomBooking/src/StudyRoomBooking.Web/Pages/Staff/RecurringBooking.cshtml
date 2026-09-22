@@ -43,7 +43,7 @@
 					<input type="date" id="startDate" name="searchCriteria.StartDate" 
 						   min="@minDate" max="@maxDate"
 						   value="@Model.SearchCriteria.StartDate.ToString("yyyy-MM-dd")" class="form-control" required />
-					<small class="text-muted">Today to 60 days in advance</small>
+					<small class="text-muted">Today to 60 days ahead</small>
 				</div>
 			</div>
 			<div class="col-md-3">
@@ -87,7 +87,7 @@
 				<div class="form-group">
 					<label for="roomType" class="form-label">Room Type</label>
 					<select id="roomType" name="searchCriteria.RoomType" class="form-select">
-						<option value="">Any Type</option>
+						<option value="">Any</option>
 						@foreach (var type in Enum.GetValues(typeof(StudyRoomBooking.Domain.Enums.RoomType)))
 						{
 							var roomType = (StudyRoomBooking.Domain.Enums.RoomType)type;
