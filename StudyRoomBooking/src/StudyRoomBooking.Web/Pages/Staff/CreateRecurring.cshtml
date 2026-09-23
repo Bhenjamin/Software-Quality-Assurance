@@ -54,10 +54,21 @@
 
 						<div class="form-group mb-3">
 							<label for="startDate" class="form-label">Start Date *</label>
-							<input type="date" id="startDate" name="startDate" 
-								   min="@minDate"
-								   value="@(Model.PreSelectedStartDate ?? defaultDate)" class="form-control" required />
+							<div class="input-group">
+								<button type="button" id="startDateBackBtn" class="btn btn-outline-secondary" title="Previous day">
+									<i class="bi bi-chevron-down"></i> ◀
+								</button>
+								<input type="date" id="startDate" name="startDate" 
+									   min="@minDate"
+									   value="@(Model.PreSelectedStartDate ?? defaultDate)" class="form-control" required />
+								<button type="button" id="startDateForwardBtn" class="btn btn-outline-secondary" title="Next day">
+									▶ <i class="bi bi-chevron-up"></i>
+								</button>
+							</div>
 							<small class="text-muted">You can book from today up to 60 days ahead</small>
+							<div id="startDateWarning" class="alert alert-warning mt-2" style="display: none; padding: 0.5rem 0.75rem; margin: 0.5rem 0;">
+								Cannot go to past date. Today is selected.
+							</div>
 						</div>
 
 						<div class="row">
@@ -102,10 +113,21 @@
 
 						<div class="form-group mb-3">
 							<label for="recurrenceEndDate" class="form-label">Recurrence End Date</label>
-							<input type="date" id="recurrenceEndDate" name="recurrenceEndDate" 
-								   min="@minDate"
-								   value="@(Model.PreSelectedRecurrenceEndDate ?? "")" class="form-control" />
+							<div class="input-group">
+								<button type="button" id="recurrenceEndDateBackBtn" class="btn btn-outline-secondary" title="Previous day">
+									<i class="bi bi-chevron-down"></i> ◀
+								</button>
+								<input type="date" id="recurrenceEndDate" name="recurrenceEndDate" 
+									   min="@minDate"
+									   value="@(Model.PreSelectedRecurrenceEndDate ?? "")" class="form-control" />
+								<button type="button" id="recurrenceEndDateForwardBtn" class="btn btn-outline-secondary" title="Next day">
+									▶ <i class="bi bi-chevron-up"></i>
+								</button>
+							</div>
 							<small class="text-muted">Optional: Leave empty for the same day as start date. No limit on future dates.</small>
+							<div id="recurrenceEndDateWarning" class="alert alert-warning mt-2" style="display: none; padding: 0.5rem 0.75rem; margin: 0.5rem 0;">
+								Cannot go to past date. Today is selected.
+							</div>
 						</div>
 
 						<div class="form-group mb-3">
@@ -181,6 +203,114 @@ document.addEventListener('DOMContentLoaded', function() {
 	// Add event listeners to both time selects
 	startTimeSelect.addEventListener('change', validateTimeRange);
 	endTimeSelect.addEventListener('change', validateTimeRange);
+
+	// Date navigation buttons for Start Date
+	const startDateInput = document.getElementById('startDate');
+	const startDateBackBtn = document.getElementById('startDateBackBtn');
+	const startDateForwardBtn = document.getElementById('startDateForwardBtn');
+	const startDateWarning = document.getElementById('startDateWarning');
+	var maxDate = new Date();
+	maxDate.setDate(maxDate.getDate() + 60);
+	const maxDateStr = maxDate.toISOString().split('T')[0];
+
+	function updateStartDateButtons() {
+		const currentDate = startDateInput.value;
+		const minDate = startDateInput.getAttribute('min');
+		startDateBackBtn.disabled = currentDate === minDate;
+		startDateForwardBtn.disabled = currentDate === maxDateStr;
+	}
+
+	startDateBackBtn.addEventListener('click', function(e) {
+		e.preventDefault();
+		const currentDate = new Date(startDateInput.value);
+		const previousDate = new Date(currentDate);
+		previousDate.setDate(previousDate.getDate() - 1);
+		const previousDateStr = previousDate.toISOString().split('T')[0];
+		const minDate = startDateInput.getAttribute('min');
+
+		if (previousDateStr < minDate) {
+			startDateWarning.textContent = 'Cannot go to past date. ' + new Date(minDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' is selected.';
+			startDateWarning.style.display = 'block';
+			setTimeout(() => { startDateWarning.style.display = 'none'; }, 3000);
+		} else {
+			startDateInput.value = previousDateStr;
+			startDateWarning.style.display = 'none';
+			updateStartDateButtons();
+		}
+	});
+
+	startDateForwardBtn.addEventListener('click', function(e) {
+		e.preventDefault();
+		const currentDate = new Date(startDateInput.value);
+		const nextDate = new Date(currentDate);
+		nextDate.setDate(nextDate.getDate() + 1);
+		const nextDateStr = nextDate.toISOString().split('T')[0];
+		if (nextDateStr > maxDateStr) return;
+		startDateInput.value = nextDateStr;
+		startDateWarning.style.display = 'none';
+		updateStartDateButtons();
+	});
+
+	// Update button states when date input changes (calendar selection)
+	startDateInput.addEventListener('change', function() {
+		updateStartDateButtons();
+	});
+
+	updateStartDateButtons();
+
+	// Date navigation buttons for Recurrence End Date
+	const recurrenceEndDateInput = document.getElementById('recurrenceEndDate');
+	const recurrenceEndDateBackBtn = document.getElementById('recurrenceEndDateBackBtn');
+	const recurrenceEndDateForwardBtn = document.getElementById('recurrenceEndDateForwardBtn');
+	const recurrenceEndDateWarning = document.getElementById('recurrenceEndDateWarning');
+
+	function updateRecurrenceEndDateButtons() {
+		const currentDate = recurrenceEndDateInput.value;
+		const minDate = recurrenceEndDateInput.getAttribute('min');
+		recurrenceEndDateBackBtn.disabled = currentDate === minDate;
+		// No max date for recurrence end date, so forward button is never disabled by max
+	}
+
+	recurrenceEndDateBackBtn.addEventListener('click', function(e) {
+		e.preventDefault();
+		if (!recurrenceEndDateInput.value) return;
+
+		const currentDate = new Date(recurrenceEndDateInput.value);
+		const previousDate = new Date(currentDate);
+		previousDate.setDate(previousDate.getDate() - 1);
+		const previousDateStr = previousDate.toISOString().split('T')[0];
+		const minDate = recurrenceEndDateInput.getAttribute('min');
+
+		if (previousDateStr < minDate) {
+			recurrenceEndDateWarning.textContent = 'Cannot go to past date. ' + new Date(minDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' is selected.';
+			recurrenceEndDateWarning.style.display = 'block';
+			setTimeout(() => { recurrenceEndDateWarning.style.display = 'none'; }, 3000);
+		} else {
+			recurrenceEndDateInput.value = previousDateStr;
+			recurrenceEndDateWarning.style.display = 'none';
+			updateRecurrenceEndDateButtons();
+		}
+	});
+
+	recurrenceEndDateForwardBtn.addEventListener('click', function(e) {
+		e.preventDefault();
+		if (!recurrenceEndDateInput.value) return;
+
+		const currentDate = new Date(recurrenceEndDateInput.value);
+		const nextDate = new Date(currentDate);
+		nextDate.setDate(nextDate.getDate() + 1);
+		const nextDateStr = nextDate.toISOString().split('T')[0];
+		recurrenceEndDateInput.value = nextDateStr;
+		recurrenceEndDateWarning.style.display = 'none';
+		updateRecurrenceEndDateButtons();
+	});
+
+	// Update button states when date input changes (calendar selection)
+	recurrenceEndDateInput.addEventListener('change', function() {
+		updateRecurrenceEndDateButtons();
+	});
+
+	updateRecurrenceEndDateButtons();
 
 	// Validate on form submission
 	document.querySelector('form').addEventListener('submit', function(e) {

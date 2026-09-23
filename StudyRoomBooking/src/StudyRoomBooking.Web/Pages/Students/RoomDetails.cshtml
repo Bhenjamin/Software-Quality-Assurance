@@ -74,10 +74,21 @@
 									<div class="col-md-6">
 										<div class="form-group">
 											<label for="bookingDate" class="form-label">Date *</label>
-											<input type="date" id="bookingDate" name="bookingDate" 
-												   min="@minDate" max="@maxDate"
-												   value="@(Model.SubmittedBookingDate ?? Model.DefaultBookingDate)" class="form-control" required />
+											<div class="input-group">
+												<button type="button" id="bookingDateBackBtn" class="btn btn-outline-secondary" title="Previous day">
+													<i class="bi bi-chevron-down"></i> ◀
+												</button>
+												<input type="date" id="bookingDate" name="bookingDate" 
+													   min="@minDate" max="@maxDate"
+													   value="@(Model.SubmittedBookingDate ?? Model.DefaultBookingDate)" class="form-control" required />
+												<button type="button" id="bookingDateForwardBtn" class="btn btn-outline-secondary" title="Next day">
+													▶ <i class="bi bi-chevron-up"></i>
+												</button>
+											</div>
 											<small class="text-muted">Today to 60 days ahead</small>
+											<div id="bookingDateWarning" class="alert alert-warning mt-2" style="display: none; padding: 0.5rem 0.75rem; margin: 0.5rem 0;">
+												Cannot go to past date. Today is selected.
+											</div>
 										</div>
 									</div>
 								</div>
@@ -175,6 +186,59 @@ document.addEventListener('DOMContentLoaded', function() {
 	// Add event listeners to both time selects
 	startTimeSelect.addEventListener('change', validateTimeRange);
 	endTimeSelect.addEventListener('change', validateTimeRange);
+
+	// Date navigation buttons for Booking Date
+	const bookingDateInput = document.getElementById('bookingDate');
+	const bookingDateBackBtn = document.getElementById('bookingDateBackBtn');
+	const bookingDateForwardBtn = document.getElementById('bookingDateForwardBtn');
+	const bookingDateWarning = document.getElementById('bookingDateWarning');
+
+	function updateDateButtons() {
+		const currentDate = bookingDateInput.value;
+		const minDate = bookingDateInput.getAttribute('min');
+		const maxDate = bookingDateInput.getAttribute('max');
+		bookingDateBackBtn.disabled = currentDate === minDate;
+		bookingDateForwardBtn.disabled = currentDate === maxDate;
+	}
+
+	bookingDateBackBtn.addEventListener('click', function(e) {
+		e.preventDefault();
+		const currentDate = new Date(bookingDateInput.value);
+		const previousDate = new Date(currentDate);
+		previousDate.setDate(previousDate.getDate() - 1);
+		const previousDateStr = previousDate.toISOString().split('T')[0];
+		const minDate = bookingDateInput.getAttribute('min');
+
+		if (previousDateStr < minDate) {
+			bookingDateWarning.textContent = 'Cannot go to past date. ' + new Date(minDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' is selected.';
+			bookingDateWarning.style.display = 'block';
+			setTimeout(() => { bookingDateWarning.style.display = 'none'; }, 3000);
+		} else {
+			bookingDateInput.value = previousDateStr;
+			bookingDateWarning.style.display = 'none';
+			updateDateButtons();
+		}
+	});
+
+	bookingDateForwardBtn.addEventListener('click', function(e) {
+		e.preventDefault();
+		const currentDate = new Date(bookingDateInput.value);
+		const nextDate = new Date(currentDate);
+		nextDate.setDate(nextDate.getDate() + 1);
+		const nextDateStr = nextDate.toISOString().split('T')[0];
+		const maxDate = bookingDateInput.getAttribute('max');
+		if (nextDateStr > maxDate) return;
+		bookingDateInput.value = nextDateStr;
+		bookingDateWarning.style.display = 'none';
+		updateDateButtons();
+	});
+
+	// Update button states when date input changes (calendar selection)
+	bookingDateInput.addEventListener('change', function() {
+		updateDateButtons();
+	});
+
+	updateDateButtons();
 
 	// Validate on form submission
 	const form = document.querySelector('form');
