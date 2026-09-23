@@ -42,6 +42,10 @@
 								{
 									<span class="badge bg-success">Confirmed</span>
 								}
+								else if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Expired)
+								{
+									<span class="badge bg-secondary">Expired</span>
+								}
 								else if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled)
 								{
 									<span class="badge bg-danger">Cancelled</span>
@@ -99,9 +103,13 @@
 								{
 									<span class="badge bg-danger">Cancelled</span>
 								}
+								else if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Expired)
+								{
+									<span class="badge bg-secondary">Expired</span>
+								}
 								else if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Completed)
 								{
-									<span class="badge bg-secondary">Completed</span>
+									<span class="badge bg-info">Completed</span>
 								}
 								else
 								{

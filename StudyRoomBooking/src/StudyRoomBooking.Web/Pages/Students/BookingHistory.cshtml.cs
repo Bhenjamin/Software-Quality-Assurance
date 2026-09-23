@@ -57,10 +57,23 @@ public class BookingHistoryModel : PageModel
             }
 
             var bookings = await _bookingService.GetBookingsByUserIdAsync(userId);
+            var now = DateTime.Now;
 
             foreach (var booking in bookings.OrderByDescending(b => b.BookingDate))
             {
                 var room = await _roomService.GetRoomByIdAsync(booking.RoomId);
+
+                // Check if booking is expired (end time is in the past and not cancelled)
+                var bookingEndDateTime = booking.BookingDate.Add(booking.EndTime);
+                var isExpired = bookingEndDateTime < now && booking.Status != StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled;
+
+                // Determine the status to display
+                var displayStatus = booking.Status;
+                if (isExpired)
+                {
+                    displayStatus = StudyRoomBooking.Domain.Enums.BookingStatus.Expired;
+                }
+
                 var viewModel = new BookingViewModel
                 {
                     Id = booking.Id,
@@ -71,12 +84,14 @@ public class BookingHistoryModel : PageModel
                     BookingDate = booking.BookingDate,
                     StartTime = booking.StartTime,
                     EndTime = booking.EndTime,
-                    Status = booking.Status,
+                    Status = displayStatus,
                     ConfirmationNumber = booking.ConfirmationNumber,
                     CreatedAt = booking.CreatedAt
                 };
 
-                if (booking.Status == StudyRoomBooking.Domain.Enums.BookingStatus.Confirmed)
+                // Current bookings: Confirmed & NOT expired
+                // Previous bookings: Cancelled, Expired, Completed, or other statuses
+                if (displayStatus == StudyRoomBooking.Domain.Enums.BookingStatus.Confirmed)
                 {
                     Bookings.Add(viewModel);
                 }
