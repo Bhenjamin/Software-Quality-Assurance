@@ -40,8 +40,6 @@
 </style>
 
 <div class="container mt-4">
-	<h2>Book a Room</h2>
-
 	@if (!ViewData.ModelState.IsValid)
 	{
 		<div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -56,11 +54,11 @@
 		</div>
 	}
 
-	<form method="post" class="card p-4 mb-4">
-		<div class="row">
-			<div class="col-md-3">
+	<form method="post" class="card p-3 mb-3">
+		<div class="d-flex align-items-end gap-4">
+			<div style="flex: 1;">
 				<div class="form-group">
-					<label for="bookingDate" class="form-label">Date *</label>
+					<label for="bookingDate" class="form-label">Date <small class="text-muted"> -  Today to 60 days ahead</small></label>
 					<div class="input-group">
 						<button type="button" id="dateBackBtn" class="btn btn-outline-secondary" title="Previous day">
 							<i class="bi bi-chevron-down"></i> ◀
@@ -72,13 +70,13 @@
 							▶ <i class="bi bi-chevron-up"></i>
 						</button>
 					</div>
-					<small class="text-muted">Today to 60 days ahead</small>
+					
 					<div id="dateWarning" class="alert alert-warning mt-2" style="display: none; padding: 0.5rem 0.75rem; margin: 0.5rem 0;">
 						Cannot go to past date. Today is selected.
 					</div>
 				</div>
 			</div>
-			<div class="col-md-3">
+			@* <div class="col-md-3" style="width: 120px;">
 				<div class="form-group">
 					<label for="startTime" class="form-label">Start Hour</label>
 					<select id="startTime" name="searchCriteria.StartTime" class="form-select">
@@ -90,7 +88,7 @@
 					</select>
 				</div>
 			</div>
-			<div class="col-md-3">
+			<div class="col-md-3" style="width: 120px;">
 				<div class="form-group">
 					<label for="endTime" class="form-label">End Hour</label>
 					<select id="endTime" name="searchCriteria.EndTime" class="form-select">
@@ -102,35 +100,28 @@
 					</select>
 					<div id="timeValidationError" class="time-validation-error">Start hour must be before end hour.</div>
 				</div>
-			</div>
-		</div>
+			</div> *@
 
-		<div class="row">
-				@if (Model.CurrentUserRole == "Staff" || Model.CurrentUserRole == "Student")
-				{
-					<div class="col-md-4">
-						<div class="form-group">
-							<label for="roomType" class="form-label">Room Type</label>
-							<select id="roomType" name="searchCriteria.RoomType" class="form-select">
-								<option value="">Any</option>
-								@foreach (var type in Model.AvailableRoomTypes)
-								{
-									<option value="@type" selected="@(Model.SearchCriteria.RoomType == type)">@type.ToDisplayName()</option>
-								}
-							</select>
-						</div>
+			@if (Model.CurrentUserRole == "Staff" || Model.CurrentUserRole == "Student")
+			{
+				<div style="flex: 1;">
+					<div class="form-group">
+						<label for="roomType" class="form-label">Room Type</label>
+						<select id="roomType" name="searchCriteria.RoomType" class="form-select">
+							<option value="">Any</option>
+							@foreach (var type in Model.AvailableRoomTypes)
+							{
+								<option value="@type" selected="@(Model.SearchCriteria.RoomType == type)">@type.ToDisplayName()</option>
+							}
+						</select>
 					</div>
-				}
-			<div class="col-md-4">
+				</div>
+			}
+			<div style="flex: 1;">
 				<div class="form-group">
 					<label for="location" class="form-label">Location</label>
 					<input type="text" id="location" name="searchCriteria.Location" 
-						   value="@Model.SearchCriteria.Location" placeholder="e.g., Building A" class="form-control" />
-				</div>
-			</div>
-			<div class="col-md-4">
-				<div class="form-group search-action">
-					<button type="submit" class="btn btn-primary btn-search form-control">Find Available Rooms</button>
+							value="@Model.SearchCriteria.Location" placeholder="e.g., Building A" class="form-control" />
 				</div>
 			</div>
 		</div>
@@ -140,27 +131,27 @@
 	{
 		<div class="card mt-4">
 			<div class="card-header">
-				<div style="display: flex; justify-content: space-between; align-items: flex-start;">
-					<div>
+				<div style="display: flex; justify-content: flex-start; align-items: flex-start; gap: 40px;">
+					<div style="width: 55%;">
 						<h5 class="mb-0">Available Rooms for @Model.SearchCriteria.BookingDate.ToString("dddd, MMMM dd, yyyy")</h5>
 						<small class="text-muted">Time Range: 08:00 - 22:00</small>
 					</div>
-					<div style="display: flex; gap: 15px; font-size: 0.9rem;">
-						<div style="display: flex; align-items: center; gap: 5px;">
-							<span style="display: inline-block; width: 20px; height: 20px; background-color: var(--success); border-radius: 3px;"></span>
-							<span>Available</span>
+					<div style="width: 45%; display: grid; grid-template-columns: 2fr 1fr; gap: 10px; font-size: 0.9rem;">
+						<div style="display: flex; align-items: flex-start; gap: 10px;">
+							<span style="display: inline-block; width: 20px; height: 20px; background-color: var(--success); border-radius: 3px; flex-shrink: 0; margin-top: 2px;"></span>
+							<div style="font-weight: 600;">Available - Click to book</div>
 						</div>
-						<div style="display: flex; align-items: center; gap: 5px;">
-							<span style="display: inline-block; width: 20px; height: 20px; background-color: var(--delete); border-radius: 3px;"></span>
-							<span>Booked</span>
+						<div style="display: flex; align-items: flex-start; gap: 10px;">
+							<span style="display: inline-block; width: 20px; height: 20px; background-color: var(--delete); border-radius: 3px; flex-shrink: 0; margin-top: 2px;"></span>
+							<div style="font-weight: 600;">Booked</div>
 						</div>
-						<div style="display: flex; align-items: center; gap: 5px;">
-							<span style="display: inline-block; width: 20px; height: 20px; background-color: #2563EB; border-radius: 3px;"></span>
-							<span>Your Booking</span>
+						<div style="display: flex; align-items: flex-start; gap: 10px;">
+							<span style="display: inline-block; width: 20px; height: 20px; background-color: #2563EB; border-radius: 3px; flex-shrink: 0; margin-top: 2px;"></span>
+							<div style="font-weight: 600;">Your Booking - Click to view/modify</div>
 						</div>
-						<div style="display: flex; align-items: center; gap: 5px;">
-							<span style="display: inline-block; width: 20px; height: 20px; background-color: #9CA3AF; border-radius: 3px;"></span>
-							<span>Unavailable</span>
+						<div style="display: flex; align-items: flex-start; gap: 10px;">
+							<span style="display: inline-block; width: 20px; height: 20px; background-color: #9CA3AF; border-radius: 3px; flex-shrink: 0; margin-top: 2px;"></span>
+							<div style="font-weight: 600;">Unavailable</div>
 						</div>
 					</div>
 				</div>
@@ -780,6 +771,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		dateWarning.style.display = 'none';
 
 		updateDateButtons();
+		autoSubmitSearch();
 	});
 
 	dateForwardBtn.addEventListener('click', function(e) {
@@ -805,12 +797,49 @@ document.addEventListener('DOMContentLoaded', function() {
 		dateWarning.style.display = 'none';
 
 		updateDateButtons();
+		autoSubmitSearch();
 	});
 
 	// Update button state when date is manually selected
 	bookingDateInput.addEventListener('change', function() {
 		updateDateButtons();
+		autoSubmitSearch();
 	});
+
+	// Auto-submit form when any search input changes
+	function autoSubmitSearch() {
+		const form = document.querySelector('form');
+		if (form) {
+			form.submit();
+		}
+	}
+
+	// Add event listeners to all search inputs to auto-submit
+	const searchForm = document.querySelector('form');
+	if (searchForm) {
+		// Date input
+		bookingDateInput.addEventListener('change', autoSubmitSearch);
+
+		// Time inputs
+		const startTimeInput = document.getElementById('startTime');
+		const endTimeInput = document.getElementById('endTime');
+		if (startTimeInput) startTimeInput.addEventListener('change', autoSubmitSearch);
+		if (endTimeInput) endTimeInput.addEventListener('change', autoSubmitSearch);
+
+		// Room type input
+		const roomTypeInput = document.getElementById('roomType');
+		if (roomTypeInput) roomTypeInput.addEventListener('change', autoSubmitSearch);
+
+		// Location input - use debouncing to avoid too many submissions while typing
+		const locationInput = document.getElementById('location');
+		if (locationInput) {
+			let locationTimeout;
+			locationInput.addEventListener('input', function() {
+				clearTimeout(locationTimeout);
+				locationTimeout = setTimeout(autoSubmitSearch, 500); // Wait 500ms after user stops typing
+			});
+		}
+	}
 
 	// Initial button state
 	updateDateButtons();
