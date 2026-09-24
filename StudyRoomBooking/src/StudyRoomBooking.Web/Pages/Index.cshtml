@@ -16,6 +16,27 @@
 	.time-validation-error.show {
 		display: block;
 	}
+	.time-label {
+		width: 80px;
+		flex-shrink: 0;
+	}
+
+	.booking-modal-dialog {
+		max-width: 380px;
+		width: 90%;
+	}
+	.room-details {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.calendar-slot-booked-self {
+		display: block;
+		width: 100%;
+		height: 100%;
+		box-sizing: border-box;
+	}
 </style>
 
 <div class="container mt-4">
@@ -211,7 +232,7 @@
 												}
 												else
 												{
-													<a asp-page="/Students/RoomDetails" asp-route-id="@room.Id" asp-route-bookingDate="@Model.SearchCriteria.BookingDate.ToString("yyyy-MM-dd")" asp-route-startTime="@startHour:00" asp-route-endTime="@endHour:00" class="badge calendar-slot calendar-slot-free"> </a>
+													<button type="button" class="badge calendar-slot calendar-slot-free" onclick="openBookingModal(@room.Id, '@Model.SearchCriteria.BookingDate.ToString("yyyy-MM-dd")', '@(startHour.ToString().PadLeft(2, '0')):00', '@(endHour.ToString().PadLeft(2, '0')):00', '@room.Name', {Name: '@room.Name', Code: '@room.Code', Location: '@room.Location', Capacity: @room.Capacity})" style="border: none; background: none; padding: 0; cursor: pointer;"> </button>
 												}
 											}
 											else
@@ -253,114 +274,545 @@
 	}
 </div>
 
+<!-- Booking Modal -->
+<div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
+	<div class="modal-dialog booking-modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="bookingModalLabel">Book a Room</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div id="modalBookingAlert" class="alert alert-danger alert-dismissible fade show" role="alert" style="display: none;">
+					<strong>Booking Error!</strong>
+					<div id="modalBookingErrors"></div>
+					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+				</div>
+				<form id="bookingForm">
+					@Html.AntiForgeryToken()
+					<div class="row">
+						<!-- Left column: Room Details -->
+						<div class="col-5">
+							<strong style="font-size: 1rem;" id="modalRoomNameDetail"></strong>
+
+							<small class="text-muted room-details" style="font-size: 1rem;">
+								<span id="modalRoomCode"></span>
+								<span id="modalRoomLocation"></span>
+								<span>Capacity: <span id="modalRoomCapacity"></span></span>
+							</small>
+						</div>
+						<!-- Vertical divider -->
+						<div class="col-1 d-flex justify-content-center">
+							<div style="border-left: 1px solid #dee2e6; height: 100%;"></div>
+						</div>
+						<!-- Right column: Booking Details -->
+						<div class="col-5">
+							<div class="mb-0">
+								<label class="form-label" style="font-size: 0.9rem; font-weight: 600;">Date: <span id="modalBookingDateDisplay"></span></label>
+							</div>
+							<div class="mb-0 d-flex align-items-center gap-2">
+								<label for="modalStartTime" class="form-label mb-0 time-label" style="font-size: 0.9rem;">Start Hour:</label>
+								<select id="modalStartTime" class="form-select form-select-sm" style="width: 80px;" required></select>
+							</div>
+							<div class="mb-0 d-flex align-items-center gap-2">
+								<label for="modalEndTime" class="form-label mb-0 time-label" style="font-size: 0.9rem;">End Hour:</label>
+								<select id="modalEndTime" class="form-select form-select-sm" style="width: 80px;" required></select>
+								<div id="modalTimeValidationError" class="time-validation-error"></div>
+							</div>
+						</div>
+					</div>
+					<input type="hidden" id="modalRoomId">
+					<input type="hidden" id="modalBookingDate">
+					<input type="hidden" id="modalStartTimeHidden">
+					<input type="hidden" id="modalEndTimeHidden">
+				</form>
+			</div>
+			<div class="modal-footer justify-content-start">
+				<button type="button" class="btn btn-primary" id="submitBookingBtn">Confirm Booking</button>
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+			</div>
+		</div>
+	</div>
+</div>
+
 <script>
+// Store booking details globally
+let globalBookingData = {
+	roomId: null,
+	bookingDate: null,
+	startTime: null,
+	endTime: null,
+	roomName: null,
+	notes: null
+};
+
+// Store room availability matrix: roomId -> { hour -> isAvailable }
+let roomAvailabilityMatrix = {};
+
 document.addEventListener('DOMContentLoaded', function() {
-	const startTimeSelect = document.getElementById('startTime');
-	const endTimeSelect = document.getElementById('endTime');
-	const searchButton = document.querySelector('form button[type="submit"]');
-	const timeValidationError = document.getElementById('timeValidationError');
+	// Build room availability matrix from the table
+	buildRoomAvailabilityMatrix();
 
-	function validateTimeRange() {
-		if (startTimeSelect.value && endTimeSelect.value) {
-			const startHour = parseInt(startTimeSelect.value.split(':')[0]);
-			const endHour = parseInt(endTimeSelect.value.split(':')[0]);
+	// Function to build availability matrix from the room matrix table
+	function buildRoomAvailabilityMatrix() {
+		const table = document.querySelector('table.table');
+		if (!table) return;
 
-			if (startHour >= endHour) {
-				timeValidationError.classList.add('show');
-				searchButton.disabled = true;
-				return false;
-			} else {
-				timeValidationError.classList.remove('show');
-				searchButton.disabled = false;
-				return true;
+		const rows = table.querySelectorAll('tbody tr');
+		rows.forEach(row => {
+			// Extract room ID from the first button in this row
+			const firstButton = row.querySelector('button[onclick*="openBookingModal"]');
+			if (!firstButton) return;
+
+			const onclickAttr = firstButton.getAttribute('onclick');
+			const roomIdMatch = onclickAttr.match(/openBookingModal\((\d+)/);
+			if (!roomIdMatch) return;
+
+			const roomId = parseInt(roomIdMatch[1]);
+			if (!roomAvailabilityMatrix[roomId]) {
+				roomAvailabilityMatrix[roomId] = {};
 			}
-		} else {
-			timeValidationError.classList.remove('show');
-			searchButton.disabled = false;
-			return true;
+
+			// Scan each time slot column (skip first column which is room name)
+			const cells = row.querySelectorAll('td');
+			for (let i = 1; i < cells.length; i++) {
+				const cell = cells[i];
+				// Check if this cell has a free slot button
+				const hasButton = cell.querySelector('button.calendar-slot-free');
+				const hour = 8 + (i - 1); // Hours start at 8
+				roomAvailabilityMatrix[roomId][hour] = hasButton ? true : false;
+			}
+		});
+	}
+
+	// Modal booking functions
+	window.openBookingModal = async function(roomId, bookingDate, startTime, endTime, roomName, room = null) {
+		try {
+			// Fetch room details if not provided
+			if (!room) {
+				room = { Name: roomName };
+			}
+
+			// Store booking data
+			globalBookingData.roomId = roomId;
+			globalBookingData.bookingDate = bookingDate;
+			globalBookingData.startTime = startTime;
+			globalBookingData.endTime = endTime;
+			globalBookingData.roomName = roomName;
+
+			// Set room details in modal
+			document.getElementById('modalRoomNameDetail').textContent = room.Name;
+			document.getElementById('modalRoomCode').textContent = room.Code || '';
+			document.getElementById('modalRoomLocation').textContent = room.Location || '';
+			document.getElementById('modalRoomCapacity').textContent = room.Capacity || '';
+
+			// Format date as dd-mm-yyyy
+			const dateObj = new Date(bookingDate);
+			const day = String(dateObj.getDate()).padStart(2, '0');
+			const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+			const year = dateObj.getFullYear();
+			document.getElementById('modalBookingDateDisplay').textContent = `${day}-${month}-${year}`;
+
+			// Populate Start Hour dropdown with default selected
+			populateStartHourDropdown(startTime);
+
+			// Populate End Hour dropdown with default selected
+			populateEndHourDropdown(endTime);
+
+			// Set hidden fields
+			document.getElementById('modalRoomId').value = roomId;
+			document.getElementById('modalBookingDate').value = bookingDate;
+			document.getElementById('modalStartTimeHidden').value = startTime;
+			document.getElementById('modalEndTimeHidden').value = endTime;
+
+			// Reset alerts
+			document.getElementById('modalBookingAlert').style.display = 'none';
+
+			// Re-enable submit button for new booking
+			document.getElementById('submitBookingBtn').disabled = false;
+
+			// Show modal
+			const bookingModal = new bootstrap.Modal(document.getElementById('bookingModal'));
+			bookingModal.show();
+		} catch (error) {
+			console.error('Error opening booking modal:', error);
+		}
+	};
+
+	// Populate Start Hour dropdown with only available time slots
+	function populateStartHourDropdown(defaultValue) {
+		const startSelect = document.getElementById('modalStartTime');
+		startSelect.innerHTML = '';
+
+		const roomId = globalBookingData.roomId;
+		const roomAvailability = roomAvailabilityMatrix[roomId] || {};
+
+		let firstAvailable = null;
+
+		// Start hours from 08:00 to 21:00
+		for (let hour = 8; hour <= 21; hour++) {
+
+			// This one-hour slot must be available
+			if (roomAvailability[hour] !== true) {
+				continue;
+			}
+
+			const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+
+			const option = document.createElement('option');
+			option.value = timeStr;
+			option.textContent = timeStr;
+
+			// Keep the clicked slot selected if it is available
+			if (timeStr === defaultValue) {
+				option.selected = true;
+			}
+
+			startSelect.appendChild(option);
+
+			if (!firstAvailable) {
+				firstAvailable = timeStr;
+			}
+		}
+
+		// If clicked/default time is not available, select first available slot
+		if (startSelect.options.length > 0 && !startSelect.value) {
+			startSelect.value = firstAvailable;
+		}
+
+		// Populate end time based on selected start time
+		if (startSelect.value) {
+			const startHour = parseInt(startSelect.value.split(':')[0]);
+			const endTimeStr = `${String(startHour + 1).padStart(2, '0')}:00`;
+			populateEndHourDropdown(endTimeStr);
 		}
 	}
 
-	// Add event listeners to both time selects
-	startTimeSelect.addEventListener('change', validateTimeRange);
-	endTimeSelect.addEventListener('change', validateTimeRange);
+	// Populate End Hour dropdown - show only available hours (up to 2 options: start+1 and start+2)
+	function populateEndHourDropdown(defaultValue) {
+		const endSelect = document.getElementById('modalEndTime');
+		endSelect.innerHTML = ''; // Clear existing options
+
+		// Get the currently selected start time
+		const startTimeStr = document.getElementById('modalStartTime').value;
+
+		if (!startTimeStr) {
+			return; // Don't populate if no start time selected
+		}
+
+		const startHour = parseInt(startTimeStr.split(':')[0]);
+		const roomId = globalBookingData.roomId;
+
+		// Get availability data for this room
+		const roomAvailability = roomAvailabilityMatrix[roomId] || {};
+
+		// Add only up to 2 available options: start+1 and start+2
+		let addedCount = 0;
+		for (let endHour = startHour + 1; endHour <= startHour + 2 && endHour <= 22 && addedCount < 2; endHour++) {
+			// Check if ALL slots from startHour to endHour-1 are available
+			let allSlotsAvailable = true;
+			for (let slotHour = startHour; slotHour < endHour; slotHour++) {
+				if (roomAvailability[slotHour] === false) {
+					allSlotsAvailable = false;
+					break;
+				}
+			}
+
+			if (allSlotsAvailable) {
+				const timeStr = `${endHour.toString().padStart(2, '0')}:00`;
+				const option = document.createElement('option');
+				option.value = timeStr;
+				option.textContent = timeStr;
+				if (timeStr === defaultValue || addedCount === 0) {
+					option.selected = true;
+				}
+				endSelect.appendChild(option);
+				addedCount++;
+			}
+		}
+	}
+
+	// Handle start time change
+	document.getElementById('modalStartTime').addEventListener('change', function() {
+		const selectedStartTime = this.value;
+		if (selectedStartTime) {
+			const startHour = parseInt(selectedStartTime.split(':')[0]);
+			// Auto-adjust end time to start + 1 hour
+			const endTimeStr = `${String(startHour + 1).padStart(2, '0')}:00`;
+			// Repopulate end time dropdown with only 2 options
+			populateEndHourDropdown(endTimeStr);
+			// Set the end time to start + 1
+			document.getElementById('modalEndTime').value = endTimeStr;
+		}
+	});
+
+	// Handle booking form submission via AJAX
+	document.getElementById('submitBookingBtn').addEventListener('click', function() {
+		// Get values from dropdowns if they exist, otherwise use stored values
+		const startTimeFromSelect = document.getElementById('modalStartTime').value;
+		const endTimeFromSelect = document.getElementById('modalEndTime').value;
+
+		const startTime = startTimeFromSelect || globalBookingData.startTime;
+		const endTime = endTimeFromSelect || globalBookingData.endTime;
+
+		// Validate times
+		if (!startTime || !endTime) {
+			document.getElementById('modalTimeValidationError').textContent = 'Please select both start and end times.';
+			document.getElementById('modalTimeValidationError').style.display = 'block';
+			return;
+		}
+
+		const startHour = parseInt(startTime.split(':')[0]);
+		const endHour = parseInt(endTime.split(':')[0]);
+		if (startHour >= endHour) {
+			document.getElementById('modalTimeValidationError').textContent = 'Start hour must be before end hour.';
+			document.getElementById('modalTimeValidationError').style.display = 'block';
+			return;
+		}
+		document.getElementById('modalTimeValidationError').style.display = 'none';
+
+		const roomId = globalBookingData.roomId;
+		const bookingDate = globalBookingData.bookingDate;
+
+		// Disable submit button during submission
+		document.getElementById('submitBookingBtn').disabled = true;
+
+		// Get antiforgery token
+		const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+		const token = tokenInput ? tokenInput.value : '';
+
+		// Prepare form data
+		const params = new URLSearchParams();
+		params.append('roomId', roomId);
+		params.append('bookingDate', bookingDate);
+		params.append('startTime', startTime);
+		params.append('endTime', endTime);
+		params.append('notes', '');
+		params.append('__RequestVerificationToken', token);
+
+		// Submit booking via AJAX
+		fetch('?handler=BookRoom', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+				'X-Requested-With': 'XMLHttpRequest'
+			},
+			body: params.toString()
+		})
+		.then(response => {
+			console.log('Response status:', response.status);
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			return response.json();
+		})
+		.then(data => {
+			if (data.success) {
+				// Close modal without showing success message in it
+				const bookingModal = bootstrap.Modal.getInstance(document.getElementById('bookingModal'));
+				bookingModal.hide();
+
+				// Update the slot color to blue (user's booking)
+				updateSlotColor(roomId, bookingDate, startTime, endTime, data.bookingId);
+
+				// Show success message on main page
+				showSuccessBanner(data.roomName, bookingDate, data.startTime, data.endTime, data.confirmationNumber);
+
+				// Reset form
+				document.getElementById('bookingForm').reset();
+			} else {
+				// Show error message in modal
+				document.getElementById('modalBookingAlert').style.display = 'block';
+				document.getElementById('modalBookingErrors').innerHTML = `<div>${data.error}</div>`;
+				document.getElementById('submitBookingBtn').disabled = false;
+			}
+		})
+		.catch(error => {
+			console.error('Error:', error);
+			document.getElementById('modalBookingAlert').style.display = 'block';
+			document.getElementById('modalBookingErrors').innerHTML = `<div>An error occurred while booking: ${error.message}</div>`;
+			document.getElementById('submitBookingBtn').disabled = false;
+		});
+	});
+
+	// Update slot color to blue after successful booking
+	function updateSlotColor(roomId, bookingDate, startTime, endTime, bookingId) {
+		const startHour = parseInt(startTime.split(':')[0]);
+		const endHour = parseInt(endTime.split(':')[0]);
+
+		const buttons = document.querySelectorAll(
+			`button[onclick*="openBookingModal(${roomId}"]`
+		);
+
+		buttons.forEach(btn => {
+			const onclickAttr = btn.getAttribute('onclick');
+
+			// Make sure this is the correct booking date
+			if (!onclickAttr.includes(`'${bookingDate}'`)) {
+				return;
+			}
+
+			// Extract the start hour of this table slot
+			const match = onclickAttr.match(
+				/openBookingModal\(\d+,\s*'[^']+',\s*'(\d{2}):00',\s*'(\d{2}):00'/
+			);
+
+			if (!match) {
+				return;
+			}
+
+			const slotStartHour = parseInt(match[1]);
+			const slotEndHour = parseInt(match[2]);
+
+			// Check whether this table slot is inside the booking range
+			if (slotStartHour >= startHour && slotEndHour <= endHour) {
+
+				const link = document.createElement('a');
+
+				// Match the Razor-generated ModifyBooking URL
+				link.href = `/Students/ModifyBooking/${bookingId}`;
+
+				link.className =
+					'badge calendar-slot calendar-slot-booked-self';
+
+				link.style.textDecoration = 'none';
+				link.style.cursor = 'pointer';
+				link.style.display = 'block';
+				link.style.width = '100%';
+				link.style.height = '100%';
+				link.style.boxSizing = 'border-box';
+
+				// Replace green available button with blue booking link
+				btn.parentNode.replaceChild(link, btn);
+			}
+		});
+
+		// Update frontend availability matrix
+		if (!roomAvailabilityMatrix[roomId]) {
+			roomAvailabilityMatrix[roomId] = {};
+		}
+
+		for (let hour = startHour; hour < endHour; hour++) {
+			roomAvailabilityMatrix[roomId][hour] = false;
+		}
+	}
+
+	// Show success banner on search page
+	function showSuccessBanner(roomName, bookingDate, startTime, endTime, confirmationNumber) {
+		const banner = document.createElement('div');
+		banner.className = 'alert alert-success alert-dismissible fade show';
+		banner.style.position = 'fixed';
+		banner.style.top = '20px';
+		banner.style.right = '20px';
+		banner.style.zIndex = '9999';
+		banner.style.minWidth = '300px';
+
+		// Format date as dd-mm-yyyy
+		const dateObj = new Date(bookingDate);
+		const day = String(dateObj.getDate()).padStart(2, '0');
+		const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+		const year = dateObj.getFullYear();
+		const formattedDate = `${day}-${month}-${year}`;
+
+		banner.innerHTML = `
+			<strong>Booking Confirmed!</strong>
+			<div style="margin-top: 8px; font-size: 0.9rem;">
+				<div>Room: <strong>${roomName}</strong></div>
+				<div>Date: <strong>${formattedDate}</strong></div>
+				<div>Time: <strong>${startTime} - ${endTime}</strong></div>
+				<div style="margin-top: 4px;">Confirmation #: <strong>${confirmationNumber}</strong></div>
+			</div>
+			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+		`;
+
+		document.body.appendChild(banner);
+
+		// Auto-dismiss after 5 seconds
+		setTimeout(() => {
+			banner.remove();
+		}, 5000);
+	}
 
 	// Date navigation buttons
 	const bookingDateInput = document.getElementById('bookingDate');
 	const dateBackBtn = document.getElementById('dateBackBtn');
 	const dateForwardBtn = document.getElementById('dateForwardBtn');
 	const dateWarning = document.getElementById('dateWarning');
-	const todayStr = new Date().toISOString().split('T')[0];
 
 	function updateDateButtons() {
 		const currentDate = bookingDateInput.value;
 		const minDate = bookingDateInput.getAttribute('min');
 		const maxDate = bookingDateInput.getAttribute('max');
 
-		// Disable backward button if at minimum date
-		dateBackBtn.disabled = currentDate === minDate;
-		// Disable forward button if at maximum date
-		dateForwardBtn.disabled = currentDate === maxDate;
+		dateBackBtn.disabled = currentDate <= minDate;
+		dateForwardBtn.disabled = currentDate >= maxDate;
 	}
 
 	dateBackBtn.addEventListener('click', function(e) {
 		e.preventDefault();
-		const currentDate = new Date(bookingDateInput.value);
-		const previousDate = new Date(currentDate);
-		previousDate.setDate(previousDate.getDate() - 1);
 
-		const previousDateStr = previousDate.toISOString().split('T')[0];
+		const currentDate = bookingDateInput.value;
 		const minDate = bookingDateInput.getAttribute('min');
 
+		// Convert yyyy-MM-dd safely
+		const [year, month, day] = currentDate.split('-').map(Number);
+		const previousDate = new Date(year, month - 1, day);
+		previousDate.setDate(previousDate.getDate() - 1);
+
+		const previousDateStr =
+			previousDate.getFullYear() + '-' +
+			String(previousDate.getMonth() + 1).padStart(2, '0') + '-' +
+			String(previousDate.getDate()).padStart(2, '0');
+
 		if (previousDateStr < minDate) {
-			// Show warning and don't change the date
-			dateWarning.textContent = 'Cannot go to past date. ' + new Date(minDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' is selected.';
+			dateWarning.textContent =
+				'Cannot go to past date. Today is selected.';
 			dateWarning.style.display = 'block';
+
 			setTimeout(() => {
 				dateWarning.style.display = 'none';
 			}, 3000);
-		} else {
-			bookingDateInput.value = previousDateStr;
-			dateWarning.style.display = 'none';
-			updateDateButtons();
+
+			return;
 		}
+
+		bookingDateInput.value = previousDateStr;
+		dateWarning.style.display = 'none';
+
+		updateDateButtons();
 	});
 
 	dateForwardBtn.addEventListener('click', function(e) {
 		e.preventDefault();
-		const currentDate = new Date(bookingDateInput.value);
-		const nextDate = new Date(currentDate);
-		nextDate.setDate(nextDate.getDate() + 1);
 
-		const nextDateStr = nextDate.toISOString().split('T')[0];
+		const currentDate = bookingDateInput.value;
 		const maxDate = bookingDateInput.getAttribute('max');
 
+		const [year, month, day] = currentDate.split('-').map(Number);
+		const nextDate = new Date(year, month - 1, day);
+		nextDate.setDate(nextDate.getDate() + 1);
+
+		const nextDateStr =
+			nextDate.getFullYear() + '-' +
+			String(nextDate.getMonth() + 1).padStart(2, '0') + '-' +
+			String(nextDate.getDate()).padStart(2, '0');
+
 		if (nextDateStr > maxDate) {
-			// Disable forward navigation if at max date
 			return;
-		} else {
-			bookingDateInput.value = nextDateStr;
-			dateWarning.style.display = 'none';
-			updateDateButtons();
 		}
+
+		bookingDateInput.value = nextDateStr;
+		dateWarning.style.display = 'none';
+
+		updateDateButtons();
 	});
 
-	// Update button states when date input changes (calendar selection)
+	// Update button state when date is manually selected
 	bookingDateInput.addEventListener('change', function() {
 		updateDateButtons();
 	});
 
 	// Initial button state
 	updateDateButtons();
-
-	// Validate on form submission
-	document.querySelector('form').addEventListener('submit', function(e) {
-		if (!validateTimeRange()) {
-			e.preventDefault();
-		}
-	});
-
-	// Initial validation in case values are pre-filled
-	validateTimeRange();
 });
 </script>

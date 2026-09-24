@@ -258,4 +258,196 @@ public class IndexModel : PageModel
 
         return Page();
     }
+
+    /// <summary>
+    /// API handler for booking a room directly via AJAX from the calendar modal.
+    /// This performs the same validation and booking logic as RoomDetails.OnPostBookRoomAsync.
+    /// </summary>
+    public async Task<IActionResult> OnPostBookRoomAsync(int roomId, string bookingDate, string startTime, string endTime, string? notes)
+    {
+        var startTimePerfomance = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            // Verify user is authenticated
+            var userIdStr = HttpContext.Session.GetString("UserId");
+            if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out var userId))
+            {
+                return new JsonResult(new { success = false, error = "User not found in session. Please log in again." })
+                {
+                    StatusCode = StatusCodes.Status401Unauthorized
+                };
+            }
+
+            var sw1 = System.Diagnostics.Stopwatch.StartNew();
+            var room = await _roomService.GetRoomByIdAsync(roomId);
+            sw1.Stop();
+            System.Diagnostics.Debug.WriteLine($"[PERF] GetRoomByIdAsync: {sw1.ElapsedMilliseconds}ms");
+
+            if (room == null)
+            {
+                return new JsonResult(new { success = false, error = "Room not found." })
+                {
+                    StatusCode = StatusCodes.Status404NotFound
+                };
+            }
+
+            var sw2 = System.Diagnostics.Stopwatch.StartNew();
+            var user = await _userService.GetUserByIdAsync(userId);
+            sw2.Stop();
+            System.Diagnostics.Debug.WriteLine($"[PERF] GetUserByIdAsync: {sw2.ElapsedMilliseconds}ms");
+
+            if (user == null)
+            {
+                return new JsonResult(new { success = false, error = "User not found." })
+                {
+                    StatusCode = StatusCodes.Status404NotFound
+                };
+            }
+
+            // Parse dates and times
+            var date = DateTime.ParseExact(bookingDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+
+            // Parse time - handle both "8:00" and "08:00" formats
+            TimeSpan start, end;
+            try
+            {
+                start = TimeSpan.ParseExact(startTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                start = TimeSpan.ParseExact(startTime, @"h\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            try
+            {
+                end = TimeSpan.ParseExact(endTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                end = TimeSpan.ParseExact(endTime, @"h\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            // Validate booking date and time constraints
+            var sw3 = System.Diagnostics.Stopwatch.StartNew();
+            var (isValid, errorMessage) = await _bookingService.ValidateBookingAsync(roomId, date, start, end);
+            sw3.Stop();
+            System.Diagnostics.Debug.WriteLine($"[PERF] ValidateBookingAsync: {sw3.ElapsedMilliseconds}ms");
+
+            if (!isValid)
+            {
+                return new JsonResult(new { success = false, error = errorMessage })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            // Check availability
+            var sw4 = System.Diagnostics.Stopwatch.StartNew();
+            var isAvailable = await _roomService.IsRoomAvailableAsync(roomId, date, start, end);
+            sw4.Stop();
+            System.Diagnostics.Debug.WriteLine($"[PERF] IsRoomAvailableAsync: {sw4.ElapsedMilliseconds}ms");
+
+            if (!isAvailable)
+            {
+                return new JsonResult(new { success = false, error = "Selected time slot is not available." })
+                {
+                    StatusCode = StatusCodes.Status409Conflict
+                };
+            }
+
+            // Create booking
+            var sw5 = System.Diagnostics.Stopwatch.StartNew();
+            var booking = new Booking
+            {
+                RoomId = roomId,
+                UserId = user.Id,
+                BookingDate = date,
+                StartTime = start,
+                EndTime = end,
+                Notes = notes,
+                Status = BookingStatus.Confirmed
+            };
+
+            await _bookingService.CreateBookingAsync(booking);
+            sw5.Stop();
+            System.Diagnostics.Debug.WriteLine($"[PERF] CreateBookingAsync: {sw5.ElapsedMilliseconds}ms");
+
+            startTimePerfomance.Stop();
+            System.Diagnostics.Debug.WriteLine($"[PERF] Total OnPostBookRoomAsync: {startTimePerfomance.ElapsedMilliseconds}ms");
+
+            return new JsonResult(new
+            { 
+                success = true, 
+                message = "Booking created successfully!",
+                bookingId = booking.Id,
+                confirmationNumber = booking.ConfirmationNumber,
+                roomName = room.Name,
+                bookingDate = booking.BookingDate.ToString("yyyy-MM-dd"),
+                startTime = booking.StartTime.ToString(@"hh\:mm"),
+                endTime = booking.EndTime.ToString(@"hh\:mm")
+            });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, error = $"Error creating booking: {ex.Message}" })
+            {
+                StatusCode = StatusCodes.Status500InternalServerError
+            };
+        }
+    }
+
+    /// <summary>
+    /// API endpoint to get available hours for a room on a specific date.
+    /// Returns list of available start hours (8-21).
+    /// </summary>
+    public async Task<IActionResult> OnGetAvailableHoursAsync(int roomId, string bookingDate)
+    {
+        try
+        {
+            if (!DateTime.TryParseExact(bookingDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var date))
+            {
+                return new JsonResult(new { success = false, error = "Invalid date format" })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            var bookings = await _bookingService.SearchBookingsAsync(date, roomId);
+
+            // Generate all possible hours (8-22)
+            var availableHours = new List<string>();
+            for (int hour = 8; hour <= 21; hour++)
+            {
+                var startTime = new TimeSpan(hour, 0, 0);
+                var endTime = new TimeSpan(hour + 1, 0, 0);
+
+                // Check if this slot is available
+                bool isAvailable = true;
+                foreach (var booking in bookings)
+                {
+                    // Check if our proposed slot conflicts with existing booking
+                    if (!(endTime <= booking.StartTime || startTime >= booking.EndTime))
+                    {
+                        isAvailable = false;
+                        break;
+                    }
+                }
+
+                if (isAvailable)
+                {
+                    availableHours.Add($"{hour:D2}:00");
+                }
+            }
+
+            return new JsonResult(new { success = true, hours = availableHours });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, error = $"Error fetching available hours: {ex.Message}" })
+            {
+                StatusCode = StatusCodes.Status500InternalServerError
+            };
+        }
+    }
 }
+

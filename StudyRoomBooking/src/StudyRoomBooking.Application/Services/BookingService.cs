@@ -82,23 +82,39 @@ public class BookingService : IBookingService
         await _unitOfWork.Bookings.AddAsync(booking);
         await _unitOfWork.SaveChangesAsync();
 
-        // Send confirmation notification
-        var user = await _unitOfWork.Users.GetByIdAsync(booking.UserId);
-        var room = await _unitOfWork.Rooms.GetByIdAsync(booking.RoomId);
-
-        if (user != null && room != null)
-        {
-            await _notificationService.SendBookingConfirmationAsync(
-                user.Email,
-                room.Name,
-                booking.BookingDate,
-                booking.StartTime,
-                booking.EndTime,
-                booking.ConfirmationNumber
-            );
-        }
+        // Send confirmation notification asynchronously WITHOUT blocking the response
+        // This allows the user to see the confirmation immediately
+        _ = SendBookingConfirmationNotificationAsync(booking);
 
         return booking;
+    }
+
+    // Send notification in the background without blocking
+    private async Task SendBookingConfirmationNotificationAsync(Booking booking)
+    {
+        try
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(booking.UserId);
+            var room = await _unitOfWork.Rooms.GetByIdAsync(booking.RoomId);
+
+            if (user != null && room != null)
+            {
+                await _notificationService.SendBookingConfirmationAsync(
+                    user.Email,
+                    room.Name,
+                    booking.BookingDate,
+                    booking.StartTime,
+                    booking.EndTime,
+                    booking.ConfirmationNumber
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't throw - failure to send email shouldn't fail the booking
+            System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to send booking confirmation: {ex.Message}");
+            Console.WriteLine($"[ERROR] Failed to send booking confirmation: {ex.Message}");
+        }
     }
 
     public async Task<Booking> UpdateBookingAsync(Booking booking)

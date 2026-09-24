@@ -197,8 +197,14 @@ document.addEventListener('DOMContentLoaded', function() {
 		const currentDate = bookingDateInput.value;
 		const minDate = bookingDateInput.getAttribute('min');
 		const maxDate = bookingDateInput.getAttribute('max');
-		bookingDateBackBtn.disabled = currentDate === minDate;
-		bookingDateForwardBtn.disabled = currentDate === maxDate;
+
+		// Use proper date comparison instead of string comparison
+		const currentDateObj = new Date(currentDate);
+		const minDateObj = new Date(minDate);
+		const maxDateObj = new Date(maxDate);
+
+		bookingDateBackBtn.disabled = currentDateObj <= minDateObj;
+		bookingDateForwardBtn.disabled = currentDateObj >= maxDateObj;
 	}
 
 	bookingDateBackBtn.addEventListener('click', function(e) {
