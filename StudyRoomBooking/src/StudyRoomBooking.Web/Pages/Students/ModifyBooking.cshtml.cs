@@ -127,6 +127,26 @@ public class ModifyBookingModel : PageModel
                     await OnGetAsync(bookingId);
                     return Page();
                 }
+
+                // Check for overlapping bookings by current user (excluding current booking)
+                var userBookings = await _bookingService.GetBookingsByUserIdAsync(booking.UserId);
+
+                // Filter for confirmed bookings on the same date and check for time overlap, excluding current booking
+                var overlappingBooking = userBookings.FirstOrDefault(b =>
+                    b.Id != bookingId && // Exclude current booking
+                    b.BookingDate == date &&
+                    b.Status != Domain.Enums.BookingStatus.Cancelled &&
+                    // Check if time slots overlap: new booking starts before existing ends AND new booking ends after existing starts
+                    !(start >= b.EndTime || end <= b.StartTime)
+                );
+
+                if (overlappingBooking != null)
+                {
+                    ModelState.AddModelError(string.Empty, 
+                        $"You cannot book overlapping time slots. You already have a booking from {overlappingBooking.StartTime:hh\\:mm} to {overlappingBooking.EndTime:hh\\:mm} on this day.");
+                    await OnGetAsync(bookingId);
+                    return Page();
+                }
             }
 
             // Update only the properties that can be modified

@@ -113,6 +113,25 @@ public class RoomDetailsModel : PageModel
                 return Page();
             }
 
+            // Check for overlapping bookings by current user
+            var userBookings = await _bookingService.GetBookingsByUserIdAsync(userId);
+
+            // Filter for confirmed bookings on the same date and check for time overlap
+            var overlappingBooking = userBookings.FirstOrDefault(b =>
+                b.BookingDate == date &&
+                b.Status != BookingStatus.Cancelled &&
+                // Check if time slots overlap: new booking starts before existing ends AND new booking ends after existing starts
+                !(start >= b.EndTime || end <= b.StartTime)
+            );
+
+            if (overlappingBooking != null)
+            {
+                ModelState.AddModelError(string.Empty, 
+                    $"You cannot book overlapping time slots. You already have a booking from {overlappingBooking.StartTime:hh\\:mm} to {overlappingBooking.EndTime:hh\\:mm} on this day.");
+                await OnGetAsync(roomId);
+                return Page();
+            }
+
             // Create booking
             var booking = new Booking
             {

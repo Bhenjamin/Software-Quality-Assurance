@@ -355,6 +355,31 @@ public class IndexModel : PageModel
                 };
             }
 
+            // Check for overlapping bookings by current user
+            var sw4b = System.Diagnostics.Stopwatch.StartNew();
+            var userBookings = await _bookingService.GetBookingsByUserIdAsync(userId);
+            sw4b.Stop();
+            System.Diagnostics.Debug.WriteLine($"[PERF] GetBookingsByUserIdAsync: {sw4b.ElapsedMilliseconds}ms");
+
+            // Filter for confirmed bookings on the same date and check for time overlap
+            var overlappingBooking = userBookings.FirstOrDefault(b =>
+                b.BookingDate == date &&
+                b.Status != BookingStatus.Cancelled &&
+                // Check if time slots overlap: new booking starts before existing ends AND new booking ends after existing starts
+                !(start >= b.EndTime || end <= b.StartTime)
+            );
+
+            if (overlappingBooking != null)
+            {
+                return new JsonResult(new { 
+                    success = false, 
+                    error = $"You cannot book overlapping time slots. You already have a booking from {overlappingBooking.StartTime:hh\\:mm} to {overlappingBooking.EndTime:hh\\:mm} on this day." 
+                })
+                {
+                    StatusCode = StatusCodes.Status409Conflict
+                };
+            }
+
             // Create booking
             var sw5 = System.Diagnostics.Stopwatch.StartNew();
             var booking = new Booking

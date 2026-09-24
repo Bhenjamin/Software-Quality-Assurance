@@ -593,7 +593,19 @@ document.addEventListener('DOMContentLoaded', function() {
 		.then(response => {
 			console.log('Response status:', response.status);
 			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
+				// For non-OK responses, try to get the error message from the response
+				return response.text().then(text => {
+					try {
+						const data = JSON.parse(text);
+						throw new Error(data.error || 'You already have a booking during this time. Please choose a different time.');
+					} catch (parseError) {
+						// If it's already an Error from above, re-throw it
+						if (parseError instanceof Error && parseError.message !== 'Unexpected token' && parseError.message !== 'Unexpected end of JSON input') {
+							throw parseError;
+						}
+						throw new Error('You already have a booking during this time. Please choose a different time.');
+					}
+				});
 			}
 			return response.json();
 		})
@@ -621,7 +633,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		.catch(error => {
 			console.error('Error:', error);
 			document.getElementById('modalBookingAlert').style.display = 'block';
-			document.getElementById('modalBookingErrors').innerHTML = `<div>An error occurred while booking: ${error.message}</div>`;
+			document.getElementById('modalBookingErrors').innerHTML = `<div>${error.message}</div>`;
 			document.getElementById('submitBookingBtn').disabled = false;
 		});
 	});
