@@ -37,6 +37,21 @@
 		height: 100%;
 		box-sizing: border-box;
 	}
+
+	/* Merged slot styling */
+	.calendar-slot-merged {
+		/* Mark when a slot is the start of a merged group */
+	}
+
+	.calendar-slot-hidden {
+		/* Hide subsequent slots in a merged group */
+		display: none !important;
+	}
+
+	td.merged-slot-container {
+		/* Container for merged slots */
+		padding: 4px;
+	}
 </style>
 
 <div class="container mt-4">
@@ -214,7 +229,7 @@
 												{
 													@if (isOwnBooking)
 													{
-														<a asp-page="/Students/ModifyBooking" asp-route-id="@bookedSlot.Id" class="badge calendar-slot calendar-slot-booked-self" style="text-decoration: none; cursor: pointer;"></a>
+														<a asp-page="/Students/ModifyBooking" asp-route-id="@bookedSlot.Id" class="badge calendar-slot calendar-slot-booked-self" data-booking-id="@bookedSlot.Id" style="text-decoration: none; cursor: pointer;"></a>
 													}
 													else
 													{
@@ -320,7 +335,64 @@
 			</div>
 			<div class="modal-footer justify-content-start">
 				<button type="button" class="btn btn-primary" id="submitBookingBtn">Confirm Booking</button>
-				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modify Booking Modal -->
+<div class="modal fade" id="modifyBookingModal" tabindex="-1" aria-labelledby="modifyBookingModalLabel" aria-hidden="true">
+	<div class="modal-dialog booking-modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="modifyBookingModalLabel">Modify Booking</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div id="modifyBookingAlert" class="alert alert-danger alert-dismissible fade show" role="alert" style="display: none;">
+					<strong>Modification Error!</strong>
+					<div id="modifyBookingErrors"></div>
+					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+				</div>
+				<form id="modifyBookingForm">
+					@Html.AntiForgeryToken()
+					<div class="row">
+						<!-- Left column: Room Details -->
+						<div class="col-5">
+							<strong style="font-size: 1rem;" id="modifyModalRoomNameDetail"></strong>
+
+							<small class="text-muted room-details" style="font-size: 0.9rem;">
+								<div id="modifyModalRoomCode"></div>
+								<div id="modifyModalRoomLocation"></div>
+								<div>Capacity: <span id="modifyModalRoomCapacity"></span></div>
+							</small>
+						</div>
+						<!-- Vertical divider -->
+						<div class="col-1 d-flex justify-content-center">
+							<div style="border-left: 1px solid #dee2e6; height: 100%;"></div>
+						</div>
+						<!-- Right column: Booking Details -->
+						<div class="col-5">
+							<div class="mb-0">
+								<label class="form-label" style="font-size: 0.9rem; font-weight: 600;">Date: <span id="modifyModalBookingDateDisplay"></span></label>
+							</div>
+							<div class="mb-2 d-flex align-items-center gap-2">
+								<label for="modifyModalStartTime" class="form-label mb-0 time-label" style="font-size: 0.9rem;">Start Hour:</label>
+								<select id="modifyModalStartTime" class="form-select form-select-sm" style="width: 80px;" required></select>
+							</div>
+							<div class="mb-2 d-flex align-items-center gap-2">
+								<label for="modifyModalEndTime" class="form-label mb-0 time-label" style="font-size: 0.9rem;">End Hour:</label>
+								<select id="modifyModalEndTime" class="form-select form-select-sm" style="width: 80px;" required></select>
+							</div>
+							<div id="modifyModalTimeValidationError" class="time-validation-error"></div>
+						</div>
+					</div>
+					<input type="hidden" id="modifyModalBookingId">
+				</form>
+			</div>
+			<div class="modal-footer justify-content-start">
+				<button type="button" class="btn btn-primary btn-sm" id="submitModifyBookingBtn">Save Changes</button>
+				<button type="button" class="btn btn-danger btn-sm" id="deleteModifyBookingBtn">Delete</button>
 			</div>
 		</div>
 	</div>
@@ -618,6 +690,9 @@ document.addEventListener('DOMContentLoaded', function() {
 				// Update the slot color to blue (user's booking)
 				updateSlotColor(roomId, bookingDate, startTime, endTime, data.bookingId);
 
+				// Merge consecutive booking slots after the slot color update
+				mergeConsecutiveBookingSlots();
+
 				// Show success message on main page
 				showSuccessBanner(data.roomName, bookingDate, data.startTime, data.endTime, data.confirmationNumber);
 
@@ -678,6 +753,8 @@ document.addEventListener('DOMContentLoaded', function() {
 				link.className =
 					'badge calendar-slot calendar-slot-booked-self';
 
+				link.setAttribute('data-booking-id', bookingId);
+
 				link.style.textDecoration = 'none';
 				link.style.cursor = 'pointer';
 				link.style.display = 'block';
@@ -717,13 +794,18 @@ document.addEventListener('DOMContentLoaded', function() {
 		const year = dateObj.getFullYear();
 		const formattedDate = `${day}-${month}-${year}`;
 
+		// Determine header based on confirmation number
+		const isModify = confirmationNumber === 'Booking Updated';
+		const headerText = isModify ? 'Booking Updated!' : 'Booking Confirmed!';
+		const labelText = isModify ? 'Updated' : 'Confirmation #';
+
 		banner.innerHTML = `
-			<strong>Booking Confirmed!</strong>
+			<strong>${headerText}</strong>
 			<div style="margin-top: 8px; font-size: 0.9rem;">
 				<div>Room: <strong>${roomName}</strong></div>
 				<div>Date: <strong>${formattedDate}</strong></div>
 				<div>Time: <strong>${startTime} - ${endTime}</strong></div>
-				<div style="margin-top: 4px;">Confirmation #: <strong>${confirmationNumber}</strong></div>
+				<div style="margin-top: 4px;">${labelText}: <strong>${confirmationNumber}</strong></div>
 			</div>
 			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 		`;
@@ -853,7 +935,381 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	}
 
+	// Merge consecutive booking slots with the same booking ID
+	function mergeConsecutiveBookingSlots() {
+		const table = document.querySelector('table.table');
+		if (!table) return;
+
+		const rows = table.querySelectorAll('tbody tr');
+		rows.forEach(row => {
+			// Get all blue booking links in this row
+			const bookingLinks = row.querySelectorAll('a.calendar-slot-booked-self');
+			if (bookingLinks.length === 0) return;
+
+			// Group consecutive links by booking ID
+			let currentGroup = [];
+			let lastBookingId = null;
+
+			bookingLinks.forEach((link, index) => {
+				const bookingId = link.getAttribute('data-booking-id');
+
+				if (bookingId === lastBookingId) {
+					// Same booking, add to current group
+					currentGroup.push(link);
+				} else {
+					// Different booking or first iteration
+					if (currentGroup.length > 1) {
+						// Merge the previous group
+						mergeSlotGroup(currentGroup);
+					}
+					currentGroup = [link];
+					lastBookingId = bookingId;
+				}
+			});
+
+			// Handle the last group
+			if (currentGroup.length > 1) {
+				mergeSlotGroup(currentGroup);
+			}
+		});
+	}
+
+	// Merge a group of slots by setting colspan on first and hiding rest
+	function mergeSlotGroup(slotGroup) {
+		if (slotGroup.length < 2) return;
+
+		const firstTd = slotGroup[0].closest('td');
+		if (!firstTd) return;
+
+		// Set colspan on the first TD
+		const colspan = slotGroup.length;
+		firstTd.setAttribute('colspan', colspan);
+		firstTd.classList.add('merged-slot-container');
+
+		// Hide all other TDs in the group
+		for (let i = 1; i < slotGroup.length; i++) {
+			const td = slotGroup[i].closest('td');
+			if (td) {
+				td.classList.add('calendar-slot-hidden');
+				slotGroup[i].classList.add('calendar-slot-merged');
+			}
+		}
+	}
+
+	// Call merge on page load
+	mergeConsecutiveBookingSlots();
+
 	// Initial button state
 	updateDateButtons();
+
+	// ================== MODIFY BOOKING MODAL FUNCTIONS ==================
+
+	// Store old booking data for comparison
+	let globalModifyBookingData = {
+		bookingId: null,
+		roomId: null,
+		roomName: null,
+		bookingDate: null,
+		startTime: null,
+		endTime: null,
+		notes: null
+	};
+
+	// Handle clicks on blue booking slots to open modify modal
+	document.addEventListener('click', async function(e) {
+		const bookingLink = e.target.closest('a.calendar-slot-booked-self');
+		if (bookingLink) {
+			e.preventDefault();
+			const bookingId = bookingLink.getAttribute('data-booking-id');
+			if (bookingId) {
+				await openModifyBookingModal(parseInt(bookingId));
+			}
+		}
+	});
+
+	// Open modify modal and fetch booking details
+	window.openModifyBookingModal = async function(bookingId) {
+		try {
+			// Fetch booking details via AJAX
+			const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+			const token = tokenInput ? tokenInput.value : '';
+
+			const params = new URLSearchParams();
+			params.append('bookingId', bookingId);
+			params.append('__RequestVerificationToken', token);
+
+			const response = await fetch('?handler=GetBookingDetails', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+					'X-Requested-With': 'XMLHttpRequest'
+				},
+				body: params.toString()
+			});
+
+			if (!response.ok) {
+				const errorText = await response.text();
+				throw new Error(errorText || 'Failed to fetch booking details');
+			}
+
+			const data = await response.json();
+
+			if (!data.success) {
+				alert('Error: ' + (data.error || 'Failed to fetch booking details'));
+				return;
+			}
+
+			const booking = data.booking;
+
+			// Store booking data
+			globalModifyBookingData.bookingId = booking.id;
+			globalModifyBookingData.roomId = booking.roomId;
+			globalModifyBookingData.roomName = booking.roomName;
+			globalModifyBookingData.bookingDate = booking.bookingDate;
+			globalModifyBookingData.startTime = booking.startTime;
+			globalModifyBookingData.endTime = booking.endTime;
+			globalModifyBookingData.notes = booking.notes;
+
+			// Populate room details
+			document.getElementById('modifyModalRoomNameDetail').textContent = booking.roomName;
+			document.getElementById('modifyModalRoomCode').textContent = booking.roomCode;
+			document.getElementById('modifyModalRoomLocation').textContent = booking.roomLocation;
+			document.getElementById('modifyModalRoomCapacity').textContent = booking.roomCapacity;
+
+			// Populate form fields
+			document.getElementById('modifyModalBookingId').value = booking.id;
+
+			// Format date as dd-mm-yyyy for display
+			const dateObj = new Date(booking.bookingDate);
+			const day = String(dateObj.getDate()).padStart(2, '0');
+			const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+			const year = dateObj.getFullYear();
+			document.getElementById('modifyModalBookingDateDisplay').textContent = `${day}-${month}-${year}`;
+
+			// Populate start and end time dropdowns
+			populateModifyStartHourDropdown(booking.startTime);
+			populateModifyEndHourDropdown(booking.endTime);
+
+			// Reset alerts
+			document.getElementById('modifyBookingAlert').style.display = 'none';
+
+			// Show modal
+			const modifyModal = new bootstrap.Modal(document.getElementById('modifyBookingModal'));
+			modifyModal.show();
+
+		} catch (error) {
+			console.error('Error opening modify modal:', error);
+			alert('Error: ' + error.message);
+		}
+	};
+
+	// Populate modify start hour dropdown
+	function populateModifyStartHourDropdown(defaultValue) {
+		const startSelect = document.getElementById('modifyModalStartTime');
+		startSelect.innerHTML = '';
+
+		// Add all possible start hours (8-21)
+		for (let hour = 8; hour <= 21; hour++) {
+			const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+			const option = document.createElement('option');
+			option.value = timeStr;
+			option.textContent = timeStr;
+			if (timeStr === defaultValue) {
+				option.selected = true;
+			}
+			startSelect.appendChild(option);
+		}
+
+		// Populate end time based on selected start time
+		if (startSelect.value) {
+			const startHour = parseInt(startSelect.value.split(':')[0]);
+			const endTimeStr = `${String(startHour + 1).padStart(2, '0')}:00`;
+			populateModifyEndHourDropdown(endTimeStr);
+		}
+	}
+
+	// Populate modify end hour dropdown
+	function populateModifyEndHourDropdown(defaultValue) {
+		const endSelect = document.getElementById('modifyModalEndTime');
+		endSelect.innerHTML = '';
+
+		const startTimeStr = document.getElementById('modifyModalStartTime').value;
+		if (!startTimeStr) {
+			return;
+		}
+
+		const startHour = parseInt(startTimeStr.split(':')[0]);
+
+		// Add only up to 2 options: start+1 and start+2
+		let addedCount = 0;
+		for (let endHour = startHour + 1; endHour <= startHour + 2 && endHour <= 22 && addedCount < 2; endHour++) {
+			const timeStr = `${endHour.toString().padStart(2, '0')}:00`;
+			const option = document.createElement('option');
+			option.value = timeStr;
+			option.textContent = timeStr;
+			if (timeStr === defaultValue || addedCount === 0) {
+				option.selected = true;
+			}
+			endSelect.appendChild(option);
+			addedCount++;
+		}
+	}
+
+	// Handle modify start time change
+	document.getElementById('modifyModalStartTime').addEventListener('change', function() {
+		const selectedStartTime = this.value;
+		if (selectedStartTime) {
+			const startHour = parseInt(selectedStartTime.split(':')[0]);
+			const endTimeStr = `${String(startHour + 1).padStart(2, '0')}:00`;
+			populateModifyEndHourDropdown(endTimeStr);
+			document.getElementById('modifyModalEndTime').value = endTimeStr;
+		}
+	});
+
+	// Handle modify booking form submission
+	document.getElementById('submitModifyBookingBtn').addEventListener('click', async function() {
+		const bookingId = document.getElementById('modifyModalBookingId').value;
+		const bookingDate = globalModifyBookingData.bookingDate; // Use stored booking date
+		const startTime = document.getElementById('modifyModalStartTime').value;
+		const endTime = document.getElementById('modifyModalEndTime').value;
+		const notes = null;
+
+		// Validate times
+		if (!startTime || !endTime) {
+			document.getElementById('modifyModalTimeValidationError').textContent = 'Please select both start and end times.';
+			document.getElementById('modifyModalTimeValidationError').style.display = 'block';
+			return;
+		}
+
+		const startHour = parseInt(startTime.split(':')[0]);
+		const endHour = parseInt(endTime.split(':')[0]);
+		if (startHour >= endHour) {
+			document.getElementById('modifyModalTimeValidationError').textContent = 'Start hour must be before end hour.';
+			document.getElementById('modifyModalTimeValidationError').style.display = 'block';
+			return;
+		}
+
+		document.getElementById('modifyModalTimeValidationError').style.display = 'none';
+
+		// Disable submit button during submission
+		this.disabled = true;
+
+		try {
+			// Get antiforgery token
+			const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+			const token = tokenInput ? tokenInput.value : '';
+
+			const params = new URLSearchParams();
+			params.append('bookingId', bookingId);
+			params.append('bookingDate', bookingDate);
+			params.append('startHour', startTime);
+			params.append('endHour', endTime);
+			params.append('notes', '');
+			params.append('__RequestVerificationToken', token);
+
+			const response = await fetch('?handler=ModifyBooking', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+					'X-Requested-With': 'XMLHttpRequest'
+				},
+				body: params.toString()
+			});
+
+			const data = await response.json();
+
+			if (data.success) {
+				// Close modal
+				const modifyModal = bootstrap.Modal.getInstance(document.getElementById('modifyBookingModal'));
+				modifyModal.hide();
+
+				// Show success message
+				showSuccessBanner(globalModifyBookingData.roomName, bookingDate, startTime, endTime, 'Booking Updated');
+
+				// Reload page after short delay to refresh the calendar
+				setTimeout(() => {
+					location.reload();
+				}, 2000);
+			} else {
+				// Show error message in modal
+				document.getElementById('modifyBookingAlert').style.display = 'block';
+				document.getElementById('modifyBookingErrors').innerHTML = `<div>${data.error}</div>`;
+				this.disabled = false;
+			}
+		} catch (error) {
+			console.error('Error:', error);
+			document.getElementById('modifyBookingAlert').style.display = 'block';
+			document.getElementById('modifyBookingErrors').innerHTML = `<div>${error.message}</div>`;
+			this.disabled = false;
+		}
+	});
+
+	// Handle delete booking button
+	document.getElementById('deleteModifyBookingBtn').addEventListener('click', async function() {
+		const bookingId = document.getElementById('modifyModalBookingId').value;
+		this.disabled = true;
+
+		try {
+			// Get antiforgery token
+			const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+			const token = tokenInput ? tokenInput.value : '';
+
+			const params = new URLSearchParams();
+			params.append('bookingId', bookingId);
+			params.append('__RequestVerificationToken', token);
+
+			const response = await fetch('?handler=DeleteBooking', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+					'X-Requested-With': 'XMLHttpRequest'
+				},
+				body: params.toString()
+			});
+
+			const data = await response.json();
+
+			if (data.success) {
+				// Close modal
+				const modifyModal = bootstrap.Modal.getInstance(document.getElementById('modifyBookingModal'));
+				modifyModal.hide();
+
+				// Show success message
+				const banner = document.createElement('div');
+				banner.className = 'alert alert-success alert-dismissible fade show';
+				banner.style.position = 'fixed';
+				banner.style.top = '20px';
+				banner.style.right = '20px';
+				banner.style.zIndex = '9999';
+				banner.style.minWidth = '300px';
+				banner.innerHTML = `
+					<strong>Booking Deleted!</strong>
+					<div style="margin-top: 8px; font-size: 0.9rem;">
+						<div>Your booking has been cancelled successfully.</div>
+					</div>
+					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+				`;
+				document.body.appendChild(banner);
+
+				// Auto-dismiss after 5 seconds
+				setTimeout(() => {
+						banner.remove();
+					}, 5000);
+
+					// Reload page immediately to refresh the calendar
+					location.reload();
+			} else {
+				// Show error message in modal
+				document.getElementById('modifyBookingAlert').style.display = 'block';
+				document.getElementById('modifyBookingErrors').innerHTML = `<div>${data.error}</div>`;
+				this.disabled = false;
+			}
+		} catch (error) {
+			console.error('Error:', error);
+			document.getElementById('modifyBookingAlert').style.display = 'block';
+			document.getElementById('modifyBookingErrors').innerHTML = `<div>${error.message}</div>`;
+			this.disabled = false;
+		}
+	});
 });
 </script>
