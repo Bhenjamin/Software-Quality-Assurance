@@ -253,8 +253,8 @@ public class BookingService : IBookingService
                 case RecurrencePattern.BiWeekly:
                     currentDate = currentDate.AddDays(14);
                     break;
-                case RecurrencePattern.Monthly:
-                    currentDate = currentDate.AddMonths(1);
+                case RecurrencePattern.FourWeeks:
+                    currentDate = currentDate.AddDays(28);
                     break;
                 default:
                     throw new ArgumentException($"Unknown recurrence pattern: {pattern}");

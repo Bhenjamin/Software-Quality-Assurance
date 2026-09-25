@@ -3,7 +3,7 @@
 @{
 	ViewData["Title"] = "Search Recurring Bookings";
 	var minDate = DateTime.Today.ToString("yyyy-MM-dd");
-	var maxDate = DateTime.Today.AddDays(60).ToString("yyyy-MM-dd");
+	var maxDate = DateTime.Today.AddDays(180).ToString("yyyy-MM-dd");
 }
 
 <style>
@@ -19,8 +19,6 @@
 </style>
 
 <div class="container mt-4">
-	<h2>Search Recurring Bookings</h2>
-
 	@if (!ViewData.ModelState.IsValid)
 	{
 		<div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -35,11 +33,11 @@
 		</div>
 	}
 
-	<form method="post" class="card p-4 mb-4">
-		<div class="row">
-			<div class="col-md-3">
+	<form method="post" class="card p-3 mb-3">
+		<div class="d-flex align-items-end gap-4">
+			<div style="width: 22%;">
 				<div class="form-group">
-					<label for="startDate" class="form-label">Start Date *</label>
+					<label for="startDate" class="form-label">Start Date <small class="text-muted"> - Limit: 6 months</small></label>
 					<div class="input-group">
 						<button type="button" id="startDateBackBtn" class="btn btn-outline-secondary" title="Previous day">
 							<i class="bi bi-chevron-down"></i> ◀
@@ -51,33 +49,32 @@
 							▶ <i class="bi bi-chevron-up"></i>
 						</button>
 					</div>
-					<small class="text-muted">Today to 60 days ahead</small>
+					
 					<div id="startDateWarning" class="alert alert-warning mt-2" style="display: none; padding: 0.5rem 0.75rem; margin: 0.5rem 0;">
 						Cannot go to past date. Today is selected.
 					</div>
 				</div>
 			</div>
-			<div class="col-md-3">
+			<div style="width: 22%;">
 				<div class="form-group">
-					<label for="recurrenceEndDate" class="form-label">Recurrence End Date *</label>
+					<label for="recurrenceEndDate" class="form-label">Recurrence End Date</label>
 					<div class="input-group">
 						<button type="button" id="endDateBackBtn" class="btn btn-outline-secondary" title="Previous day">
 							<i class="bi bi-chevron-down"></i> ◀
 						</button>
 						<input type="date" id="recurrenceEndDate" name="searchCriteria.RecurrenceEndDate" 
-							   min="@minDate" 
+							   min="@minDate" max="@maxDate"
 							   value="@Model.SearchCriteria.RecurrenceEndDate.ToString("yyyy-MM-dd")" class="form-control" required />
 						<button type="button" id="endDateForwardBtn" class="btn btn-outline-secondary" title="Next day">
 							▶ <i class="bi bi-chevron-up"></i>
 						</button>
 					</div>
-					<small class="text-muted">Must be on or after start date</small>
 					<div id="endDateWarning" class="alert alert-warning mt-2" style="display: none; padding: 0.5rem 0.75rem; margin: 0.5rem 0;">
 						Cannot go to past date. Today is selected.
 					</div>
 				</div>
 			</div>
-			<div class="col-md-3">
+		@* 	<div class="col-md-3">
 				<div class="form-group">
 					<label for="startTime" class="form-label">Start Hour</label>
 					<select id="startTime" name="searchCriteria.StartTime" class="form-select">
@@ -104,8 +101,8 @@
 			</div>
 		</div>
 
-		<div class="row">
-			<div class="col-md-3">
+		<div class="row"> *@
+			<div style="width: 25%;">
 				<div class="form-group">
 					<label for="roomType" class="form-label">Room Type</label>
 					<select id="roomType" name="searchCriteria.RoomType" class="form-select">
@@ -118,7 +115,7 @@
 					</select>
 				</div>
 			</div>
-			<div class="col-md-3">
+			<div style="width: 13%;">
 				<div class="form-group">
 					<label for="location" class="form-label">Location</label>
 					<select id="location" name="searchCriteria.Location" class="form-select">
@@ -130,9 +127,19 @@
 					</select>
 				</div>
 			</div>
-			<div class="col-md-3">
-				<div class="form-group search-action">
-					<button type="submit" class="btn btn-primary btn-search form-control">Search</button>
+			<div style="width: 18%;">
+				<div class="form-group">
+					<label for="recurrencePattern" class="form-label">Recurrence Pattern</label>
+					<select id="recurrencePattern" name="searchCriteria.RecurrencePattern" class="form-select">
+						@foreach (var pattern in Enum.GetValues(typeof(StudyRoomBooking.Domain.Enums.RecurrencePattern)))
+						{
+							var recurrencePattern = (StudyRoomBooking.Domain.Enums.RecurrencePattern)pattern;
+							<option value="@pattern"
+									selected="@(Model.SearchCriteria.RecurrencePattern == recurrencePattern)">
+								@(recurrencePattern == StudyRoomBooking.Domain.Enums.RecurrencePattern.FourWeeks ? "Four Weeks" : recurrencePattern.ToString())
+							</option>
+						}
+					</select>
 				</div>
 			</div>
 		</div>
@@ -142,8 +149,8 @@
 	{
 		<div class="card mt-4">
 			<div class="card-header">
-				<div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
-					<div>
+				<div style="display: flex; justify-content: flex-start; align-items: flex-start; gap: 15px;">
+					<div style="width: 55%;">
 						<h5 class="mb-0">Available Rooms for @Model.SearchCriteria.StartDate.ToString("dddd, MMMM dd, yyyy")</h5>
 						<small class="text-muted">Recurring from @Model.SearchCriteria.StartDate.ToString("MMM dd") to @Model.SearchCriteria.RecurrenceEndDate.ToString("MMM dd, yyyy") | Time Range: 08:00 - 22:00
 							@if (Model.SearchCriteria.StartTime.HasValue || Model.SearchCriteria.EndTime.HasValue)
@@ -152,34 +159,22 @@
 							}
 						</small>
 					</div>
-					<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 0.9rem;">
+					<div style="width: 45%; display: grid; grid-template-columns: 2fr 1fr; gap: 10px; font-size: 0.9rem;">
 						<div style="display: flex; align-items: flex-start; gap: 10px;">
 							<span style="display: inline-block; width: 20px; height: 20px; background-color: var(--success); border-radius: 3px; flex-shrink: 0; margin-top: 2px;"></span>
-							<div>
-								<div style="font-weight: 600;">Available</div>
-								<div style="font-size: 0.85rem; color: #666;">Click to book</div>
-							</div>
+							<div style="font-weight: 600;">Available - Click to book</div>
 						</div>
 						<div style="display: flex; align-items: flex-start; gap: 10px;">
 							<span style="display: inline-block; width: 20px; height: 20px; background-color: var(--delete); border-radius: 3px; flex-shrink: 0; margin-top: 2px;"></span>
-							<div>
-								<div style="font-weight: 600;">Booked</div>
-								<div style="font-size: 0.85rem; color: #666;">Not available</div>
-							</div>
+							<div style="font-weight: 600;">Booked</div>
 						</div>
 						<div style="display: flex; align-items: flex-start; gap: 10px;">
 							<span style="display: inline-block; width: 20px; height: 20px; background-color: #2563EB; border-radius: 3px; flex-shrink: 0; margin-top: 2px;"></span>
-							<div>
-								<div style="font-weight: 600;">Your Booking</div>
-								<div style="font-size: 0.85rem; color: #666;">Click to view/modify</div>
-							</div>
+							<div style="font-weight: 600;">Your Booking - Click to view/modify</div>
 						</div>
 						<div style="display: flex; align-items: flex-start; gap: 10px;">
 							<span style="display: inline-block; width: 20px; height: 20px; background-color: #9CA3AF; border-radius: 3px; flex-shrink: 0; margin-top: 2px;"></span>
-							<div>
-								<div style="font-weight: 600;">Unavailable</div>
-								<div style="font-size: 0.85rem; color: #666;">Not available</div>
-							</div>
+							<div style="font-weight: 600;">Unavailable</div>
 						</div>
 					</div>
 				</div>
@@ -232,22 +227,23 @@
 										var isBooked = bookedSlot != null;
 										var isOwnBooking = isBooked && bookedSlot.UserId == Model.CurrentUserId;
 										var isInSearchRange = Model.IsTimeSlotInSearchRange(timeSlot);
+										var isInPast = Model.IsTimeSlotInPast(timeSlot);
 										var startHour = timeSlot.Hours;
 										var endHour = nextTime.Hours;
 
 										<td style="padding: 4px;">
-											@if (isInSearchRange)
+											@if (isInSearchRange && !isInPast)
 											{
 												@if (isBooked)
-															{
-																@if (isOwnBooking)
-																{
-																	<a asp-page="/Students/ModifyBooking" asp-route-id="@bookedSlot.Id" class="badge calendar-slot calendar-slot-booked-self" style="text-decoration: none; cursor: pointer;"></a>
-																}
-																else
-																{
-																	<span class="badge calendar-slot calendar-slot-booked"></span>
-																}
+												{
+													@if (isOwnBooking)
+													{
+														<a asp-page="/Students/ModifyBooking" asp-route-id="@bookedSlot.Id" class="badge calendar-slot calendar-slot-booked-self" style="text-decoration: none; cursor: pointer;"></a>
+													}
+													else
+													{
+														<span class="badge calendar-slot calendar-slot-booked"></span>
+													}
 												}
 												else
 												{
@@ -265,7 +261,7 @@
 												<span class="badge calendar-slot calendar-slot-unavailable"> </span>
 											}
 										</td>
-											}
+										}
 									</tr>
 							}
 						</tbody>
@@ -288,30 +284,36 @@
 
 <script>
 	document.addEventListener('DOMContentLoaded', function () {
-		const startTimeSelect = document.getElementById('startTime');
-		const endTimeSelect = document.getElementById('endTime');
-		const timeValidationError = document.getElementById('timeValidationError');
+		// const startTimeSelect = document.getElementById('startTime');
+		// const endTimeSelect = document.getElementById('endTime');
+		// const timeValidationError = document.getElementById('timeValidationError');
 
-		function validateTimes() {
-			const startTime = startTimeSelect.value;
-			const endTime = endTimeSelect.value;
+		// function validateTimes() {
+		// 	const startTime = startTimeSelect.value;
+		// 	const endTime = endTimeSelect.value;
 
-			if (startTime && endTime) {
-				const startHour = parseInt(startTime.split(':')[0]);
-				const endHour = parseInt(endTime.split(':')[0]);
+		// 	if (startTime && endTime) {
+		// 		const startHour = parseInt(startTime.split(':')[0]);
+		// 		const endHour = parseInt(endTime.split(':')[0]);
 
-				if (startHour >= endHour) {
-					timeValidationError.classList.add('show');
-				} else {
-					timeValidationError.classList.remove('show');
-				}
-			} else {
-				timeValidationError.classList.remove('show');
-			}
-		}
+		// 		if (startHour >= endHour) {
+		// 			timeValidationError.classList.add('show');
+		// 		} else {
+		// 			timeValidationError.classList.remove('show');
+		// 		}
+		// 	} else {
+		// 		timeValidationError.classList.remove('show');
+		// 	}
+		// }
 
-		startTimeSelect.addEventListener('change', validateTimes);
-		endTimeSelect.addEventListener('change', validateTimes);
+		// startTimeSelect.addEventListener('change', function() {
+		// 	validateTimes();
+		// 	autoSubmitSearch();
+		// });
+		// endTimeSelect.addEventListener('change', function() {
+		// 	validateTimes();
+		// 	autoSubmitSearch();
+		// });
 
 		// Date navigation buttons for Start Date
 		const startDateInput = document.getElementById('startDate');
@@ -329,39 +331,57 @@
 
 		startDateBackBtn.addEventListener('click', function(e) {
 			e.preventDefault();
-			const currentDate = new Date(startDateInput.value);
-			const previousDate = new Date(currentDate);
-			previousDate.setDate(previousDate.getDate() - 1);
-			const previousDateStr = previousDate.toISOString().split('T')[0];
+			const currentDate = startDateInput.value;
 			const minDate = startDateInput.getAttribute('min');
+
+			// Convert yyyy-MM-dd safely
+			const [year, month, day] = currentDate.split('-').map(Number);
+			const previousDate = new Date(year, month - 1, day);
+			previousDate.setDate(previousDate.getDate() - 1);
+
+			const previousDateStr =
+				previousDate.getFullYear() + '-' +
+				String(previousDate.getMonth() + 1).padStart(2, '0') + '-' +
+				String(previousDate.getDate()).padStart(2, '0');
 
 			if (previousDateStr < minDate) {
 				startDateWarning.textContent = 'Cannot go to past date. ' + new Date(minDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' is selected.';
 				startDateWarning.style.display = 'block';
 				setTimeout(() => { startDateWarning.style.display = 'none'; }, 3000);
-			} else {
-				startDateInput.value = previousDateStr;
+				} else {
+					startDateInput.value = previousDateStr;
+					startDateWarning.style.display = 'none';
+					updateStartDateButtons();
+					autoSubmitSearch();
+				}
+			});
+
+			startDateForwardBtn.addEventListener('click', function(e) {
+				e.preventDefault();
+				const currentDate = startDateInput.value;
+				const maxDate = startDateInput.getAttribute('max');
+
+				// Convert yyyy-MM-dd safely
+				const [year, month, day] = currentDate.split('-').map(Number);
+				const nextDate = new Date(year, month - 1, day);
+				nextDate.setDate(nextDate.getDate() + 1);
+
+				const nextDateStr =
+					nextDate.getFullYear() + '-' +
+					String(nextDate.getMonth() + 1).padStart(2, '0') + '-' +
+					String(nextDate.getDate()).padStart(2, '0');
+
+				if (nextDateStr > maxDate) return;
+				startDateInput.value = nextDateStr;
 				startDateWarning.style.display = 'none';
 				updateStartDateButtons();
-			}
-		});
+				autoSubmitSearch();
+			});
 
-		startDateForwardBtn.addEventListener('click', function(e) {
-			e.preventDefault();
-			const currentDate = new Date(startDateInput.value);
-			const nextDate = new Date(currentDate);
-			nextDate.setDate(nextDate.getDate() + 1);
-			const nextDateStr = nextDate.toISOString().split('T')[0];
-			const maxDate = startDateInput.getAttribute('max');
-			if (nextDateStr > maxDate) return;
-			startDateInput.value = nextDateStr;
-			startDateWarning.style.display = 'none';
-			updateStartDateButtons();
-		});
-
-		// Update button states when date input changes (calendar selection)
-		startDateInput.addEventListener('change', function() {
-			updateStartDateButtons();
+			// Update button states when date input changes (calendar selection)
+			startDateInput.addEventListener('change', function() {
+				updateStartDateButtons();
+				autoSubmitSearch();
 		});
 
 		updateStartDateButtons();
@@ -380,42 +400,92 @@
 
 		endDateBackBtn.addEventListener('click', function(e) {
 			e.preventDefault();
-			const currentDate = new Date(endDateInput.value);
-			const previousDate = new Date(currentDate);
-			previousDate.setDate(previousDate.getDate() - 1);
-			const previousDateStr = previousDate.toISOString().split('T')[0];
+			const currentDate = endDateInput.value;
 			const minDate = endDateInput.getAttribute('min');
+
+			// Convert yyyy-MM-dd safely
+			const [year, month, day] = currentDate.split('-').map(Number);
+			const previousDate = new Date(year, month - 1, day);
+			previousDate.setDate(previousDate.getDate() - 1);
+
+			const previousDateStr =
+				previousDate.getFullYear() + '-' +
+				String(previousDate.getMonth() + 1).padStart(2, '0') + '-' +
+				String(previousDate.getDate()).padStart(2, '0');
 
 			if (previousDateStr < minDate) {
 				endDateWarning.textContent = 'Cannot go to past date. ' + new Date(minDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + ' is selected.';
 				endDateWarning.style.display = 'block';
 				setTimeout(() => { endDateWarning.style.display = 'none'; }, 3000);
-			} else {
-				endDateInput.value = previousDateStr;
+				} else {
+					endDateInput.value = previousDateStr;
+					endDateWarning.style.display = 'none';
+					updateEndDateButtons();
+					autoSubmitSearch();
+				}
+			});
+
+			endDateForwardBtn.addEventListener('click', function(e) {
+				e.preventDefault();
+				const currentDate = endDateInput.value;
+
+				// Convert yyyy-MM-dd safely
+				const [year, month, day] = currentDate.split('-').map(Number);
+				const nextDate = new Date(year, month - 1, day);
+				nextDate.setDate(nextDate.getDate() + 1);
+
+				const nextDateStr =
+					nextDate.getFullYear() + '-' +
+					String(nextDate.getMonth() + 1).padStart(2, '0') + '-' +
+					String(nextDate.getDate()).padStart(2, '0');
+
+				endDateInput.value = nextDateStr;
 				endDateWarning.style.display = 'none';
 				updateEndDateButtons();
-			}
-		});
-
-		endDateForwardBtn.addEventListener('click', function(e) {
-			e.preventDefault();
-			const currentDate = new Date(endDateInput.value);
-			const nextDate = new Date(currentDate);
-			nextDate.setDate(nextDate.getDate() + 1);
-			const nextDateStr = nextDate.toISOString().split('T')[0];
-			endDateInput.value = nextDateStr;
-			endDateWarning.style.display = 'none';
-			updateEndDateButtons();
-		});
+				autoSubmitSearch();
+			});
 
 		// Update button states when date input changes (calendar selection)
 		endDateInput.addEventListener('change', function() {
 			updateEndDateButtons();
+			autoSubmitSearch();
 		});
 
 		updateEndDateButtons();
 
 		// Validate on page load
 		validateTimes();
+
+		// Auto-submit form when any search input changes
+		function autoSubmitSearch() {
+			const form = document.querySelector('form');
+			if (form) {
+				form.submit();
+			}
+		}
+
+		// Add event listeners to all search inputs to auto-submit
+		const searchForm = document.querySelector('form');
+		if (searchForm) {
+			// Start date input
+			startDateInput.addEventListener('change', autoSubmitSearch);
+
+			// End date input
+			endDateInput.addEventListener('change', autoSubmitSearch);
+
+			// Time inputs
+			// const startTimeInput = document.getElementById('startTime');
+			// const endTimeInput = document.getElementById('endTime');
+			// if (startTimeInput) startTimeInput.addEventListener('change', autoSubmitSearch);
+			// if (endTimeInput) endTimeInput.addEventListener('change', autoSubmitSearch);
+
+			// Room type input
+			const roomTypeInput = document.getElementById('roomType');
+			if (roomTypeInput) roomTypeInput.addEventListener('change', autoSubmitSearch);
+
+			// Location input (dropdown)
+			const locationInput = document.getElementById('location');
+			if (locationInput) locationInput.addEventListener('change', autoSubmitSearch);
+		}
 	});
 </script>

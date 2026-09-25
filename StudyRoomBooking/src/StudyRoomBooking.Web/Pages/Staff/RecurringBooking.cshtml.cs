@@ -150,6 +150,26 @@ public class RecurringBookingModel : PageModel
         }
     }
 
+    /// <summary>
+    /// Determines if a time slot is in the past for today's start date.
+    /// Returns true only if the start date is today AND the time slot is before current time.
+    /// For future dates, this always returns false (no slots are in the past).
+    /// </summary>
+    public bool IsTimeSlotInPast(TimeSpan timeSlot)
+    {
+        // Only check for past times if the start date is today
+        if (SearchCriteria.StartDate.Date == DateTime.Today)
+        {
+            var currentTime = DateTime.Now.TimeOfDay;
+            var roundedCurrentTime = TimeSpan.FromHours(Math.Floor(currentTime.TotalHours));
+            // A slot is in the past if its start time is before rounded current time
+            return timeSlot < roundedCurrentTime;
+        }
+
+        // For future dates, no slots are in the past
+        return false;
+    }
+
     public async Task OnPostAsync()
     {
         HasSearched = true;
@@ -183,11 +203,11 @@ public class RecurringBookingModel : PageModel
                 return;
             }
 
-            // Validate start date is not more than 60 days ahead
+            // Validate start date is not more than 180 days ahead
             var daysInAdvance = (SearchCriteria.StartDate.Date - today).Days;
-            if (daysInAdvance > 60)
+            if (daysInAdvance > 180)
             {
-                ModelState.AddModelError(string.Empty, $"Start date can only be up to 60 days ahead. Your selected date is {daysInAdvance} days away.");
+                ModelState.AddModelError(string.Empty, $"Start date can only be up to 6 months (180 days) ahead. Your selected date is {daysInAdvance} days away.");
                 PopulateAvailableBuildings();
                 return;
             }

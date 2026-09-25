@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace StudyRoomBooking.Domain.Enums;
 
 public enum RecurrencePattern
@@ -6,5 +8,6 @@ public enum RecurrencePattern
     Daily,
     Weekly,
     BiWeekly,
-    Monthly
+    [Display(Name = "Four Weeks")]
+    FourWeeks
 }

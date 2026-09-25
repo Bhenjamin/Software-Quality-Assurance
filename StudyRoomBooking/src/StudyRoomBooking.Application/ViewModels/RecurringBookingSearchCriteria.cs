@@ -11,4 +11,5 @@ public class RecurringBookingSearchCriteria
     public int? Capacity { get; set; }
     public RoomType? RoomType { get; set; }
     public string? Location { get; set; }
+    public RecurrencePattern? RecurrencePattern { get; set; }
 }
