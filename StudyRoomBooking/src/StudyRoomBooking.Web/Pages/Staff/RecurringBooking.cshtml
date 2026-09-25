@@ -215,53 +215,58 @@
 											<small class="text-muted">@room.Code<br />@room.Location<br />Cap: @room.Capacity</small>
 										</div>
 									</td>
-									@{
-										var bookingsForRoom = await Model.GetRoomBookingsAsync(room.Id, Model.SearchCriteria.StartDate);
-									}
 									@foreach (var timeSlot in timeSlots)
 									{
 										var nextTime = timeSlot.Add(interval);
-										var bookedSlot = bookingsForRoom.FirstOrDefault(b => 
-											!(b.EndTime <= timeSlot || b.StartTime >= nextTime) && 
-											b.Status != StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled);
-										var isBooked = bookedSlot != null;
-										var isOwnBooking = isBooked && bookedSlot.UserId == Model.CurrentUserId;
-										var isInSearchRange = Model.IsTimeSlotInSearchRange(timeSlot);
-										var isInPast = Model.IsTimeSlotInPast(timeSlot);
 										var startHour = timeSlot.Hours;
 										var endHour = nextTime.Hours;
 
+										// Get the pre-calculated slot status from the cache
+										var slotStatus = Model.SlotStatusCache.ContainsKey(room.Id) && Model.SlotStatusCache[room.Id].ContainsKey(timeSlot)
+											? Model.SlotStatusCache[room.Id][timeSlot]
+											: SlotStatus.Unavailable;
+
+										// Check if slot is in the past (only when StartDate is today)
+										var isInPast = Model.IsTimeSlotInPast(timeSlot);
+
 										<td style="padding: 4px;">
-											@if (isInSearchRange && !isInPast)
+											@if (!isInPast && slotStatus == SlotStatus.Available)
 											{
-												@if (isBooked)
+												<!--Green: Available - clickable link -->
+												<a asp-page="/Staff/CreateRecurring" 
+												   asp-route-roomId="@room.Id"
+												   asp-route-startDate="@Model.SearchCriteria.StartDate.ToString("yyyy-MM-dd")"
+												   asp-route-startTime="@startHour:00"
+												   asp-route-endTime="@endHour:00"
+												   asp-route-recurrenceEndDate="@Model.SearchCriteria.RecurrenceEndDate.ToString("yyyy-MM-dd")"
+												   class="badge calendar-slot calendar-slot-free"> </a>
+											}
+											else if (!isInPast && slotStatus == SlotStatus.YourBooking)
+											{
+												<!-- Blue: Your booking - non-clickable badge -->
+												<span class="badge calendar-slot calendar-slot-booked-self"></span>
+											}
+											else if (!isInPast && (slotStatus == SlotStatus.Booked || slotStatus == SlotStatus.Mixed))
+											{
+												<!-- Red or Mixed: Booked or Mixed booking -->
+												@if (slotStatus == SlotStatus.Mixed)
 												{
-													@if (isOwnBooking)
-													{
-														<a asp-page="/Students/ModifyBooking" asp-route-id="@bookedSlot.Id" class="badge calendar-slot calendar-slot-booked-self" style="text-decoration: none; cursor: pointer;"></a>
-													}
-													else
-													{
-														<span class="badge calendar-slot calendar-slot-booked"></span>
-													}
+													<!-- Red + Blue: Mixed booking -->
+													<span class="badge calendar-slot calendar-slot-booked" style="position: relative; background: linear-gradient(135deg, #dc3545 50%, #2563EB 50%);"> </span>
 												}
 												else
 												{
-													<a asp-page="/Staff/CreateRecurring" 
-													   asp-route-roomId="@room.Id"
-													   asp-route-startDate="@Model.SearchCriteria.StartDate.ToString("yyyy-MM-dd")"
-													   asp-route-startTime="@startHour:00"
-													   asp-route-endTime="@endHour:00"
-													   asp-route-recurrenceEndDate="@Model.SearchCriteria.RecurrenceEndDate.ToString("yyyy-MM-dd")"
-													   class="badge calendar-slot calendar-slot-free"> </a>
+													<!-- Red: Booked -->
+													<span class="badge calendar-slot calendar-slot-booked"> </span>
 												}
 											}
 											else
 											{
+												<!-- Grey: Unavailable (past or placeholder) -->
 												<span class="badge calendar-slot calendar-slot-unavailable"> </span>
 											}
 										</td>
-										}
+									}
 									</tr>
 							}
 						</tbody>
@@ -454,7 +459,7 @@
 		updateEndDateButtons();
 
 		// Validate on page load
-		validateTimes();
+		// validateTimes(); // Commented out - no time filters on this page
 
 		// Auto-submit form when any search input changes
 		function autoSubmitSearch() {
@@ -486,6 +491,10 @@
 			// Location input (dropdown)
 			const locationInput = document.getElementById('location');
 			if (locationInput) locationInput.addEventListener('change', autoSubmitSearch);
+
+			// Recurrence Pattern input (dropdown)
+			const recurrencePatternInput = document.getElementById('recurrencePattern');
+			if (recurrencePatternInput) recurrencePatternInput.addEventListener('change', autoSubmitSearch);
 		}
 	});
 </script>

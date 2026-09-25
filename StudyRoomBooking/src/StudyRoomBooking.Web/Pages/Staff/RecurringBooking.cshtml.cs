@@ -22,6 +22,16 @@ public class RecurringBookingModel : PageModel
     public int CurrentUserId { get; set; } = 0;
     public List<BuildingLocation> AvailableBuildings { get; set; } = new();
 
+    /// <summary>
+    /// Cached slot statuses for the current search: Dictionary[RoomId][TimeSlot] = SlotStatus
+    /// </summary>
+    public Dictionary<int, Dictionary<TimeSpan, SlotStatus>> SlotStatusCache { get; set; } = new();
+
+    /// <summary>
+    /// Cached recurrence dates for the current search
+    /// </summary>
+    public List<DateTime> RecurrenceDates { get; set; } = new();
+
     public RecurringBookingModel(IRoomService roomService, IBookingService bookingService)
     {
         _roomService = roomService;
@@ -57,6 +67,10 @@ public class RecurringBookingModel : PageModel
             SearchCriteria.RoomType,
             SearchCriteria.Location
         );
+
+        // Generate recurrence dates and pre-calculate slot statuses for initial load
+        RecurrenceDates = GetRecurrenceDates();
+        await PreCalculateSlotStatusesAsync();
     }
 
     public async Task<List<Domain.Entities.Booking>> GetRoomBookingsAsync(int roomId, DateTime date)
@@ -223,6 +237,9 @@ public class RecurringBookingModel : PageModel
             // Populate available buildings
             PopulateAvailableBuildings();
 
+            // Generate recurrence dates once for the search
+            RecurrenceDates = GetRecurrenceDates();
+
             // Use the start date for room availability search (showing first day of recurrence pattern)
             SearchResults = await _roomService.SearchRoomsAsync(
                 SearchCriteria.StartDate,
@@ -238,12 +255,147 @@ public class RecurringBookingModel : PageModel
             {
                 SearchResults = await FilterRoomsByDateRangeAvailabilityAsync(SearchResults);
             }
+
+            // Pre-calculate slot statuses for all rooms and time slots
+            await PreCalculateSlotStatusesAsync();
         }
         catch (Exception ex)
         {
             ModelState.AddModelError(string.Empty, $"Error searching rooms: {ex.Message}");
             PopulateAvailableBuildings();
         }
+    }
+
+    /// <summary>
+    /// Calculates the combined slot status across all recurrence dates.
+    /// Priority (high to low): Unavailable > Mixed > Booked > YourBooking > Available
+    /// 
+    /// - Unavailable: if the slot is in the past (StartDate is today and hour has passed)
+    /// - Mixed: if both current user and other users have bookings across the recurrence dates
+    /// - Booked: if only other users have bookings on one or more recurrence dates
+    /// - YourBooking: if only the current user has bookings on one or more recurrence dates
+    /// - Available: if the slot is free on every recurrence date
+    /// </summary>
+    public async Task<SlotStatus> GetSlotStatusAsync(int roomId, TimeSpan timeSlot, List<DateTime> recurrenceDates)
+    {
+        // Priority 1: Check if slot is in the past (only when StartDate is today)
+        if (IsTimeSlotInPast(timeSlot))
+        {
+            return SlotStatus.Unavailable;
+        }
+
+        // Priority 2-5: Analyze bookings across all recurrence dates
+        bool hasCurrentUserBooking = false;
+        bool hasOtherUserBooking = false;
+
+        foreach (var date in recurrenceDates)
+        {
+            var bookings = await GetRoomBookingsAsync(roomId, date);
+            var nextTime = timeSlot.Add(TimeSpan.FromHours(1));
+
+            // Check if this time slot is booked on this date
+            var bookedSlot = bookings.FirstOrDefault(b =>
+                !(b.EndTime <= timeSlot || b.StartTime >= nextTime) &&
+                b.Status != BookingStatus.Cancelled);
+
+            if (bookedSlot != null)
+            {
+                // This slot is booked on this date
+                if (bookedSlot.UserId == CurrentUserId)
+                {
+                    hasCurrentUserBooking = true;
+                }
+                else
+                {
+                    hasOtherUserBooking = true;
+                }
+            }
+        }
+
+        // Determine final status based on priority
+        if (hasCurrentUserBooking && hasOtherUserBooking)
+        {
+            return SlotStatus.Mixed;
+        }
+        else if (hasOtherUserBooking)
+        {
+            return SlotStatus.Booked;
+        }
+        else if (hasCurrentUserBooking)
+        {
+            return SlotStatus.YourBooking;
+        }
+        else
+        {
+            // No bookings found on any date, slot is available on all dates
+            return SlotStatus.Available;
+        }
+    }
+
+    /// <summary>
+    /// Pre-calculates slot statuses for all rooms and time slots in the search results.
+    /// This avoids recalculating statuses repeatedly in the view.
+    /// </summary>
+    private async Task PreCalculateSlotStatusesAsync()
+    {
+        SlotStatusCache.Clear();
+
+        var startTime = new TimeSpan(8, 0, 0);
+        var endTime = new TimeSpan(22, 0, 0);
+        var interval = TimeSpan.FromHours(1);
+
+        foreach (var room in SearchResults)
+        {
+            SlotStatusCache[room.Id] = new Dictionary<TimeSpan, SlotStatus>();
+
+            var currentTime = startTime;
+            while (currentTime < endTime)
+            {
+                var status = await GetSlotStatusAsync(room.Id, currentTime, RecurrenceDates);
+                SlotStatusCache[room.Id][currentTime] = status;
+                currentTime = currentTime.Add(interval);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Generates all recurrence dates based on the selected recurrence pattern.
+    /// - None: returns only the StartDate
+    /// - Daily: every date from StartDate to RecurrenceEndDate inclusive
+    /// - Weekly: every 7 days starting from StartDate
+    /// - BiWeekly: every 14 days starting from StartDate
+    /// - FourWeeks: every 28 days starting from StartDate
+    /// </summary>
+    public List<DateTime> GetRecurrenceDates()
+    {
+        var dates = new List<DateTime>();
+        var pattern = SearchCriteria.RecurrencePattern ?? RecurrencePattern.None;
+
+        if (pattern == RecurrencePattern.None)
+        {
+            // Only the start date
+            dates.Add(SearchCriteria.StartDate);
+        }
+        else
+        {
+            int interval = pattern switch
+            {
+                RecurrencePattern.Daily => 1,
+                RecurrencePattern.Weekly => 7,
+                RecurrencePattern.BiWeekly => 14,
+                RecurrencePattern.FourWeeks => 28,
+                _ => 1
+            };
+
+            var currentDate = SearchCriteria.StartDate;
+            while (currentDate <= SearchCriteria.RecurrenceEndDate)
+            {
+                dates.Add(currentDate);
+                currentDate = currentDate.AddDays(interval);
+            }
+        }
+
+        return dates;
     }
 
     private void PopulateAvailableBuildings()
