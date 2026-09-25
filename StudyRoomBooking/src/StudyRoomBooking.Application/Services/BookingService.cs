@@ -58,6 +58,26 @@ public class BookingService : IBookingService
         return filtered;
     }
 
+    /// <summary>
+    /// Fetches all bookings for a specific room within a date range.
+    /// Optimized for recurring booking searches to avoid N+1 query problem.
+    /// </summary>
+    public async Task<List<Booking>> GetRoomBookingsByDateRangeAsync(int roomId, DateTime startDate, DateTime endDate)
+    {
+        var allBookings = await _unitOfWork.Bookings.GetAllAsync();
+
+        var filtered = allBookings
+            .Where(b =>
+                b.RoomId == roomId
+                && b.BookingDate.Date >= startDate.Date
+                && b.BookingDate.Date <= endDate.Date
+                && b.Status != BookingStatus.Cancelled
+            )
+            .ToList();
+
+        return filtered;
+    }
+
     public async Task<Booking> CreateBookingAsync(Booking booking)
     {
         if (booking.UserId <= 0)

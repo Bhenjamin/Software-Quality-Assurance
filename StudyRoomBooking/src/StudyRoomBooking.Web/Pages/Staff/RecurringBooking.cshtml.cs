@@ -12,6 +12,7 @@ public class RecurringBookingModel : PageModel
 {
     private readonly IRoomService _roomService;
     private readonly IBookingService _bookingService;
+    private readonly IUserService _userService;
 
     [BindProperty]
     public RecurringBookingSearchCriteria SearchCriteria { get; set; } = new();
@@ -32,10 +33,17 @@ public class RecurringBookingModel : PageModel
     /// </summary>
     public List<DateTime> RecurrenceDates { get; set; } = new();
 
-    public RecurringBookingModel(IRoomService roomService, IBookingService bookingService)
+    /// <summary>
+    /// Cached bookings by room for the current search: Dictionary[RoomId] = List of bookings
+    /// Populated once per search to avoid N+1 database queries
+    /// </summary>
+    private Dictionary<int, List<Booking>> _roomBookingsCache = new();
+
+    public RecurringBookingModel(IRoomService roomService, IBookingService bookingService, IUserService userService)
     {
         _roomService = roomService;
         _bookingService = bookingService;
+        _userService = userService;
     }
 
     public async Task OnGetAsync()
@@ -267,6 +275,245 @@ public class RecurringBookingModel : PageModel
     }
 
     /// <summary>
+    /// API handler for creating a recurring booking via AJAX from the modal.
+    /// Validates inputs, generates recurrence dates, checks availability, and creates bookings.
+    /// Returns JSON response with success/error status.
+    /// </summary>
+    public async Task<IActionResult> OnPostCreateRecurringBooking(int roomId, string startDate, string startTime, 
+        string endTime, string recurrencePattern, string recurrenceEndDate, string? notes)
+    {
+        try
+        {
+            // Get current user ID
+            var userIdStr = HttpContext.Session.GetString("UserId");
+            if (!int.TryParse(userIdStr, out int userId))
+            {
+                return new JsonResult(new { success = false, error = "User session expired. Please login again." })
+                {
+                    StatusCode = StatusCodes.Status401Unauthorized
+                };
+            }
+
+            // Verify user is staff
+            var currentUserRole = HttpContext.Session.GetString("CurrentUserRole");
+            if (currentUserRole != "Staff")
+            {
+                return new JsonResult(new { success = false, error = "Only staff members can create recurring bookings." })
+                {
+                    StatusCode = StatusCodes.Status403Forbidden
+                };
+            }
+
+            // Get room
+            var room = await _roomService.GetRoomByIdAsync(roomId);
+            if (room == null)
+            {
+                return new JsonResult(new { success = false, error = "Room not found." })
+                {
+                    StatusCode = StatusCodes.Status404NotFound
+                };
+            }
+
+            // Get user
+            var userIdObj = HttpContext.Session.GetString("CurrentUser");
+            if (string.IsNullOrEmpty(userIdObj))
+            {
+                return new JsonResult(new { success = false, error = "User session expired. Please login again." })
+                {
+                    StatusCode = StatusCodes.Status401Unauthorized
+                };
+            }
+
+            var user = await _userService.GetUserByUserIdAsync(userIdObj);
+            if (user == null)
+            {
+                return new JsonResult(new { success = false, error = "User not found." })
+                {
+                    StatusCode = StatusCodes.Status404NotFound
+                };
+            }
+
+            // Parse dates and times
+            if (!DateTime.TryParseExact(startDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var date))
+            {
+                return new JsonResult(new { success = false, error = "Invalid start date format." })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            TimeSpan start, end;
+            try
+            {
+                start = TimeSpan.ParseExact(startTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                start = TimeSpan.ParseExact(startTime, @"h\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            try
+            {
+                end = TimeSpan.ParseExact(endTime, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                end = TimeSpan.ParseExact(endTime, @"h\:mm", System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            // Validate time range (start must be before end)
+            if (start >= end)
+            {
+                return new JsonResult(new { success = false, error = "Start time must be before end time." })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            // Validate time is within allowed range (8:00 to 22:00)
+            var minTime = new TimeSpan(8, 0, 0);
+            var maxTime = new TimeSpan(22, 0, 0);
+            if (start < minTime || end > maxTime)
+            {
+                return new JsonResult(new { success = false, error = "Booking time must be between 8:00 AM and 10:00 PM." })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            // Validate booking date is not in the past
+            var today = DateTime.Today;
+            if (date.Date < today)
+            {
+                return new JsonResult(new { success = false, error = "Cannot book for dates in the past. Please select today or later." })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            // Parse recurrence end date
+            DateTime? recurrenceEnd = null;
+            if (!string.IsNullOrEmpty(recurrenceEndDate) && recurrenceEndDate != "")
+            {
+                if (!DateTime.TryParseExact(recurrenceEndDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedEndDate))
+                {
+                    return new JsonResult(new { success = false, error = "Invalid recurrence end date format." })
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest
+                    };
+                }
+                recurrenceEnd = parsedEndDate;
+
+                // Validate recurrence end date is not before start date
+                if (recurrenceEnd.Value.Date < date.Date)
+                {
+                    return new JsonResult(new { success = false, error = "Recurrence end date must be on or after the start date." })
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest
+                    };
+                }
+            }
+
+            // Parse recurrence pattern
+            if (!Enum.TryParse<RecurrencePattern>(recurrencePattern, out var pattern))
+            {
+                return new JsonResult(new { success = false, error = "Invalid recurrence pattern." })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            // Validate booking date and time constraints for the start date
+            var (isValid, errorMessage) = await _bookingService.ValidateBookingAsync(roomId, date, start, end, skipAdvanceDaysCheck: true);
+            if (!isValid)
+            {
+                return new JsonResult(new { success = false, error = errorMessage })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            // Check availability for start date
+            var isAvailable = await _roomService.IsRoomAvailableAsync(roomId, date, start, end);
+            if (!isAvailable)
+            {
+                return new JsonResult(new { success = false, error = "Selected time slot is not available." })
+                {
+                    StatusCode = StatusCodes.Status409Conflict
+                };
+            }
+
+            // Generate all recurrence dates
+            DateTime endDateForRecurrence = recurrenceEnd ?? date;
+            var recurrenceDates = _bookingService.GenerateRecurrenceDates(date, endDateForRecurrence, pattern);
+
+            // Validate availability and constraints for all recurrence dates
+            foreach (var occurrenceDate in recurrenceDates)
+            {
+                var (dateIsValid, dateErrorMessage) = await _bookingService.ValidateBookingAsync(roomId, occurrenceDate, start, end, skipAdvanceDaysCheck: true);
+                if (!dateIsValid)
+                {
+                    return new JsonResult(new { success = false, error = $"Cannot create recurring booking: {dateErrorMessage} (Date: {occurrenceDate:yyyy-MM-dd})" })
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest
+                    };
+                }
+
+                var dateIsAvailable = await _roomService.IsRoomAvailableAsync(roomId, occurrenceDate, start, end);
+                if (!dateIsAvailable)
+                {
+                    return new JsonResult(new { success = false, error = $"Selected time slot is not available on {occurrenceDate:yyyy-MM-dd}." })
+                    {
+                        StatusCode = StatusCodes.Status409Conflict
+                    };
+                }
+            }
+
+            // Create individual bookings for each recurrence date
+            foreach (var occurrenceDate in recurrenceDates)
+            {
+                var booking = new Booking
+                {
+                    RoomId = roomId,
+                    UserId = user.Id,
+                    BookingDate = occurrenceDate,
+                    StartTime = start,
+                    EndTime = end,
+                    RecurrencePattern = RecurrencePattern.None,  // Each booking is standalone
+                    RecurrenceEndDate = null,
+                    Notes = notes,
+                    Status = BookingStatus.Confirmed
+                };
+
+                await _bookingService.CreateBookingAsync(booking);
+            }
+
+            // Build success message
+            var message = $"Recurring booking created successfully with {recurrenceDates.Count} bookings!";
+
+            return new JsonResult(new
+            {
+                success = true,
+                message = message,
+                roomName = room.Name,
+                startDate = date.ToString("yyyy-MM-dd"),
+                recurrenceEndDate = (recurrenceEnd ?? date).ToString("yyyy-MM-dd"),
+                startTime = start.ToString(@"hh\:mm"),
+                endTime = end.ToString(@"hh\:mm"),
+                recurrencePattern = recurrencePattern,
+                bookingCount = recurrenceDates.Count
+            });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, error = $"Error creating booking: {ex.Message}" })
+            {
+                StatusCode = StatusCodes.Status500InternalServerError
+            };
+        }
+    }
+
+    /// <summary>
     /// Calculates the combined slot status across all recurrence dates.
     /// Priority (high to low): Unavailable > Mixed > Booked > YourBooking > Available
     /// 
@@ -288,13 +535,23 @@ public class RecurringBookingModel : PageModel
         bool hasCurrentUserBooking = false;
         bool hasOtherUserBooking = false;
 
+        // Get cached bookings for this room (pre-loaded in PreCalculateSlotStatusesAsync)
+        if (!_roomBookingsCache.TryGetValue(roomId, out var cachedBookings))
+        {
+            cachedBookings = new List<Booking>();
+        }
+
         foreach (var date in recurrenceDates)
         {
-            var bookings = await GetRoomBookingsAsync(roomId, date);
+            // Filter cached bookings to only those for this specific date
+            var bookingsForDate = cachedBookings
+                .Where(b => b.BookingDate.Date == date.Date)
+                .ToList();
+
             var nextTime = timeSlot.Add(TimeSpan.FromHours(1));
 
             // Check if this time slot is booked on this date
-            var bookedSlot = bookings.FirstOrDefault(b =>
+            var bookedSlot = bookingsForDate.FirstOrDefault(b =>
                 !(b.EndTime <= timeSlot || b.StartTime >= nextTime) &&
                 b.Status != BookingStatus.Cancelled);
 
@@ -339,6 +596,19 @@ public class RecurringBookingModel : PageModel
     private async Task PreCalculateSlotStatusesAsync()
     {
         SlotStatusCache.Clear();
+        _roomBookingsCache.Clear();
+
+        // Pre-load all bookings for each room across the recurrence date range
+        // This avoids N+1 queries in GetSlotStatusAsync
+        foreach (var room in SearchResults)
+        {
+            var bookings = await _bookingService.GetRoomBookingsByDateRangeAsync(
+                room.Id,
+                RecurrenceDates.Min(),
+                RecurrenceDates.Max()
+            );
+            _roomBookingsCache[room.Id] = bookings;
+        }
 
         var startTime = new TimeSpan(8, 0, 0);
         var endTime = new TimeSpan(22, 0, 0);

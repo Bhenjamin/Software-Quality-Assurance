@@ -487,11 +487,419 @@ public class IndexModel : PageModel
         }
     }
 
+    /// <summary>
+    /// Returns available start hours for modifying an existing booking.
+    /// The current booking is excluded from the conflict check so its
+    /// existing time remains selectable.
+    /// </summary>
+    public async Task<IActionResult> OnGetModifyAvailableHoursAsync(
+        int bookingId,
+        string bookingDate)
+    {
+        try
+        {
+            // Get the booking being modified
+            var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+
+            if (booking == null)
+            {
+                return new JsonResult(new
+                {
+                    success = false,
+                    error = "Booking not found"
+                })
+                {
+                    StatusCode = StatusCodes.Status404NotFound
+                };
+            }
+
+            // Verify current user owns the booking
+            var userIdStr = HttpContext.Session.GetString("UserId");
+
+            if (!int.TryParse(userIdStr, out int userId) ||
+                booking.UserId != userId)
+            {
+                return new JsonResult(new
+                {
+                    success = false,
+                    error = "You don't have permission to modify this booking"
+                })
+                {
+                    StatusCode = StatusCodes.Status403Forbidden
+                };
+            }
+
+            // Parse date
+            if (!DateTime.TryParseExact(
+                    bookingDate,
+                    "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None,
+                    out var date))
+            {
+                return new JsonResult(new
+                {
+                    success = false,
+                    error = "Invalid date format"
+                })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            // Get all bookings for this room/date
+            var bookings = await _bookingService.SearchBookingsAsync(
+                date,
+                booking.RoomId
+            );
+
+            var availableHours = new List<string>();
+
+            // Start hours are 08:00 - 21:00
+            for (int hour = 8; hour <= 21; hour++)
+            {
+                var startTime = new TimeSpan(hour, 0, 0);
+                var endTime = new TimeSpan(hour + 1, 0, 0);
+
+                bool isAvailable = true;
+
+                foreach (var existingBooking in bookings)
+                {
+                    // Ignore the booking currently being modified
+                    if (existingBooking.Id == bookingId)
+                        continue;
+
+                    // Ignore cancelled bookings
+                    if (existingBooking.Status == BookingStatus.Cancelled)
+                        continue;
+
+                    // Check overlap
+                    if (!(endTime <= existingBooking.StartTime ||
+                          startTime >= existingBooking.EndTime))
+                    {
+                        isAvailable = false;
+                        break;
+                    }
+                }
+
+                if (isAvailable)
+                {
+                    availableHours.Add($"{hour:D2}:00");
+                }
+            }
+
+            return new JsonResult(new
+            {
+                success = true,
+                hours = availableHours
+            });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new
+            {
+                success = false,
+                error = $"Error fetching available hours: {ex.Message}"
+            })
+            {
+                StatusCode = StatusCodes.Status500InternalServerError
+            };
+        }
+    }
+
+    /// <summary>
+    /// Handler to get booking details for the modify modal
+    /// Called when user clicks on a blue (booked) time slot
+    /// </summary>
+    public async Task<IActionResult> OnPostGetBookingDetails(int bookingId)
+    {
+        try
+        {
+            // Get the booking from database
+            var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+
+            if (booking == null)
+            {
+                return new JsonResult(new { success = false, error = "Booking not found" })
+                {
+                    StatusCode = StatusCodes.Status404NotFound
+                };
+            }
+
+            // Get room details
+            var room = await _roomService.GetRoomByIdAsync(booking.RoomId);
+            if (room == null)
+            {
+                return new JsonResult(new { success = false, error = "Room not found" })
+                {
+                    StatusCode = StatusCodes.Status404NotFound
+                };
+            }
+
+            return new JsonResult(new
+            {
+                success = true,
+                booking = new
+                {
+                    id = booking.Id,
+                    roomId = booking.RoomId,
+                    roomName = room.Name,
+                    roomCode = room.Code,
+                    roomLocation = room.Location.ToString(),
+                    roomCapacity = room.Capacity,
+                    bookingDate = booking.BookingDate.ToString("yyyy-MM-dd"),
+                    startTime = booking.StartTime.ToString(@"hh\:mm"),
+                    endTime = booking.EndTime.ToString(@"hh\:mm"),
+                    notes = booking.Notes ?? "",
+                    status = booking.Status.ToString(),
+                    confirmationNumber = booking.ConfirmationNumber
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, error = $"Error fetching booking details: {ex.Message}" })
+            {
+                StatusCode = StatusCodes.Status500InternalServerError
+            };
+        }
+    }
+
     private void PopulateAvailableBuildings()
     {
         AvailableBuildings = Enum.GetValues(typeof(BuildingLocation))
             .Cast<BuildingLocation>()
             .ToList();
+    }
+
+    /// <summary>
+    /// Handler to modify an existing booking
+    /// Called when user saves changes in the modify modal
+    /// </summary>
+    public async Task<IActionResult> OnPostModifyBooking(int bookingId, string bookingDate, string startHour, string endHour, string notes)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserId")))
+            {
+                return new JsonResult(new { success = false, error = "User not authenticated" })
+                {
+                    StatusCode = StatusCodes.Status401Unauthorized
+                };
+            }
+
+            // Parse dates and times
+            if (!DateTime.TryParseExact(bookingDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var date))
+            {
+                return new JsonResult(new { success = false, error = "Invalid booking date format" })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            if (!TimeSpan.TryParseExact(startHour, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture, out var start))
+            {
+                return new JsonResult(new { success = false, error = "Invalid start time format" })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            if (!TimeSpan.TryParseExact(endHour, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture, out var end))
+            {
+                return new JsonResult(new { success = false, error = "Invalid end time format" })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            // Validation: start time must be before end time
+            if (start >= end)
+            {
+                return new JsonResult(new { success = false, error = "Start time must be before end time" })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            // Validation: cannot modify to a time in the past (for today)
+            if (date.Date == DateTime.Today)
+            {
+                var currentTime = DateTime.Now.TimeOfDay;
+                var roundedCurrentTime = TimeSpan.FromHours(Math.Floor(currentTime.TotalHours));
+                if (start < roundedCurrentTime)
+                {
+                    return new JsonResult(new { success = false, error = "Cannot book a time slot in the past" })
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest
+                    };
+                }
+            }
+
+            // Get the existing booking
+            var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+            if (booking == null)
+            {
+                return new JsonResult(new { success = false, error = "Booking not found" })
+                {
+                    StatusCode = StatusCodes.Status404NotFound
+                };
+            }
+
+            // Verify the user owns this booking
+            var userIdStr = HttpContext.Session.GetString("UserId");
+            if (!int.TryParse(userIdStr, out int userId) || booking.UserId != userId)
+            {
+                return new JsonResult(new { success = false, error = "You don't have permission to modify this booking" })
+                {
+                    StatusCode = StatusCodes.Status403Forbidden
+                };
+            }
+
+            // Validate room exists
+            var room = await _roomService.GetRoomByIdAsync(booking.RoomId);
+            if (room == null)
+            {
+                return new JsonResult(new { success = false, error = "Room not found" })
+                {
+                    StatusCode = StatusCodes.Status404NotFound
+                };
+            }
+
+            // Validate new time is within allowed hours (8:00 - 22:00)
+            if (start.TotalHours < 8 || end.TotalHours > 22)
+            {
+                return new JsonResult(new { success = false, error = "Bookings must be between 08:00 and 22:00" })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            // Check if the new time slot is available in the same room
+            var conflictingBookings = await _bookingService.SearchBookingsAsync(date, booking.RoomId);
+
+            foreach (var existingBooking in conflictingBookings)
+            {
+                // Skip the current booking being modified
+                if (existingBooking.Id == bookingId)
+                    continue;
+
+                // Check for time conflicts in the same room
+                if (existingBooking.Status != BookingStatus.Cancelled &&
+                    !(end <= existingBooking.StartTime || start >= existingBooking.EndTime))
+                {
+                    return new JsonResult(new
+                    {
+                        success = false,
+                        error = "The selected time slot is not available"
+                    })
+                    {
+                        StatusCode = StatusCodes.Status409Conflict
+                    };
+                }
+            }
+
+            // Check if the user already has another booking at the new time
+            var userBookings = await _bookingService.GetBookingsByUserIdAsync(userId);
+
+            var overlappingBooking = userBookings.FirstOrDefault(b =>
+                b.Id != bookingId &&
+                b.BookingDate.Date == date.Date &&
+                b.Status != BookingStatus.Cancelled &&
+                !(start >= b.EndTime || end <= b.StartTime)
+            );
+
+            if (overlappingBooking != null)
+            {
+                return new JsonResult(new
+                {
+                    success = false,
+                    error = $"You cannot book overlapping time slots. You already have a booking from {overlappingBooking.StartTime:hh\\:mm} to {overlappingBooking.EndTime:hh\\:mm} on this day."
+                })
+                {
+                    StatusCode = StatusCodes.Status409Conflict
+                };
+            }
+
+            // Update the booking
+            booking.StartTime = start;
+            booking.EndTime = end;
+            booking.Notes = notes ?? "";
+
+            await _bookingService.UpdateBookingAsync(booking);
+
+            return new JsonResult(new
+            {
+                success = true,
+                message = "Booking modified successfully",
+                bookingId = booking.Id,
+                roomName = room.Name,
+                bookingDate = booking.BookingDate.ToString("yyyy-MM-dd"),
+                startTime = booking.StartTime.ToString(@"hh\:mm"),
+                endTime = booking.EndTime.ToString(@"hh\:mm")
+            });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, error = $"Error modifying booking: {ex.Message}" })
+            {
+                StatusCode = StatusCodes.Status500InternalServerError
+            };
+        }
+    }
+
+    /// <summary>
+    /// Handler to delete a booking
+    /// Called when user clicks delete button in the modify modal
+    /// </summary>
+    public async Task<IActionResult> OnPostDeleteBooking(int bookingId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserId")))
+            {
+                return new JsonResult(new { success = false, error = "User not authenticated" })
+                {
+                    StatusCode = StatusCodes.Status401Unauthorized
+                };
+            }
+
+            // Get the booking
+            var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+            if (booking == null)
+            {
+                return new JsonResult(new { success = false, error = "Booking not found" })
+                {
+                    StatusCode = StatusCodes.Status404NotFound
+                };
+            }
+
+            // Verify the user owns this booking
+            var userIdStr = HttpContext.Session.GetString("UserId");
+            if (!int.TryParse(userIdStr, out int userId) || booking.UserId != userId)
+            {
+                return new JsonResult(new { success = false, error = "You don't have permission to delete this booking" })
+                {
+                    StatusCode = StatusCodes.Status403Forbidden
+                };
+            }
+
+            // Cancel the booking
+            await _bookingService.CancelBookingAsync(bookingId);
+
+            return new JsonResult(new
+            {
+                success = true,
+                message = "Booking deleted successfully"
+            });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, error = $"Error deleting booking: {ex.Message}" })
+            {
+                StatusCode = StatusCodes.Status500InternalServerError
+            };
+        }
     }
 }
 

@@ -316,14 +316,14 @@
 						<!-- Right column: Booking Details -->
 						<div class="col-5">
 							<div class="mb-0">
-								<label class="form-label" style="font-size: 0.9rem; font-weight: 600;">Date: <span id="modalBookingDateDisplay"></span></label>
+								<label class="form-label" style="font-size: 0.9rem; font-weight: 600;">Date:&nbsp;</label><span id="modalBookingDateDisplay"></span>
 							</div>
-							<div class="mb-0 d-flex align-items-center gap-2">
-								<label for="modalStartTime" class="form-label mb-0 time-label" style="font-size: 0.9rem;">Start Hour:</label>
+							<div class="mb-0 d-flex align-items-center gap-2" style="white-space: nowrap;">
+								<label for="modalStartTime" class="form-label mb-0 time-label" style="font-size: 0.9rem; font-weight: 600;">Start Hour:</label>
 								<select id="modalStartTime" class="form-select form-select-sm" style="width: 80px;" required></select>
 							</div>
-							<div class="mb-0 d-flex align-items-center gap-2">
-								<label for="modalEndTime" class="form-label mb-0 time-label" style="font-size: 0.9rem;">End Hour:</label>
+							<div class="mb-0 d-flex align-items-center gap-2" style="white-space: nowrap;">
+								<label for="modalEndTime" class="form-label mb-0 time-label" style="font-size: 0.9rem; font-weight: 600;">End Hour:</label>
 								<select id="modalEndTime" class="form-select form-select-sm" style="width: 80px;" required></select>
 								<div id="modalTimeValidationError" class="time-validation-error"></div>
 							</div>
@@ -362,11 +362,10 @@
 						<!-- Left column: Room Details -->
 						<div class="col-5">
 							<strong style="font-size: 1rem;" id="modifyModalRoomNameDetail"></strong>
-
-							<small class="text-muted room-details" style="font-size: 0.9rem;">
-								<div id="modifyModalRoomCode"></div>
-								<div id="modifyModalRoomLocation"></div>
-								<div>Capacity: <span id="modifyModalRoomCapacity"></span></div>
+							<small class="text-muted room-details" style="font-size: 1rem;">
+								<span id="modifyModalRoomCode"></span>
+								<span id="modifyModalRoomLocation"></span>
+								<span>Capacity: <span id="modifyModalRoomCapacity"></span></span>
 							</small>
 						</div>
 						<!-- Vertical divider -->
@@ -376,14 +375,14 @@
 						<!-- Right column: Booking Details -->
 						<div class="col-5">
 							<div class="mb-0">
-								<label class="form-label" style="font-size: 0.9rem; font-weight: 600;">Date: <span id="modifyModalBookingDateDisplay"></span></label>
+								<label class="form-label" style="font-size: 0.9rem; font-weight: 600;">Date:&nbsp;</label><span id="modifyModalBookingDateDisplay"></span>
 							</div>
-							<div class="mb-2 d-flex align-items-center gap-2">
-								<label for="modifyModalStartTime" class="form-label mb-0 time-label" style="font-size: 0.9rem;">Start Hour:</label>
+							<div class="mb-2 d-flex align-items-center gap-2" style="white-space: nowrap;">
+								<label for="modifyModalStartTime" class="form-label mb-0 time-label" style="font-size: 0.9rem; font-weight: 600;">Start Hour:</label>
 								<select id="modifyModalStartTime" class="form-select form-select-sm" style="width: 80px;" required></select>
 							</div>
-							<div class="mb-2 d-flex align-items-center gap-2">
-								<label for="modifyModalEndTime" class="form-label mb-0 time-label" style="font-size: 0.9rem;">End Hour:</label>
+							<div class="mb-2 d-flex align-items-center gap-2" style="white-space: nowrap;">
+								<label for="modifyModalEndTime" class="form-label mb-0 time-label" style="font-size: 0.9rem; font-weight: 600;">End Hour:</label>
 								<select id="modifyModalEndTime" class="form-select form-select-sm" style="width: 80px;" required></select>
 							</div>
 							<div id="modifyModalTimeValidationError" class="time-validation-error"></div>
@@ -779,6 +778,233 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	}
 
+	// Update calendar after modifying an existing booking
+	function updateSlotAfterModify(
+		roomId,
+		bookingDate,
+		oldStartTime,
+		oldEndTime,
+		newStartTime,
+		newEndTime,
+		bookingId
+	) {
+		const oldStartHour = parseInt(oldStartTime.split(':')[0]);
+		const oldEndHour = parseInt(oldEndTime.split(':')[0]);
+		const newStartHour = parseInt(newStartTime.split(':')[0]);
+		const newEndHour = parseInt(newEndTime.split(':')[0]);
+
+		const table = document.querySelector('table.table');
+		if (!table) return;
+
+		// Find the row for this room
+		const rows = table.querySelectorAll('tbody tr');
+
+		let targetRow = null;
+
+		rows.forEach(row => {
+			const firstButton = row.querySelector('button[onclick*="openBookingModal"]');
+			const bookingLink = row.querySelector(
+				`a.calendar-slot-booked-self[data-booking-id="${bookingId}"]`
+			);
+
+			if (bookingLink) {
+				targetRow = row;
+				return;
+			}
+
+			if (firstButton) {
+				const onclickAttr = firstButton.getAttribute('onclick');
+				const match = onclickAttr.match(/openBookingModal\((\d+)/);
+
+				if (match && parseInt(match[1]) === roomId) {
+					targetRow = row;
+				}
+			}
+		});
+
+		if (!targetRow) {
+			console.warn('Could not find calendar row for room:', roomId);
+			return;
+		}
+
+		// Remove merged structure first
+		targetRow.querySelectorAll('.calendar-slot-hidden').forEach(td => {
+			td.classList.remove('calendar-slot-hidden');
+			td.style.display = '';
+		});
+
+		targetRow.querySelectorAll('.merged-slot-container').forEach(td => {
+			td.removeAttribute('colspan');
+			td.classList.remove('merged-slot-container');
+		});
+
+		targetRow.querySelectorAll('.calendar-slot-merged').forEach(element => {
+			element.classList.remove('calendar-slot-merged');
+		});
+
+		// Restore the OLD booking slots to green
+		const oldBookingLinks = targetRow.querySelectorAll(
+			`a.calendar-slot-booked-self[data-booking-id="${bookingId}"]`
+		);
+
+		oldBookingLinks.forEach(link => {
+			const td = link.closest('td');
+			if (!td) return;
+
+			// Only restore slots belonging to the old booking range
+			const cellIndex = Array.from(targetRow.children).indexOf(td);
+
+			// First column is room details, so:
+			// cell index 1 = 08:00
+			const slotStartHour = 8 + (cellIndex - 1);
+			const slotEndHour = slotStartHour + 1;
+
+			if (
+				slotStartHour >= oldStartHour &&
+				slotEndHour <= oldEndHour
+			) {
+				const button = document.createElement('button');
+
+				button.type = 'button';
+				button.className = 'badge calendar-slot calendar-slot-free';
+
+				button.style.border = 'none';
+				button.style.background = 'none';
+				button.style.padding = '0';
+				button.style.cursor = 'pointer';
+
+				button.onclick = function() {
+					openBookingModal(
+						roomId,
+						bookingDate,
+						`${String(slotStartHour).padStart(2, '0')}:00`,
+						`${String(slotEndHour).padStart(2, '0')}:00`
+					);
+				};
+
+				td.innerHTML = '';
+				td.appendChild(button);
+
+				if (!roomAvailabilityMatrix[roomId]) {
+					roomAvailabilityMatrix[roomId] = {};
+				}
+
+				roomAvailabilityMatrix[roomId][slotStartHour] = true;
+			}
+		});
+
+		// Update the new booking slots to blue
+		const cells = targetRow.querySelectorAll('td');
+
+		for (let i = 1; i < cells.length; i++) {
+			const td = cells[i];
+
+			const slotStartHour = 8 + (i - 1);
+			const slotEndHour = slotStartHour + 1;
+
+			if (
+				slotStartHour >= newStartHour &&
+				slotEndHour <= newEndHour
+			) {
+				// Only change currently available slots
+				const freeButton = td.querySelector('button.calendar-slot-free');
+
+				if (!freeButton) {
+					continue;
+				}
+
+				const link = document.createElement('a');
+
+				link.href = `/Students/ModifyBooking/${bookingId}`;
+				link.className =
+					'badge calendar-slot calendar-slot-booked-self';
+
+				link.setAttribute('data-booking-id', bookingId);
+
+				link.style.textDecoration = 'none';
+				link.style.cursor = 'pointer';
+				link.style.display = 'block';
+				link.style.width = '100%';
+				link.style.height = '100%';
+				link.style.boxSizing = 'border-box';
+
+				td.replaceChild(link, freeButton);
+
+				if (!roomAvailabilityMatrix[roomId]) {
+					roomAvailabilityMatrix[roomId] = {};
+				}
+
+				roomAvailabilityMatrix[roomId][slotStartHour] = false;
+			}
+		}
+
+		// Merge consecutive booking slots again
+		mergeConsecutiveBookingSlots();
+	}
+
+
+	// Update calendar after deleting a booking
+	function updateSlotAfterDelete(roomId, bookingDate, startTime, endTime) {
+		const startHour = parseInt(startTime.split(':')[0]);
+		const endHour = parseInt(endTime.split(':')[0]);
+
+		const links = document.querySelectorAll(
+			`a.calendar-slot-booked-self[data-booking-id="${globalModifyBookingData.bookingId}"]`
+		);
+
+		links.forEach(link => {
+			const td = link.closest('td');
+
+			if (!td) {
+				return;
+			}
+
+			const button = document.createElement('button');
+
+			button.type = 'button';
+			button.className = 'badge calendar-slot calendar-slot-free';
+			button.style.border = 'none';
+			button.style.background = 'none';
+			button.style.padding = '0';
+			button.style.cursor = 'pointer';
+
+			// Extract the room information from the booking data
+			button.setAttribute(
+				'onclick',
+				`openBookingModal(${roomId}, '${bookingDate}', '${startTime}', '${endTime}')`
+			);
+
+			td.innerHTML = '';
+			td.appendChild(button);
+		});
+
+		// Update availability matrix
+		if (!roomAvailabilityMatrix[roomId]) {
+			roomAvailabilityMatrix[roomId] = {};
+		}
+
+		for (let hour = startHour; hour < endHour; hour++) {
+			roomAvailabilityMatrix[roomId][hour] = true;
+		}
+
+		// Remove merged-slot classes and restore normal table structure
+		const table = document.querySelector('table.table');
+
+		if (table) {
+			table.querySelectorAll('.calendar-slot-hidden').forEach(td => {
+				td.classList.remove('calendar-slot-hidden');
+				td.style.display = '';
+			});
+
+			table.querySelectorAll('.merged-slot-container').forEach(td => {
+				td.removeAttribute('colspan');
+				td.classList.remove('merged-slot-container');
+			});
+		}
+
+		mergeConsecutiveBookingSlots();
+	}
+
 	// Show success banner on search page
 	function showSuccessBanner(roomName, bookingDate, startTime, endTime, confirmationNumber) {
 		const banner = document.createElement('div');
@@ -1083,7 +1309,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			document.getElementById('modifyModalBookingDateDisplay').textContent = `${day}-${month}-${year}`;
 
 			// Populate start and end time dropdowns
-			populateModifyStartHourDropdown(booking.startTime);
+			await populateModifyStartHourDropdown(booking.id, booking.bookingDate);
 			populateModifyEndHourDropdown(booking.endTime);
 
 			// Reset alerts
@@ -1099,28 +1325,55 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	};
 
-	// Populate modify start hour dropdown
-	function populateModifyStartHourDropdown(defaultValue) {
-		const startSelect = document.getElementById('modifyModalStartTime');
-		startSelect.innerHTML = '';
+	// Populate modify start hour dropdown with available slots
+	async function populateModifyStartHourDropdown(bookingId, bookingDate) {
+		const startDropdown = document.getElementById('modifyModalStartTime');
 
-		// Add all possible start hours (8-21)
-		for (let hour = 8; hour <= 21; hour++) {
-			const timeStr = `${hour.toString().padStart(2, '0')}:00`;
-			const option = document.createElement('option');
-			option.value = timeStr;
-			option.textContent = timeStr;
-			if (timeStr === defaultValue) {
-				option.selected = true;
+		startDropdown.innerHTML = '';
+
+		try {
+			const response = await fetch(
+				`?handler=ModifyAvailableHours&bookingId=${bookingId}&bookingDate=${encodeURIComponent(bookingDate)}`
+			);
+
+			if (!response.ok) {
+				throw new Error('Failed to load available start hours.');
 			}
-			startSelect.appendChild(option);
-		}
 
-		// Populate end time based on selected start time
-		if (startSelect.value) {
-			const startHour = parseInt(startSelect.value.split(':')[0]);
-			const endTimeStr = `${String(startHour + 1).padStart(2, '0')}:00`;
-			populateModifyEndHourDropdown(endTimeStr);
+			const data = await response.json();
+
+			if (!data.success) {
+				console.error(data.error);
+				return;
+			}
+
+			data.hours.forEach(hour => {
+				const option = document.createElement('option');
+
+				option.value = hour;
+				option.textContent = hour;
+
+				startDropdown.appendChild(option);
+			});
+
+			// Keep the current booking start time selected
+			if (globalModifyBookingData.startTime) {
+				startDropdown.value = globalModifyBookingData.startTime;
+			}
+
+			// Populate end time based on selected start time
+			if (startDropdown.value) {
+				const startHour = parseInt(startDropdown.value.split(':')[0]);
+				const endTime = `${String(startHour + 1).padStart(2, '0')}:00`;
+
+				populateModifyEndHourDropdown(endTime);
+			}
+
+		} catch (error) {
+			console.error(
+				'Error loading available modify start hours:',
+				error
+			);
 		}
 	}
 
@@ -1129,25 +1382,81 @@ document.addEventListener('DOMContentLoaded', function() {
 		const endSelect = document.getElementById('modifyModalEndTime');
 		endSelect.innerHTML = '';
 
-		const startTimeStr = document.getElementById('modifyModalStartTime').value;
-		if (!startTimeStr) {
-			return;
-		}
+		const startTimeStr =
+			document.getElementById('modifyModalStartTime').value;
+
+		if (!startTimeStr) return;
 
 		const startHour = parseInt(startTimeStr.split(':')[0]);
 
-		// Add only up to 2 options: start+1 and start+2
+		const bookingId = globalModifyBookingData.bookingId;
+		const roomId = globalModifyBookingData.roomId;
+		const bookingDate = globalModifyBookingData.bookingDate;
+
 		let addedCount = 0;
-		for (let endHour = startHour + 1; endHour <= startHour + 2 && endHour <= 22 && addedCount < 2; endHour++) {
-			const timeStr = `${endHour.toString().padStart(2, '0')}:00`;
+
+		for (
+			let endHour = startHour + 1;
+			endHour <= startHour + 2 && endHour <= 22 && addedCount < 2;
+			endHour++
+		) {
+			let slotAvailable = true;
+
+			// Check each slot between start and end.
+			for (let slotHour = startHour; slotHour < endHour; slotHour++) {
+
+				// The current booking's own slot is available for modification.
+				if (
+					slotHour >=
+					parseInt(globalModifyBookingData.startTime.split(':')[0]) &&
+					slotHour <
+					parseInt(globalModifyBookingData.endTime.split(':')[0])
+				) {
+					continue;
+				}
+
+				// Check availability from the room availability matrix.
+				const roomAvailability =
+					roomAvailabilityMatrix[roomId] || {};
+
+				if (roomAvailability[slotHour] !== true) {
+					slotAvailable = false;
+					break;
+				}
+			}
+
+			if (!slotAvailable) {
+				// Stop here.
+				// This means if the second hour is unavailable,
+				// only the first available end time is shown.
+				break;
+			}
+
+			const timeStr =
+				`${String(endHour).padStart(2, '0')}:00`;
+
 			const option = document.createElement('option');
+
 			option.value = timeStr;
 			option.textContent = timeStr;
-			if (timeStr === defaultValue || addedCount === 0) {
+
+			if (timeStr === defaultValue) {
 				option.selected = true;
 			}
+
 			endSelect.appendChild(option);
 			addedCount++;
+		}
+
+		// If the original end time is no longer valid,
+		// select the first available option.
+		if (
+			endSelect.options.length > 0 &&
+			!Array.from(endSelect.options).some(
+				option => option.value === defaultValue
+			)
+		) {
+			endSelect.selectedIndex = 0;
 		}
 	}
 
@@ -1215,17 +1524,21 @@ document.addEventListener('DOMContentLoaded', function() {
 			const data = await response.json();
 
 			if (data.success) {
+				const oldStartTime = globalModifyBookingData.startTime;
+				const oldEndTime = globalModifyBookingData.endTime;
+				const roomId = globalModifyBookingData.roomId;
+
 				// Close modal
 				const modifyModal = bootstrap.Modal.getInstance(document.getElementById('modifyBookingModal'));
 				modifyModal.hide();
 
+				// Update calendar immediately 
+                updateSlotAfterModify( roomId, bookingDate, oldStartTime, oldEndTime, startTime, endTime, bookingId );
+
 				// Show success message
 				showSuccessBanner(globalModifyBookingData.roomName, bookingDate, startTime, endTime, 'Booking Updated');
 
-				// Reload page after short delay to refresh the calendar
-				setTimeout(() => {
-					location.reload();
-				}, 2000);
+				this.disabled = false;
 			} else {
 				// Show error message in modal
 				document.getElementById('modifyBookingAlert').style.display = 'block';
@@ -1243,6 +1556,10 @@ document.addEventListener('DOMContentLoaded', function() {
 	// Handle delete booking button
 	document.getElementById('deleteModifyBookingBtn').addEventListener('click', async function() {
 		const bookingId = document.getElementById('modifyModalBookingId').value;
+		const roomId = globalModifyBookingData.roomId;
+		const bookingDate = globalModifyBookingData.bookingDate;
+		const startTime = globalModifyBookingData.startTime;
+		const endTime = globalModifyBookingData.endTime;
 		this.disabled = true;
 
 		try {
@@ -1270,6 +1587,9 @@ document.addEventListener('DOMContentLoaded', function() {
 				const modifyModal = bootstrap.Modal.getInstance(document.getElementById('modifyBookingModal'));
 				modifyModal.hide();
 
+				// Update calendar immediately
+                updateSlotAfterDelete( roomId, bookingDate, startTime, endTime );
+
 				// Show success message
 				const banner = document.createElement('div');
 				banner.className = 'alert alert-success alert-dismissible fade show';
@@ -1289,11 +1609,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 				// Auto-dismiss after 5 seconds
 				setTimeout(() => {
-						banner.remove();
-					}, 5000);
+					banner.remove();
+				}, 5000);
 
-					// Reload page immediately to refresh the calendar
-					location.reload();
+				this.disabled = false;
 			} else {
 				// Show error message in modal
 				document.getElementById('modifyBookingAlert').style.display = 'block';
