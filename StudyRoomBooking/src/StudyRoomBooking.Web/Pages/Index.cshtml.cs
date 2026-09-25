@@ -4,6 +4,7 @@ using StudyRoomBooking.Application.Services;
 using StudyRoomBooking.Application.ViewModels;
 using StudyRoomBooking.Domain.Entities;
 using StudyRoomBooking.Domain.Enums;
+using StudyRoomBooking.Web.Utilities;
 
 namespace StudyRoomBooking.Web.Pages;
 
@@ -23,6 +24,7 @@ public class IndexModel : PageModel
     public string? CurrentUserName { get; set; } = null;
     public int CurrentUserId { get; set; } = 0;
     public List<RoomType> AvailableRoomTypes { get; set; } = new();
+    public List<BuildingLocation> AvailableBuildings { get; set; } = new();
 
     public IndexModel(IRoomService roomService, IBookingService bookingService, IUserService userService)
     {
@@ -64,6 +66,10 @@ public class IndexModel : PageModel
 
         // Populate available room types based on user role
         await PopulateAvailableRoomTypesAsync();
+
+        // Populate available buildings
+        PopulateAvailableBuildings();
+
         HasSearched = true;
         SearchResults = await _roomService.SearchRoomsAsync(
             SearchCriteria.BookingDate,
@@ -220,6 +226,7 @@ public class IndexModel : PageModel
             if (SearchCriteria.BookingDate.Date < today)
             {
                 ModelState.AddModelError(string.Empty, "Cannot search for bookings in the past. Please select a date from today onwards.");
+                PopulateAvailableBuildings();
                 return Page();
             }
 
@@ -228,11 +235,15 @@ public class IndexModel : PageModel
             if (daysInAdvance > 60)
             {
                 ModelState.AddModelError(string.Empty, $"Bookings can only be made up to 60 days ahead. Your selected date is {daysInAdvance} days away.");
+                PopulateAvailableBuildings();
                 return Page();
             }
 
             // Populate available room types (in case major or role changed)
             await PopulateAvailableRoomTypesAsync();
+
+            // Populate available buildings
+            PopulateAvailableBuildings();
 
             // No longer restrict students to Study rooms only - they can now access their major-restricted rooms
             // Room filtering will be applied based on major restrictions instead
@@ -254,6 +265,7 @@ public class IndexModel : PageModel
         catch (Exception ex)
         {
             ModelState.AddModelError(string.Empty, $"Error searching rooms: {ex.Message}");
+            PopulateAvailableBuildings();
         }
 
         return Page();
@@ -475,229 +487,11 @@ public class IndexModel : PageModel
         }
     }
 
-    /// <summary>
-    /// AJAX endpoint to get booking details for modification popup
-    /// </summary>
-    public async Task<IActionResult> OnPostGetBookingDetailsAsync(int bookingId)
+    private void PopulateAvailableBuildings()
     {
-        try
-        {
-            var booking = await _bookingService.GetBookingByIdAsync(bookingId);
-            if (booking == null)
-            {
-                return new JsonResult(new { success = false, error = "Booking not found" })
-                {
-                    StatusCode = StatusCodes.Status404NotFound
-                };
-            }
-
-            // Check if booking is cancelled
-            if (booking.Status == BookingStatus.Cancelled)
-            {
-                return new JsonResult(new { success = false, error = "Cannot modify a cancelled booking" })
-                {
-                    StatusCode = StatusCodes.Status400BadRequest
-                };
-            }
-
-            var room = await _roomService.GetRoomByIdAsync(booking.RoomId);
-            if (room == null)
-            {
-                return new JsonResult(new { success = false, error = "Room not found" })
-                {
-                    StatusCode = StatusCodes.Status404NotFound
-                };
-            }
-
-            return new JsonResult(new
-            {
-                success = true,
-                booking = new
-                {
-                    id = booking.Id,
-                    roomId = booking.RoomId,
-                    roomName = room.Name,
-                    roomCode = room.Code,
-                    roomLocation = room.Location,
-                    roomCapacity = room.Capacity,
-                    bookingDate = booking.BookingDate.ToString("yyyy-MM-dd"),
-                    startTime = booking.StartTime.ToString(@"hh\:mm"),
-                    endTime = booking.EndTime.ToString(@"hh\:mm"),
-                    notes = booking.Notes ?? ""
-                }
-            });
-        }
-        catch (Exception ex)
-        {
-            return new JsonResult(new { success = false, error = $"Error fetching booking: {ex.Message}" })
-            {
-                StatusCode = StatusCodes.Status500InternalServerError
-            };
-        }
-    }
-
-    /// <summary>
-    /// AJAX endpoint to modify an existing booking
-    /// </summary>
-    public async Task<IActionResult> OnPostModifyBookingAsync(int bookingId, string bookingDate, string startHour, string endHour, string? notes)
-    {
-        try
-        {
-            var booking = await _bookingService.GetBookingByIdAsync(bookingId);
-            if (booking == null)
-            {
-                return new JsonResult(new { success = false, error = "Booking not found" })
-                {
-                    StatusCode = StatusCodes.Status404NotFound
-                };
-            }
-
-            // Check if booking is cancelled
-            if (booking.Status == BookingStatus.Cancelled)
-            {
-                return new JsonResult(new { success = false, error = "Cannot modify a cancelled booking" })
-                {
-                    StatusCode = StatusCodes.Status400BadRequest
-                };
-            }
-
-            // Parse date
-            var date = DateTime.ParseExact(bookingDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-
-            // Parse time - handle both "8:00" and "08:00" formats
-            TimeSpan start, end;
-            try
-            {
-                start = TimeSpan.ParseExact(startHour, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
-            }
-            catch
-            {
-                start = TimeSpan.ParseExact(startHour, @"h\:mm", System.Globalization.CultureInfo.InvariantCulture);
-            }
-
-            try
-            {
-                end = TimeSpan.ParseExact(endHour, @"hh\:mm", System.Globalization.CultureInfo.InvariantCulture);
-            }
-            catch
-            {
-                end = TimeSpan.ParseExact(endHour, @"h\:mm", System.Globalization.CultureInfo.InvariantCulture);
-            }
-
-            // Validate time constraints
-            if (start >= end)
-            {
-                return new JsonResult(new { success = false, error = "Start time must be before end time" })
-                {
-                    StatusCode = StatusCodes.Status400BadRequest
-                };
-            }
-
-            // Validate booking date and time constraints only if date or time has changed
-            bool dateOrTimeChanged = date.Date != booking.BookingDate.Date || start != booking.StartTime || end != booking.EndTime;
-
-            if (dateOrTimeChanged)
-            {
-                var (isValid, errorMessage) = await _bookingService.ValidateBookingAsync(booking.RoomId, date, start, end, bookingId);
-                if (!isValid)
-                {
-                    return new JsonResult(new { success = false, error = errorMessage })
-                    {
-                        StatusCode = StatusCodes.Status400BadRequest
-                    };
-                }
-
-                // Check availability (excluding current booking)
-                var isAvailable = await _roomService.IsRoomAvailableAsync(booking.RoomId, date, start, end, bookingId);
-                if (!isAvailable)
-                {
-                    return new JsonResult(new { success = false, error = "Selected time slot is not available" })
-                    {
-                        StatusCode = StatusCodes.Status400BadRequest
-                    };
-                }
-
-                // Check for overlapping bookings by current user (excluding current booking)
-                var userBookings = await _bookingService.GetBookingsByUserIdAsync(booking.UserId);
-
-                var overlappingBooking = userBookings.FirstOrDefault(b =>
-                    b.Id != bookingId &&
-                    b.BookingDate == date &&
-                    b.Status != BookingStatus.Cancelled &&
-                    !(start >= b.EndTime || end <= b.StartTime)
-                );
-
-                if (overlappingBooking != null)
-                {
-                    return new JsonResult(new { success = false, error = $"You cannot book overlapping time slots. You already have a booking from {overlappingBooking.StartTime:hh\\:mm} to {overlappingBooking.EndTime:hh\\:mm} on this day." })
-                    {
-                        StatusCode = StatusCodes.Status400BadRequest
-                    };
-                }
-            }
-
-            // Update booking
-            booking.BookingDate = date;
-            booking.StartTime = start;
-            booking.EndTime = end;
-            booking.Notes = notes;
-
-            await _bookingService.UpdateBookingAsync(booking);
-
-            return new JsonResult(new
-            {
-                success = true,
-                message = "Booking updated successfully"
-            });
-        }
-        catch (Exception ex)
-        {
-            return new JsonResult(new { success = false, error = $"Error updating booking: {ex.Message}" })
-            {
-                StatusCode = StatusCodes.Status500InternalServerError
-            };
-        }
-    }
-
-    /// <summary>
-    /// AJAX endpoint to delete/cancel a booking
-    /// </summary>
-    public async Task<IActionResult> OnPostDeleteBookingAsync(int bookingId)
-    {
-        try
-        {
-            var booking = await _bookingService.GetBookingByIdAsync(bookingId);
-            if (booking == null)
-            {
-                return new JsonResult(new { success = false, error = "Booking not found" })
-                {
-                    StatusCode = StatusCodes.Status404NotFound
-                };
-            }
-
-            // Check if booking is already cancelled
-            if (booking.Status == BookingStatus.Cancelled)
-            {
-                return new JsonResult(new { success = false, error = "Booking is already cancelled" })
-                {
-                    StatusCode = StatusCodes.Status400BadRequest
-                };
-            }
-
-            await _bookingService.CancelBookingAsync(bookingId);
-
-            return new JsonResult(new
-            {
-                success = true,
-                message = "Booking cancelled successfully"
-            });
-        }
-        catch (Exception ex)
-        {
-            return new JsonResult(new { success = false, error = $"Error cancelling booking: {ex.Message}" })
-            {
-                StatusCode = StatusCodes.Status500InternalServerError
-            };
-        }
+        AvailableBuildings = Enum.GetValues(typeof(BuildingLocation))
+            .Cast<BuildingLocation>()
+            .ToList();
     }
 }
+

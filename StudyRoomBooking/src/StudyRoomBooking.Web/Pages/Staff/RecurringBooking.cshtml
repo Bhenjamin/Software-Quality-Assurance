@@ -121,8 +121,13 @@
 			<div class="col-md-3">
 				<div class="form-group">
 					<label for="location" class="form-label">Location</label>
-					<input type="text" id="location" name="searchCriteria.Location" 
-						   value="@Model.SearchCriteria.Location" placeholder="e.g., Building A" class="form-control" />
+					<select id="location" name="searchCriteria.Location" class="form-select">
+						<option value="">Any</option>
+						@foreach (var building in Model.AvailableBuildings)
+						{
+							<option value="Building @building" selected="@(Model.SearchCriteria.Location == "Building " + building.ToString())">Building @building</option>
+						}
+					</select>
 				</div>
 			</div>
 			<div class="col-md-3">

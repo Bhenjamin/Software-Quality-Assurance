@@ -49,14 +49,6 @@
                                     Book a Room
                                 </a>
                             </li>
-
-                            <li class="nav-item">
-                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Students/BookingHistory") ? "active" : "")"
-                                   asp-area=""
-                                   asp-page="/Students/BookingHistory">
-                                    Booking History
-                                </a>
-                            </li>
                         }
 
                         @if (userRole == "Staff")
@@ -66,6 +58,17 @@
                                    asp-area=""
                                    asp-page="/Staff/RecurringBooking">
                                     Recurring Bookings
+                                </a>
+                            </li>
+                        }
+
+                        @if (userRole == "Student" || userRole == "Staff" || userRole == "Admin")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark @(Context.Request.Path.StartsWithSegments("/Students/BookingHistory") ? "active" : "")"
+                                   asp-area=""
+                                   asp-page="/Students/BookingHistory">
+                                    Booking History
                                 </a>
                             </li>
                         }

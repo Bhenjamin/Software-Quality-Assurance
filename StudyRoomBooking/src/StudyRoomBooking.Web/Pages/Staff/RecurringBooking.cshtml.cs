@@ -4,6 +4,7 @@ using StudyRoomBooking.Application.Services;
 using StudyRoomBooking.Application.ViewModels;
 using StudyRoomBooking.Domain.Entities;
 using StudyRoomBooking.Domain.Enums;
+using StudyRoomBooking.Web.Utilities;
 
 namespace StudyRoomBooking.Web.Pages.Staff;
 
@@ -19,6 +20,7 @@ public class RecurringBookingModel : PageModel
     public bool HasSearched { get; set; } = false;
     public string? CurrentUserRole { get; set; } = null;
     public int CurrentUserId { get; set; } = 0;
+    public List<BuildingLocation> AvailableBuildings { get; set; } = new();
 
     public RecurringBookingModel(IRoomService roomService, IBookingService bookingService)
     {
@@ -41,6 +43,9 @@ public class RecurringBookingModel : PageModel
 
         // Get the current user role from session
         CurrentUserRole = HttpContext.Session.GetString("CurrentUserRole");
+
+        // Populate available buildings
+        PopulateAvailableBuildings();
 
         // Run search on page load to show room-time matrix
         HasSearched = true;
@@ -165,6 +170,7 @@ public class RecurringBookingModel : PageModel
             if (CurrentUserRole != "Staff")
             {
                 ModelState.AddModelError(string.Empty, "Only staff members can search recurring bookings.");
+                PopulateAvailableBuildings();
                 return;
             }
 
@@ -173,6 +179,7 @@ public class RecurringBookingModel : PageModel
             if (SearchCriteria.StartDate.Date < today)
             {
                 ModelState.AddModelError(string.Empty, "Start date cannot be in the past. Please select a date from today onwards.");
+                PopulateAvailableBuildings();
                 return;
             }
 
@@ -181,6 +188,7 @@ public class RecurringBookingModel : PageModel
             if (daysInAdvance > 60)
             {
                 ModelState.AddModelError(string.Empty, $"Start date can only be up to 60 days ahead. Your selected date is {daysInAdvance} days away.");
+                PopulateAvailableBuildings();
                 return;
             }
 
@@ -188,8 +196,12 @@ public class RecurringBookingModel : PageModel
             if (SearchCriteria.RecurrenceEndDate.Date < SearchCriteria.StartDate.Date)
             {
                 ModelState.AddModelError(string.Empty, "Recurrence End Date must be on or after the Start Date.");
+                PopulateAvailableBuildings();
                 return;
             }
+
+            // Populate available buildings
+            PopulateAvailableBuildings();
 
             // Use the start date for room availability search (showing first day of recurrence pattern)
             SearchResults = await _roomService.SearchRoomsAsync(
@@ -210,6 +222,14 @@ public class RecurringBookingModel : PageModel
         catch (Exception ex)
         {
             ModelState.AddModelError(string.Empty, $"Error searching rooms: {ex.Message}");
+            PopulateAvailableBuildings();
         }
+    }
+
+    private void PopulateAvailableBuildings()
+    {
+        AvailableBuildings = Enum.GetValues(typeof(BuildingLocation))
+            .Cast<BuildingLocation>()
+            .ToList();
     }
 }

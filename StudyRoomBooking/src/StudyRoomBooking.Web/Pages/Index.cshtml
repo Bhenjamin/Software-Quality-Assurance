@@ -117,26 +117,28 @@
 				</div>
 			</div> *@
 
-			@if (Model.CurrentUserRole == "Staff" || Model.CurrentUserRole == "Student")
-			{
-				<div style="flex: 1;">
-					<div class="form-group">
-						<label for="roomType" class="form-label">Room Type</label>
-						<select id="roomType" name="searchCriteria.RoomType" class="form-select">
-							<option value="">Any</option>
-							@foreach (var type in Model.AvailableRoomTypes)
-							{
-								<option value="@type" selected="@(Model.SearchCriteria.RoomType == type)">@type.ToDisplayName()</option>
-							}
-						</select>
-					</div>
+			<div style="flex: 1;">
+				<div class="form-group">
+					<label for="roomType" class="form-label">Room Type</label>
+					<select id="roomType" name="searchCriteria.RoomType" class="form-select">
+						<option value="">Any</option>
+						@foreach (var type in Model.AvailableRoomTypes)
+						{
+							<option value="@type" selected="@(Model.SearchCriteria.RoomType == type)">@type.ToDisplayName()</option>
+						}
+					</select>
 				</div>
-			}
+			</div>
 			<div style="flex: 1;">
 				<div class="form-group">
 					<label for="location" class="form-label">Location</label>
-					<input type="text" id="location" name="searchCriteria.Location" 
-							value="@Model.SearchCriteria.Location" placeholder="e.g., Building A" class="form-control" />
+					<select id="location" name="searchCriteria.Location" class="form-select">
+						<option value="">Any</option>
+						@foreach (var building in Model.AvailableBuildings)
+						{
+							<option value="Building @building" selected="@(Model.SearchCriteria.Location == "Building " + building.ToString())">Building @building</option>
+						}
+					</select>
 				</div>
 			</div>
 		</div>
@@ -924,15 +926,9 @@ document.addEventListener('DOMContentLoaded', function() {
 		const roomTypeInput = document.getElementById('roomType');
 		if (roomTypeInput) roomTypeInput.addEventListener('change', autoSubmitSearch);
 
-		// Location input - use debouncing to avoid too many submissions while typing
+		// Location input (now a dropdown)
 		const locationInput = document.getElementById('location');
-		if (locationInput) {
-			let locationTimeout;
-			locationInput.addEventListener('input', function() {
-				clearTimeout(locationTimeout);
-				locationTimeout = setTimeout(autoSubmitSearch, 500); // Wait 500ms after user stops typing
-			});
-		}
+		if (locationInput) locationInput.addEventListener('change', autoSubmitSearch);
 	}
 
 	// Merge consecutive booking slots with the same booking ID
