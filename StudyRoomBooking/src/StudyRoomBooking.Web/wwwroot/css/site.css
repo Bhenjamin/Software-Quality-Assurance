@@ -109,6 +109,23 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 0.3rem;
 }
 
+.cancel-booking-modal .modal-title {
+  color: #fff;
+}
+
+.cancel-booking-modal .btn-keep-booking {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.cancel-booking-modal .btn-keep-booking:hover,
+.cancel-booking-modal .btn-keep-booking:focus {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: #fff;
+}
+
 .btn-filter {
   background-color: var(--secondary);
   border-color: var(--secondary);

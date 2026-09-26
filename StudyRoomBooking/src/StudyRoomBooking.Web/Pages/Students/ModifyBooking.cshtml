@@ -144,7 +144,7 @@
 								</dl>
 							</div>
 							<div class="modal-footer">
-								<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Booking</button>
+								<button type="button" class="btn btn-keep-booking" data-bs-dismiss="modal">Keep Booking</button>
 								<form method="post" asp-page-handler="CancelBooking">
 									<input type="hidden" name="bookingId" value="@Model.Booking.Id" />
 									<button type="submit" class="btn btn-danger">Confirm Cancellation</button>
