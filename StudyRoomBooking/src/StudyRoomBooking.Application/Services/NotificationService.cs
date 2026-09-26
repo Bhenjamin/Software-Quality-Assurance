@@ -26,11 +26,17 @@ public class NotificationService : INotificationService
     public async Task SendBookingConfirmationAsync(string email, string roomName, DateTime bookingDate, TimeSpan startTime, TimeSpan endTime, string confirmationNumber)
     {
         var subject = $"Study room booking confirmed: {confirmationNumber}";
-        var body = $"Your study room booking is confirmed.\n\n" +
-                   $"Room: {roomName}\n" +
-                   $"Date: {bookingDate:dd/MM/yyyy}\n" +
-                   $"Time: {startTime:hh\\:mm} - {endTime:hh\\:mm}\n" +
-                   $"Confirmation number: {confirmationNumber}\n";
+        var body = $"Đặt phòng học của bạn đã được xác nhận.\n" +
+               $"Phòng học: {roomName}\n" +
+               $"Ngày: {bookingDate:dd/MM/yyyy}\n" +
+               $"Thời gian: {startTime:hh\\:mm} - {endTime:hh\\:mm}\n" +
+               $"Mã xác nhận: {confirmationNumber}\n\n" +
+               "----------------------------------------\n\n" +
+               $"Your study room booking is confirmed.\n" +
+               $"Room: {roomName}\n" +
+               $"Date: {bookingDate:dd/MM/yyyy}\n" +
+               $"Time: {startTime:hh\\:mm} - {endTime:hh\\:mm}\n" +
+               $"Confirmation number: {confirmationNumber}\n";
 
         if (!_emailOptions.Enabled)
         {
