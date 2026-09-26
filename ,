@@ -1,0 +1,5 @@
+CREATE TABLE location
+(
+    location_id NUMBER(6),
+    location_name VARCHAR2(2)
+);
