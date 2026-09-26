@@ -4,6 +4,25 @@
 	ViewData["Title"] = "Booking Management";
 }
 
+<style>
+	.cancel-booking-modal .modal-content {
+		border: none;
+		border-radius: 10px;
+		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+	}
+	.cancel-booking-modal .modal-header {
+		background: #1E3A5F;
+		color: white;
+		border-bottom: 2px solid #e9ecef;
+		border-radius: 10px 10px 0 0;
+	}
+	.cancel-booking-modal .modal-footer {
+		border-top: 2px solid #e9ecef;
+		background-color: #f8f9fa;
+		border-radius: 0 0 10px 10px;
+	}
+</style>
+
 <div class="container mt-4">
 	<h2>Booking Management</h2>
 
@@ -75,14 +94,10 @@
 								}
 							</td>
 							<td>
-								<form method="post" asp-page-handler="CancelBooking" asp-route-id="@booking.Id" class="d-inline">
-									<input type="hidden" name="filterDate" value="@Model.FilterDate?.ToString("yyyy-MM-dd")" />
-									<input type="hidden" name="filterStatus" value="@Model.FilterStatus" />
-									@if (booking.Status != StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled)
-									{
-										<button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?');">Cancel</button>
-									}
-								</form>
+								@if (booking.Status != StudyRoomBooking.Domain.Enums.BookingStatus.Cancelled)
+								{
+									<button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#cancelBookingModal" data-booking-id="@booking.Id" data-room="@booking.RoomName" data-user="@booking.UserName" data-date="@booking.BookingDate.ToString("dd/MM/yyyy")" data-time="@booking.StartTime.ToString(@"hh\:mm") - @booking.EndTime.ToString(@"hh\:mm")" data-confirmation="@booking.ConfirmationNumber">Cancel</button>
+								}
 							</td>
 						</tr>
 					}
@@ -95,3 +110,50 @@
 		<div class="alert alert-info">No bookings found.</div>
 	}
 </div>
+
+<div class="modal fade cancel-booking-modal" id="cancelBookingModal" tabindex="-1" aria-labelledby="cancelBookingModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="cancelBookingModalLabel">Cancel Booking</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<p>Are you sure you want to cancel this booking? Please review the details before confirming.</p>
+				<dl class="row mb-0">
+					<dt class="col-5">Room</dt>
+					<dd class="col-7" id="cancelBookingRoom"></dd>
+					<dt class="col-5">User</dt>
+					<dd class="col-7" id="cancelBookingUser"></dd>
+					<dt class="col-5">Date</dt>
+					<dd class="col-7" id="cancelBookingDate"></dd>
+					<dt class="col-5">Time</dt>
+					<dd class="col-7" id="cancelBookingTime"></dd>
+					<dt class="col-5">Confirmation</dt>
+					<dd class="col-7" id="cancelBookingConfirmation"></dd>
+				</dl>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Booking</button>
+				<form method="post" asp-page-handler="CancelBooking">
+					<input type="hidden" name="id" id="cancelBookingId" />
+					<input type="hidden" name="filterDate" value="@Model.FilterDate?.ToString("yyyy-MM-dd")" />
+					<input type="hidden" name="filterStatus" value="@Model.FilterStatus" />
+					<button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	document.getElementById('cancelBookingModal').addEventListener('show.bs.modal', function (event) {
+		const trigger = event.relatedTarget;
+		document.getElementById('cancelBookingId').value = trigger.dataset.bookingId;
+		document.getElementById('cancelBookingRoom').textContent = trigger.dataset.room;
+		document.getElementById('cancelBookingUser').textContent = trigger.dataset.user;
+		document.getElementById('cancelBookingDate').textContent = trigger.dataset.date;
+		document.getElementById('cancelBookingTime').textContent = trigger.dataset.time;
+		document.getElementById('cancelBookingConfirmation').textContent = trigger.dataset.confirmation;
+	});
+</script>
