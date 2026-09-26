@@ -475,7 +475,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			const day = String(dateObj.getDate()).padStart(2, '0');
 			const month = String(dateObj.getMonth() + 1).padStart(2, '0');
 			const year = dateObj.getFullYear();
-			document.getElementById('modalBookingDateDisplay').textContent = `${day}-${month}-${year}`;
+			document.getElementById('modalBookingDateDisplay').textContent = `${day}/${month}/${year}`;
 
 			// Populate Start Hour dropdown with default selected
 			populateStartHourDropdown(startTime);
@@ -1020,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		const day = String(dateObj.getDate()).padStart(2, '0');
 		const month = String(dateObj.getMonth() + 1).padStart(2, '0');
 		const year = dateObj.getFullYear();
-		const formattedDate = `${day}-${month}-${year}`;
+		const formattedDate = `${day}/${month}/${year}`;
 
 		// Determine header based on confirmation number
 		const isModify = confirmationNumber === 'Booking Updated';
@@ -1306,7 +1306,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			const day = String(dateObj.getDate()).padStart(2, '0');
 			const month = String(dateObj.getMonth() + 1).padStart(2, '0');
 			const year = dateObj.getFullYear();
-			document.getElementById('modifyModalBookingDateDisplay').textContent = `${day}-${month}-${year}`;
+			document.getElementById('modifyModalBookingDateDisplay').textContent = `${day}/${month}/${year}`;
 
 			// Populate start and end time dropdowns
 			await populateModifyStartHourDropdown(booking.id, booking.bookingDate);

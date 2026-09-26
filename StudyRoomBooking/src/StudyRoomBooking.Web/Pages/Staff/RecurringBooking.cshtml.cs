@@ -469,6 +469,31 @@ public class RecurringBookingModel : PageModel
                 }
             }
 
+            // Check for overlapping bookings by current user across all recurrence dates
+            var userBookings = await _bookingService.GetBookingsByUserIdAsync(userId);
+
+            foreach (var occurrenceDate in recurrenceDates)
+            {
+                var overlappingBooking = userBookings.FirstOrDefault(b =>
+                    b.BookingDate == occurrenceDate &&
+                    b.Status != BookingStatus.Cancelled &&
+                    // Check if time slots overlap: new booking starts before existing ends AND new booking ends after existing starts
+                    !(start >= b.EndTime || end <= b.StartTime)
+                );
+
+                if (overlappingBooking != null)
+                {
+                    return new JsonResult(new
+                    {
+                        success = false,
+                        error = $"You cannot book overlapping time slots. You already have bookings that overlap with the selected time slot on one or more dates."
+                    })
+                    {
+                        StatusCode = StatusCodes.Status409Conflict
+                    };
+                }
+            }
+
             // Create individual bookings for each recurrence date
             foreach (var occurrenceDate in recurrenceDates)
             {
@@ -1250,6 +1275,27 @@ public class RecurringBookingModel : PageModel
                             continue;
                         }
 
+                        // Check for overlapping bookings by current user in OTHER rooms (not this one)
+                        var allUserBookings = await _bookingService.GetBookingsByUserIdAsync(userId);
+                        var overlappingBooking = allUserBookings.FirstOrDefault(b =>
+                            b.Id != existingBooking.Id &&  // Exclude the current booking
+                            b.BookingDate == date &&
+                            b.Status != BookingStatus.Cancelled &&
+                            !(newStart >= b.EndTime || newEnd <= b.StartTime)
+                        );
+
+                        if (overlappingBooking != null)
+                        {
+                            results.Add(new
+                            {
+                                date = date.ToString("yyyy-MM-dd"),
+                                status = "error",
+                                message = $"Cannot update: You already have a booking from {overlappingBooking.StartTime:hh\\:mm} to {overlappingBooking.EndTime:hh\\:mm} on {date:MMM dd}"
+                            });
+                            errorCount++;
+                            continue;
+                        }
+
                         // Update the booking
                         existingBooking.StartTime = newStart;
                         existingBooking.EndTime = newEnd;
@@ -1297,6 +1343,26 @@ public class RecurringBookingModel : PageModel
                                 date = date.ToString("yyyy-MM-dd"),
                                 status = "error",
                                 message = $"Cannot create: {errorMsg}"
+                            });
+                            errorCount++;
+                            continue;
+                        }
+
+                        // Check for overlapping bookings by current user across all rooms
+                        var allUserBookings = await _bookingService.GetBookingsByUserIdAsync(userId);
+                        var overlappingBooking = allUserBookings.FirstOrDefault(b =>
+                            b.BookingDate == date &&
+                            b.Status != BookingStatus.Cancelled &&
+                            !(newStart >= b.EndTime || newEnd <= b.StartTime)
+                        );
+
+                        if (overlappingBooking != null)
+                        {
+                            results.Add(new
+                            {
+                                date = date.ToString("yyyy-MM-dd"),
+                                status = "error",
+                                message = $"Cannot create: You already have a booking from {overlappingBooking.StartTime:hh\\:mm} to {overlappingBooking.EndTime:hh\\:mm} on {date:MMM dd}"
                             });
                             errorCount++;
                             continue;
@@ -1437,14 +1503,24 @@ public class RecurringBookingModel : PageModel
                 RecurrencePattern.Weekly => 7,
                 RecurrencePattern.BiWeekly => 14,
                 RecurrencePattern.FourWeeks => 28,
-                _ => 1
+                RecurrencePattern.None => 0,  // None pattern means only the start date
+                _ => 0
             };
 
             var currentDate = startDateOnly;
-            while (currentDate <= endDateOnly)
+            if (interval == 0)
             {
+                // None pattern: only book for the start date
                 recurrenceDates.Add(currentDate);
-                currentDate = currentDate.AddDays(interval);
+            }
+            else
+            {
+                // Recurring patterns: generate dates based on interval
+                while (currentDate <= endDateOnly)
+                {
+                    recurrenceDates.Add(currentDate);
+                    currentDate = currentDate.AddDays(interval);
+                }
             }
 
             // Get room
@@ -1457,8 +1533,43 @@ public class RecurringBookingModel : PageModel
                 };
             }
 
-            // Get all bookings in the date range
+            // Get all bookings in the date range for this room
             var allBookings = await _bookingService.GetRoomBookingsByDateRangeAsync(roomId, startDateOnly, endDateOnly);
+
+            // Get all user's bookings to check for overlaps across all rooms
+            var allUserBookings = await _bookingService.GetBookingsByUserIdAsync(userId);
+
+            // Get all bookings across all rooms for the date range to check for conflicts with other users
+            var allRoomBookings = await _bookingService.GetAllBookingsAsync();
+            var conflictingBookingsAllRooms = allRoomBookings
+                .Where(b => 
+                    b.BookingDate.Date >= startDateOnly.Date 
+                    && b.BookingDate.Date <= endDateOnly.Date 
+                    && b.RoomId != roomId
+                    && b.Status != BookingStatus.Cancelled)
+                .ToList();
+
+            // Check for overlapping bookings across all recurrence dates (exclude current room - only check other rooms)
+            foreach (var date in recurrenceDates)
+            {
+                var overlappingBooking = allUserBookings.FirstOrDefault(b =>
+                    b.BookingDate.Date == date.Date &&
+                    b.RoomId != roomId &&
+                    b.Status != BookingStatus.Cancelled &&
+                    !(b.EndTime <= newStart || b.StartTime >= newEnd));
+
+                if (overlappingBooking != null)
+                {
+                    return new JsonResult(new
+                    {
+                        success = false,
+                        error = $"You cannot book overlapping time slots. You already have bookings in other rooms that overlap with the selected time slot on one or more dates."
+                    })
+                    {
+                        StatusCode = StatusCodes.Status409Conflict
+                    };
+                }
+            }
 
             var results = new List<object>();
             int successCount = 0;
@@ -1525,21 +1636,40 @@ public class RecurringBookingModel : PageModel
                     }
                     else
                     {
-                        // No booking exists for this date, check if there's a conflicting booking
-                        var conflicts = allBookings.Where(b =>
-                            b.UserId != userId &&
+                        // No booking exists for this date, check if there's a conflicting booking (across all rooms)
+                        var conflicts = conflictingBookingsAllRooms.Where(b =>
                             b.BookingDate.Date == date.Date &&
-                            b.Status != BookingStatus.Cancelled &&
                             !(b.EndTime <= newStart || b.StartTime >= newEnd)).ToList();
 
                         if (conflicts.Count > 0)
+                        {
+                            var conflictingRoomIds = string.Join(", ", conflicts.Select(c => c.RoomId).Distinct());
+                            results.Add(new
+                            {
+                                date = date.ToString("yyyy-MM-dd"),
+                                dateDisplay = date.ToString("dd/MM"),
+                                status = "error",
+                                message = $"Cannot book: Time slot conflicts with bookings in other rooms (Room IDs: {conflictingRoomIds})"
+                            });
+                            errorCount++;
+                            continue;
+                        }
+
+                        // Check for overlapping bookings by current user on the same date with different times
+                        var userOverlappingBookings = allBookings.Where(b =>
+                            b.UserId == userId &&
+                            b.BookingDate.Date == date.Date &&
+                            b.Status != BookingStatus.Cancelled &&
+                            !(b.EndTime <= bookStartTime || b.StartTime >= bookEndTime)).ToList();
+
+                        if (userOverlappingBookings.Count > 0)
                         {
                             results.Add(new
                             {
                                 date = date.ToString("yyyy-MM-dd"),
                                 dateDisplay = date.ToString("dd/MM"),
                                 status = "error",
-                                message = "Cannot book: Time slot conflicts with another booking"
+                                message = "Cannot book: You already have a booking that overlaps with this time slot"
                             });
                             errorCount++;
                             continue;
@@ -1644,9 +1774,6 @@ public class RecurringBookingModel : PageModel
         }
     }
 
-    /// <summary>
-    /// Deletes all bookings in a recurring booking series.
-    /// </summary>
     /// <summary>
     /// Deletes or modifies all bookings in a recurring booking series.
     /// For bookings completely within the requested time range, they are deleted.
@@ -2123,6 +2250,102 @@ public class RecurringBookingModel : PageModel
         }
 
         return dates;
+    }
+
+    /// <summary>
+    /// Refreshes the slot statuses for the current search and returns updated matrix data as JSON
+    /// This is called after booking/deleting to update the matrix without page reload
+    /// </summary>
+    public async Task<IActionResult> OnPostRefreshMatrixAsync()
+    {
+        if (string.IsNullOrEmpty(HttpContext.Session.GetString("UserId")))
+        {
+            return new JsonResult(new { success = false, error = "User not authenticated" })
+            {
+                StatusCode = StatusCodes.Status401Unauthorized
+            };
+        }
+
+        try
+        {
+            // Get current user ID
+            var userIdStr = HttpContext.Session.GetString("UserId");
+            if (int.TryParse(userIdStr, out int userId))
+            {
+                CurrentUserId = userId;
+            }
+
+            // Get the search criteria from the POST data or session
+            // If SearchCriteria is not bound, try to use previous values from Session or ViewData
+            if (SearchCriteria == null || string.IsNullOrEmpty(SearchCriteria.StartDate.ToString()))
+            {
+                // If we don't have search criteria, we can't refresh
+                return new JsonResult(new { success = false, error = "Search criteria not available" })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            // Perform the search again with the current criteria
+            SearchResults = await _roomService.SearchRoomsAsync(
+                SearchCriteria.StartDate,
+                SearchCriteria.StartTime,
+                SearchCriteria.EndTime,
+                SearchCriteria.Capacity,
+                SearchCriteria.RoomType,
+                SearchCriteria.Location
+            );
+
+            // Generate recurrence dates
+            RecurrenceDates = GetRecurrenceDates();
+
+            // Recalculate slot statuses
+            await PreCalculateSlotStatusesAsync();
+
+            // Build matrix data for JSON response
+            var matrixData = new List<dynamic>();
+            var timeSlots = new List<TimeSpan>();
+
+            // Generate all time slots (8:00 to 21:00)
+            for (int hour = 8; hour <= 21; hour++)
+            {
+                timeSlots.Add(new TimeSpan(hour, 0, 0));
+            }
+
+            // Build data for each room and time slot
+            foreach (var room in SearchResults)
+            {
+                foreach (var timeSlot in timeSlots)
+                {
+                    if (!IsTimeSlotInSearchRange(timeSlot))
+                        continue;
+
+                    var slotStatus = SlotStatusCache.ContainsKey(room.Id) && SlotStatusCache[room.Id].ContainsKey(timeSlot)
+                        ? SlotStatusCache[room.Id][timeSlot]
+                        : SlotStatus.Unavailable;
+
+                    matrixData.Add(new
+                    {
+                        roomId = room.Id,
+                        timeSlot = timeSlot.ToString(@"hh\:mm"),
+                        status = slotStatus.ToString()
+                    });
+                }
+            }
+
+            return new JsonResult(new
+            {
+                success = true,
+                matrixData = matrixData
+            });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, error = $"Error refreshing matrix: {ex.Message}" })
+            {
+                StatusCode = StatusCodes.Status500InternalServerError
+            };
+        }
     }
 
     private void PopulateAvailableBuildings()

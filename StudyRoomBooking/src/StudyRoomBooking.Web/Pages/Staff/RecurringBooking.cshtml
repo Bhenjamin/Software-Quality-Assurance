@@ -233,12 +233,13 @@
 										// Check if slot is in the past (only when StartDate is today)
 										var isInPast = Model.IsTimeSlotInPast(timeSlot);
 
-										<td style="padding: 4px;">
+										<td style="padding: 4px;" data-room-id="@room.Id" data-time-slot="@timeSlot.ToString(@"hh\:mm")">
 											@if (!isInPast && slotStatus == SlotStatus.Available)
 											{
 												<!--Green: Available - clickable button -->
 												<button type="button" class="badge calendar-slot calendar-slot-free btn-recurring-book" 
 													data-room-id="@room.Id"
+													data-time-slot="@(startHour.ToString().PadLeft(2,'0')):00"
 													data-start-date="@Model.SearchCriteria.StartDate.ToString("yyyy-MM-dd")"
 													data-start-time="@(startHour.ToString().PadLeft(2,'0')):00"
 													data-end-time="@(endHour.ToString().PadLeft(2,'0')):00"
@@ -256,6 +257,7 @@
 												<span class="badge calendar-slot calendar-slot-booked-self" 
 													style="cursor: pointer;"
 													data-room-id="@room.Id"
+													data-time-slot="@(startHour.ToString().PadLeft(2,'0')):00"
 													data-start-date="@Model.SearchCriteria.StartDate.ToString("yyyy-MM-dd")"
 													data-start-time="@(startHour.ToString().PadLeft(2,'0')):00"
 													data-end-time="@(endHour.ToString().PadLeft(2,'0')):00"
@@ -308,6 +310,108 @@
 </div>
 
 <script>
+
+	// Function to refresh the matrix display without page reload
+	async function refreshMatrixDisplay(status = 'YourBooking') {
+		try {
+			// Get booking details from modal
+			const roomId = document.getElementById('modifyRecurringRoomId').value;
+			const recurrenceDatesJson = document.getElementById('modifyRecurringRecurrenceDatesJson').value;
+			const startTime = document.getElementById('modifyRecurringStartTime').value;
+			const endTime = document.getElementById('modifyRecurringEndTime').value;
+
+			// Parse recurrence dates if available
+			let recurrenceDates = [];
+			try {
+				if (recurrenceDatesJson) {
+					const parsed = JSON.parse(recurrenceDatesJson);
+					recurrenceDates = Array.isArray(parsed) ? parsed : [];
+				}
+			} catch (e) {
+				console.error('Error parsing recurrence dates:', e);
+			}
+
+			console.log('Updating slots for room:', roomId, 'times:', startTime, '-', endTime, 'status:', status, 'dates:', recurrenceDates);
+
+			// Update each slot that was booked/deleted
+			const startHour = parseInt(startTime.split(':')[0]);
+			const endHour = parseInt(endTime.split(':')[0]);
+
+			// Update all hours between start and end
+			for (let hour = startHour; hour < endHour; hour++) {
+				const timeSlotStr = String(hour).padStart(2, '0') + ':00';
+
+				// Find and update the cell
+				const cells = document.querySelectorAll(`td[data-room-id="${roomId}"][data-time-slot="${timeSlotStr}"]`);
+				console.log(`Found ${cells.length} cells for room ${roomId} time ${timeSlotStr}`);
+
+				cells.forEach(cell => {
+					const button = cell.querySelector('button, span');
+					if (button) {
+						console.log(`Updating cell to status: ${status}`);
+
+						// Remove all status classes
+						button.classList.remove('calendar-slot-free', 'calendar-slot-booked', 'calendar-slot-booked-self', 'calendar-slot-unavailable');
+
+						// Add the appropriate class and color based on status
+						if (status === 'Available') {
+							// Slot is now available (deleted)
+							button.classList.add('calendar-slot-free');
+							button.style.backgroundColor = '#d4edda'; // Green
+
+							// Convert span to button if needed (recreate the booking button)
+							if (button.tagName === 'SPAN') {
+								const newButton = document.createElement('button');
+								newButton.type = 'button';
+								newButton.className = 'badge calendar-slot calendar-slot-free btn-recurring-book';
+								newButton.style.border = 'none';
+								newButton.style.background = 'none';
+								newButton.style.padding = '0';
+								newButton.style.cursor = 'pointer';
+								newButton.style.backgroundColor = '#d4edda';
+
+								// Copy data attributes
+								Array.from(button.attributes).forEach(attr => {
+									if (attr.name.startsWith('data-')) {
+										newButton.setAttribute(attr.name, attr.value);
+									}
+								});
+
+								cell.innerHTML = '';
+								cell.appendChild(newButton);
+							}
+						} else {
+							// Slot is booked (Default is 'YourBooking')
+							button.classList.add('calendar-slot-booked-self');
+							button.style.backgroundColor = '#2563EB'; // Blue
+
+							// Convert button to span if it's a booking
+							if (button.tagName === 'BUTTON') {
+								const newSpan = document.createElement('span');
+								newSpan.className = 'badge calendar-slot calendar-slot-booked-self';
+								newSpan.style.cursor = 'pointer';
+								newSpan.style.backgroundColor = '#2563EB';
+
+								// Copy data attributes
+								Array.from(button.attributes).forEach(attr => {
+									if (attr.name.startsWith('data-')) {
+										newSpan.setAttribute(attr.name, attr.value);
+									}
+								});
+
+								cell.innerHTML = '';
+								cell.appendChild(newSpan);
+							}
+						}
+					}
+				});
+			}
+
+		} catch (error) {
+			console.error('Error in refreshMatrixDisplay:', error);
+		}
+	}
+
 	document.addEventListener('DOMContentLoaded', function () {
 		// const startTimeSelect = document.getElementById('startTime');
 		// const endTimeSelect = document.getElementById('endTime');
@@ -518,103 +622,34 @@
 		}
 	});
 
-	// Add event listener to all recurring booking buttons
-	document.addEventListener('DOMContentLoaded', function() {
-		const recurringBookingButtons = document.querySelectorAll('.btn-recurring-book');
-		recurringBookingButtons.forEach(button => {
-			button.addEventListener('click', function(e) {
-				e.preventDefault();
-				const roomId = parseInt(this.getAttribute('data-room-id'));
-				const startDate = this.getAttribute('data-start-date');
-				const startTime = this.getAttribute('data-start-time');
-				const endTime = this.getAttribute('data-end-time');
-				const recurrenceEndDate = this.getAttribute('data-recurrence-end-date');
-				const recurrencePattern = this.getAttribute('data-recurrence-pattern');
-				const roomName = this.getAttribute('data-room-name');
-				const roomDetails = {
-					Name: this.getAttribute('data-room-name'),
-					Code: this.getAttribute('data-room-code'),
-					Location: this.getAttribute('data-room-location'),
-					Capacity: parseInt(this.getAttribute('data-room-capacity'))
-				};
+	// Add event listener to all recurring booking buttons using event delegation
+	// This works for buttons that exist on page load AND buttons created dynamically
+	document.addEventListener('click', function(e) {
+		const greenButton = e.target.closest('.btn-recurring-book');
+		if (greenButton) {
+			e.preventDefault();
+			e.stopPropagation();
 
-				openRecurringBookingModal(roomId, startDate, startTime, endTime, recurrenceEndDate, recurrencePattern, roomName, roomDetails);
-			});
-		});
+			const roomId = parseInt(greenButton.getAttribute('data-room-id'));
+			const startDate = greenButton.getAttribute('data-start-date');
+			const startTime = greenButton.getAttribute('data-start-time');
+			const endTime = greenButton.getAttribute('data-end-time');
+			const recurrenceEndDate = greenButton.getAttribute('data-recurrence-end-date');
+			const recurrencePattern = greenButton.getAttribute('data-recurrence-pattern');
+			const roomName = greenButton.getAttribute('data-room-name');
+			const roomDetails = {
+				Name: greenButton.getAttribute('data-room-name'),
+				Code: greenButton.getAttribute('data-room-code'),
+				Location: greenButton.getAttribute('data-room-location'),
+				Capacity: parseInt(greenButton.getAttribute('data-room-capacity'))
+			};
+
+			openModifyRecurringBookingModal(roomId, startDate, startTime, endTime, recurrenceEndDate, recurrencePattern, roomDetails);
+		}
 	});
 
-	// Function to open recurring booking modal
-	function openRecurringBookingModal(roomId, startDate, startTime, endTime, recurrenceEndDate, recurrencePattern, roomName, roomDetails) {
-		// Populate room details
-		document.getElementById('recurringModalRoomNameDetail').textContent = roomDetails.Name;
-		document.getElementById('recurringModalRoomCode').textContent = roomDetails.Code;
-		document.getElementById('recurringModalRoomLocation').textContent = roomDetails.Location;
-		document.getElementById('recurringModalRoomCapacity').textContent = roomDetails.Capacity;
-
-		// Format and display Start Date (DD/MM/YYYY format)
-		const startDateObj = new Date(startDate + 'T00:00:00');
-		const formattedStartDate = startDateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-		document.getElementById('recurringModalStartDateDisplay').textContent = formattedStartDate;
-		document.getElementById('recurringModalStartDate').value = startDate;
-
-		// Format and display Recurrence End Date (DD/MM/YYYY format)
-		const endDateObj = new Date(recurrenceEndDate + 'T00:00:00');
-		const formattedEndDate = endDateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-		document.getElementById('recurringModalRecurrenceEndDateDisplay').textContent = formattedEndDate;
-		document.getElementById('recurringModalRecurrenceEndDate').value = recurrenceEndDate;
-
-		// Display Recurrence Pattern (convert enum to readable text)
-		const patternDisplay = {
-			'None': 'No Recurrence',
-			'Daily': 'Daily',
-			'Weekly': 'Weekly',
-			'BiWeekly': 'Bi-Weekly',
-			'FourWeeks': 'Every 4 Weeks'
-		};
-		const selectedPattern = recurrencePattern || 'None';
-
-		document.getElementById('recurringModalRecurrencePatternDisplay').textContent = patternDisplay[selectedPattern] || 'Single Booking';
-
-		document.getElementById('recurringModalRecurrencePattern').value = selectedPattern;
-
-		// Set hidden fields
-		document.getElementById('recurringModalRoomId').value = roomId;
-
-		// Extract hour from time string (e.g., "09:00" -> 9)
-		const startHour = parseInt(startTime.split(':')[0]);
-		const endHour = parseInt(endTime.split(':')[0]);
-
-		// Populate time dropdowns with 8-22 hour range
-		populateTimeDropdown('recurringModalStartTime', startHour);
-		populateTimeDropdown('recurringModalEndTime', endHour);
-
-		// Clear any previous error messages
-		document.getElementById('recurringBookingAlert').style.display = 'none';
-		document.getElementById('recurringBookingErrors').innerHTML = '';
-
-		// Show modal
-		const modal = new bootstrap.Modal(document.getElementById('recurringBookingModal'));
-		modal.show();
-	}
-
-	// Helper function to populate time dropdowns
-	function populateTimeDropdown(elementId, selectedHour) {
-		const select = document.getElementById(elementId);
-		select.innerHTML = '';
-		for (let hour = 8; hour <= 22; hour++) {
-			const option = document.createElement('option');
-			const timeStr = `${String(hour).padStart(2, '0')}:00`;
-			option.value = timeStr;
-			option.textContent = timeStr;
-			if (hour === selectedHour) {
-				option.selected = true;
-			}
-			select.appendChild(option);
-		}
-	}
-
-	// Show success banner for recurring booking
-	function showRecurringBookingSuccessBanner(roomName, startDate, recurrenceEndDate, recurrencePattern, startTime, endTime, bookingCount) {
+	// Show success banner - generic function for all booking operations
+	function showBookingSuccessBanner(title, details) {
 		const banner = document.createElement('div');
 		banner.className = 'alert alert-success alert-dismissible fade show';
 		banner.style.position = 'fixed';
@@ -623,35 +658,21 @@
 		banner.style.zIndex = '9999';
 		banner.style.minWidth = '350px';
 
-		// Format dates
-		const startDateObj = new Date(startDate + 'T00:00:00');
-		const endDateObj = new Date(recurrenceEndDate + 'T00:00:00');
-
-		const formatDate = (date) => {
-			const d = String(date.getDate()).padStart(2, '0');
-			const m = String(date.getMonth() + 1).padStart(2, '0');
-			const y = date.getFullYear();
-			return `${d}-${m}-${y}`;
-		};
-
-		// Format recurrence pattern (convert PascalCase to Title Case)
-		const formatPattern = (pattern) => {
-			if (!pattern) return '';
-			return pattern.replace(/([A-Z])/g, ' $1').trim();
-		};
-
-		const formattedStartDate = formatDate(startDateObj);
-		const formattedEndDate = formatDate(endDateObj);
-		const formattedPattern = formatPattern(recurrencePattern);
+		let detailsHtml = '';
+		if (Array.isArray(details)) {
+			detailsHtml = details.map(detail => `<div>${detail}</div>`).join('');
+		} else if (typeof details === 'object') {
+			detailsHtml = Object.entries(details)
+				.map(([key, value]) => `<div>${key}: <strong>${value}</strong></div>`)
+				.join('');
+		} else {
+			detailsHtml = `<div>${details}</div>`;
+		}
 
 		banner.innerHTML = `
-			<strong>✓ Recurring Booking Created!</strong>
+			<strong>✓ ${title}</strong>
 			<div style="margin-top: 8px; font-size: 0.9rem;">
-				<div>Room: <strong>${roomName}</strong></div>
-				<div>Pattern: <strong>${formattedPattern}</strong></div>
-				<div>Period: <strong>${formattedStartDate} to ${formattedEndDate}</strong></div>
-				<div>Time: <strong>${startTime} - ${endTime}</strong></div>
-				<div style="margin-top: 4px;">Bookings Created: <strong>${bookingCount}</strong></div>
+				${detailsHtml}
 			</div>
 			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 		`;
@@ -664,89 +685,7 @@
 		}, 5000);
 	}
 
-	// Handle form submission - wrap in DOMContentLoaded to ensure button exists
-	document.addEventListener('DOMContentLoaded', function() {
-		document.getElementById('submitRecurringBookingBtn')?.addEventListener('click', async function(e) {
-			e.preventDefault();
-
-			const roomId = document.getElementById('recurringModalRoomId').value;
-			const startDate = document.getElementById('recurringModalStartDate').value;
-			const startTime = document.getElementById('recurringModalStartTime').value;
-			const endTime = document.getElementById('recurringModalEndTime').value;
-			const recurrencePattern = document.getElementById('recurringModalRecurrencePattern').value;
-			const recurrenceEndDate = document.getElementById('recurringModalRecurrenceEndDate').value;
-			const notes = document.getElementById('recurringModalNotes').value || '';
-
-			const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-
-			// Debug logging
-			console.log('Form Data:', {
-				roomId, startDate, startTime, endTime, recurrencePattern, recurrenceEndDate, notes, token
-			});
-
-			// Validation
-			if (!roomId || !startDate || !startTime || !endTime || !recurrencePattern || !recurrenceEndDate) {
-				document.getElementById('recurringBookingAlert').style.display = 'block';
-				document.getElementById('recurringBookingErrors').innerHTML = 'Please fill in all required fields.';
-				console.error('Missing required fields:', { roomId, startDate, startTime, endTime, recurrencePattern, recurrenceEndDate });
-				return;
-			}
-
-			const params = new URLSearchParams();
-			params.append('roomId', roomId);
-			params.append('startDate', startDate);
-			params.append('startTime', startTime);
-			params.append('endTime', endTime);
-			params.append('recurrencePattern', recurrencePattern);
-			params.append('recurrenceEndDate', recurrenceEndDate);
-			params.append('notes', notes);
-			params.append('__RequestVerificationToken', token);
-
-			console.log('Request body:', params.toString());
-
-			try {
-				const response = await fetch('?handler=CreateRecurringBooking', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body: params.toString()
-				});
-
-				console.log('Response status:', response.status);
-				const data = await response.json();
-				console.log('Response data:', data);
-
-				if (data.success) {
-					document.getElementById('recurringBookingAlert').style.display = 'none';
-
-					// Close modal
-					bootstrap.Modal.getInstance(document.getElementById('recurringBookingModal')).hide();
-
-					// Show success banner instead of alert
-					showRecurringBookingSuccessBanner(
-						data.roomName, 
-						data.startDate, 
-						data.recurrenceEndDate, 
-						data.recurrencePattern,
-						data.startTime, 
-						data.endTime,
-						data.bookingCount
-					);
-
-					// Reload page after banner auto-dismisses (5 seconds)
-					setTimeout(() => location.reload(), 5500);
-				} else {
-					document.getElementById('recurringBookingAlert').style.display = 'block';
-					document.getElementById('recurringBookingErrors').innerHTML = data.error || 'An error occurred';
-				}
-			} catch (error) {
-				console.error('Error:', error);
-				document.getElementById('recurringBookingAlert').style.display = 'block';
-							document.getElementById('recurringBookingErrors').innerHTML = 'Failed to create booking: ' + error.message;
-						}
-					});
-				});
-
-				// ==================== MODIFY RECURRING BOOKING FUNCTIONS ====================
+	// ==================== MODIFY RECURRING BOOKING FUNCTIONS ====================
 
 				// Add click handler to blue slots (YourBooking) to open modify modal
 				document.addEventListener('click', async function(e) {
@@ -787,7 +726,12 @@
 						// Format and display dates
 						const startDateObj = new Date(startDate + 'T00:00:00');
 						const endDateObj = new Date(recurrenceEndDate + 'T00:00:00');
-						const formatDate = (date) => date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
+						const formatDate = (date) => {
+							const day = String(date.getDate()).padStart(2, '0');
+							const month = String(date.getMonth() + 1).padStart(2, '0');
+							const year = date.getFullYear();
+							return `${day}/${month}/${year}`;
+						};
 
 						document.getElementById('modifyRecurringModalStartDateDisplay').textContent = formatDate(startDateObj);
 						document.getElementById('modifyRecurringModalRecurrenceEndDateDisplay').textContent = formatDate(endDateObj);
@@ -809,8 +753,9 @@
 						document.getElementById('modifyRecurringRecurrenceEndDate').value = recurrenceEndDate;
 
 						// Populate time dropdowns
-						populateModifyTimeDropdown('modifyRecurringStartTime', parseInt(startTime.split(':')[0]));
-						populateModifyTimeDropdown('modifyRecurringEndTime', parseInt(endTime.split(':')[0]));
+						const startTimeHour = parseInt(startTime.split(':')[0]);
+						populateModifyTimeDropdown('modifyRecurringStartTime', startTimeHour);
+						populateModifyEndTimeDropdown(startTimeHour);
 
 						// Fetch booking details and populate status list
 						await refreshModifyRecurringBookingStatuses(roomId, startDate, recurrenceEndDate, selectedPattern, startTime, endTime);
@@ -832,7 +777,7 @@
 				function populateModifyTimeDropdown(elementId, selectedHour) {
 					const select = document.getElementById(elementId);
 					select.innerHTML = '';
-					for (let hour = 8; hour <= 22; hour++) {
+					for (let hour = 8; hour <= 21; hour++) {
 						const option = document.createElement('option');
 						const timeStr = `${String(hour).padStart(2, '0')}:00`;
 						option.value = timeStr;
@@ -841,6 +786,34 @@
 							option.selected = true;
 						}
 						select.appendChild(option);
+					}
+				}
+
+				// Function to populate end time dropdown based on start hour
+				// Only shows 2 options: start hour + 1 and start hour + 2, not exceeding 22:00
+				function populateModifyEndTimeDropdown(startHour) {
+					const endTimeSelect = document.getElementById('modifyRecurringEndTime');
+					endTimeSelect.innerHTML = '';
+
+					// Create two options: startHour + 1 and startHour + 2
+					const option1Hour = startHour + 1;
+					const option2Hour = startHour + 2;
+
+					if (option1Hour <= 22) {
+						const option1 = document.createElement('option');
+						const timeStr1 = `${String(option1Hour).padStart(2, '0')}:00`;
+						option1.value = timeStr1;
+						option1.textContent = timeStr1;
+						option1.selected = true; // Default to start hour + 1
+						endTimeSelect.appendChild(option1);
+					}
+
+					if (option2Hour <= 22) {
+						const option2 = document.createElement('option');
+						const timeStr2 = `${String(option2Hour).padStart(2, '0')}:00`;
+						option2.value = timeStr2;
+						option2.textContent = timeStr2;
+						endTimeSelect.appendChild(option2);
 					}
 				}
 
@@ -964,6 +937,42 @@
 								document.getElementById('modifyRecurringRecurrenceDatesJson').value = JSON.stringify(datesWithBookings);
 								console.log('Stored dates with bookings count:', datesWithBookings.length, 'Dates:', datesWithBookings);
 
+								// Disable sync button when all dates already have "existing" status
+								const hasAnyMissingBooking = data.dateStatuses.some(ds => ds.status !== 'existing');
+								const syncBtn = document.getElementById('modifyRecurringSyncAllBtn');
+
+								if (!hasAnyMissingBooking) {
+									// All dates are existing - disable the sync button
+									syncBtn.disabled = true;
+									syncBtn.style.opacity = '0.5';
+									syncBtn.style.cursor = 'not-allowed';
+									syncBtn.title = 'All recurring dates are already synced';
+								} else {
+									// There are dates that are not existing - enable the sync button
+									syncBtn.disabled = false;
+									syncBtn.style.opacity = '1';
+									syncBtn.style.cursor = 'pointer';
+									syncBtn.title = '';
+								}
+
+								// Disable delete button when there are no existing bookings to delete
+								const hasAnyExistingBooking = data.dateStatuses.some(ds => ds.status === 'existing' || ds.status === 'missing hour');
+								const deleteBtn = document.getElementById('modifyRecurringDeleteAllBtn');
+
+								if (!hasAnyExistingBooking) {
+									// All dates are missing - disable the delete button
+									deleteBtn.disabled = true;
+									deleteBtn.style.opacity = '0.5';
+									deleteBtn.style.cursor = 'not-allowed';
+									deleteBtn.title = 'No existing bookings to delete';
+								} else {
+									// There are existing bookings - enable the delete button
+									deleteBtn.disabled = false;
+									deleteBtn.style.opacity = '1';
+									deleteBtn.style.cursor = 'pointer';
+									deleteBtn.title = '';
+								}
+
 								console.log('Populated dates list with', datesList.children.length, 'items');
 
 						} catch (error) {
@@ -979,6 +988,14 @@
 					const endTimeSelect = document.getElementById('modifyRecurringEndTime');
 
 					startTimeSelect?.addEventListener('change', async function() {
+						// Get the selected start hour and update end time dropdown
+						const selectedStartTime = this.value;
+						const startHour = parseInt(selectedStartTime.split(':')[0]);
+
+						// Populate end time dropdown with only 2 options: start hour + 1 and start hour + 2
+						populateModifyEndTimeDropdown(startHour);
+
+						// Now refresh the booking statuses
 						const roomId = document.getElementById('modifyRecurringRoomId').value;
 						const startDate = document.getElementById('modifyRecurringStartDate').value;
 						const endDate = document.getElementById('modifyRecurringRecurrenceEndDate').value;
@@ -1063,12 +1080,28 @@
 							if (data.success || data.results) {
 								// Show results summary
 								const stats = data.stats;
-								let message = `Booking Missing Slots Completed:\n✓ Created: ${stats.created}\n✗ Failed: ${stats.failed}\n⊙ Skipped: ${stats.skipped}\n\n${data.message}`;
-								alert(message);
+								const roomName = document.getElementById('modifyRecurringModalRoomNameDetail').textContent;
+								const startDateDisplay = document.getElementById('modifyRecurringModalStartDateDisplay').textContent;
+								const recurrenceEndDateDisplay = document.getElementById('modifyRecurringModalRecurrenceEndDateDisplay').textContent;
+								const patternDisplay = document.getElementById('modifyRecurringModalRecurrencePatternDisplay').textContent;
+								const startTime = document.getElementById('modifyRecurringStartTime').value;
+								const endTime = document.getElementById('modifyRecurringEndTime').value;
 
-								// Close modal and reload
+								const details = {
+									'Room': roomName,
+									'Start Date': startDateDisplay,
+									'End Date': recurrenceEndDateDisplay,
+									'Pattern': patternDisplay,
+									'Time': `${startTime} - ${endTime}`,
+								};
+
+								showBookingSuccessBanner('Recurring Booked Successfully!', details);
+
+								// Close modal
 								bootstrap.Modal.getInstance(document.getElementById('modifyRecurringBookingModal')).hide();
-								setTimeout(() => location.reload(), 500);
+
+								// Refresh the matrix without page reload
+								await refreshMatrixDisplay();
 							} else {
 								document.getElementById('modifyRecurringBookingAlert').style.display = 'block';
 								document.getElementById('modifyRecurringBookingErrors').innerHTML = data.error || 'Failed to book missing bookings';
@@ -1092,10 +1125,6 @@
 
 								if (!bookingId) {
 									alert('Booking ID not found.');
-									return;
-								}
-
-								if (!confirm('Are you sure you want to delete all bookings in this recurring series? Bookings that partially overlap will be modified instead. This cannot be undone.')) {
 									return;
 								}
 
@@ -1123,12 +1152,13 @@
 									const data = await response.json();
 
 									if (data.success) {
-										const message = `Successfully processed: ${data.deletedCount} deletion(s), ${data.modifiedCount || 0} modification(s).`;
-										alert(message);
+										showBookingSuccessBanner('Slot deleted successfully from the recurrence date list','');
 
-										// Close modal and reload
+										// Close modal
 										bootstrap.Modal.getInstance(document.getElementById('modifyRecurringBookingModal')).hide();
-										setTimeout(() => location.reload(), 500);
+
+										// Refresh the matrix without page reload - slots become available (green)
+										await refreshMatrixDisplay('Available');
 									} else {
 										document.getElementById('modifyRecurringBookingAlert').style.display = 'block';
 										document.getElementById('modifyRecurringBookingErrors').innerHTML = data.error || 'Failed to delete bookings';
@@ -1144,96 +1174,13 @@
 </script>
 
 <!-- Recurring Booking Modal -->
-<div class="modal fade" id="recurringBookingModal" tabindex="-1" aria-labelledby="recurringBookingModalLabel" aria-hidden="true">
+
+<!-- Book/Delete Recurring Booking Modal -->
+<div class="modal fade" id="modifyRecurringBookingModal" tabindex="-1" aria-labelledby="modifyRecurringBookingModalLabel" aria-hidden="true">
 	<div class="modal-dialog booking-modal-dialog">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h5 class="modal-title" id="recurringBookingModalLabel">Create Recurring Booking</h5>
-				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-			</div>
-
-			<div class="modal-body">
-				<!-- Error -->
-				<div id="recurringBookingAlert" class="alert alert-danger alert-dismissible fade show" role="alert" style="display: none;">
-					<strong>Booking Error!</strong>
-					<div id="recurringBookingErrors"></div>
-					<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-				</div>
-
-				<form id="recurringBookingForm">
-					@Html.AntiForgeryToken()
-
-					<div class="row">
-						<!-- Left column: Room Details -->
-						<div class="col-4">
-							<div class="mb-0">
-								<div style="font-size: 1rem; font-weight: 600;">
-									<span id="recurringModalRoomNameDetail"></span>
-								</div>
-								<small class="text-muted room-details" style="font-size: 1rem;">
-									<div id="recurringModalRoomCode"></div>
-									<div id="recurringModalRoomLocation"></div>
-									<div>Capacity: <span id="recurringModalRoomCapacity"></span></div>
-								</small>
-							</div>
-						</div>
-
-						<!-- Vertical divider -->
-						<div class="col-1 d-flex justify-content-center">
-							<div style="border-left: 1px solid #dee2e6; height: 100%;"></div>
-						</div>
-
-						<!-- Right column: Booking Details -->
-						<div class="col-7">
-							<div class="mb-0" style="white-space: nowrap;">
-								<label class="form-label" style="font-size: 0.9rem; font-weight: 600;">Start Date:&nbsp;</label><span id="recurringModalStartDateDisplay"></span>
-							</div>
-							<div class="mb-0" style="white-space: nowrap;">
-								<label class="form-label" style="font-size: 0.9rem; font-weight: 600;">End Date:&nbsp;</label><span id="recurringModalRecurrenceEndDateDisplay"></span>
-							</div>
-							<div class="mb-0" style="white-space: nowrap;">
-								<label class="form-label" style="font-size: 0.9rem; font-weight: 600;">Recurrence Pattern:&nbsp;</label><span id="recurringModalRecurrencePatternDisplay"></span>
-							</div>
-							<div class="mb-0 d-flex align-items-center gap-2" style="white-space: nowrap;">
-								<label for="recurringModalStartTime" class="form-label mb-0 time-label" style="font-size: 0.9rem; font-weight: 600; width: 75px;">Start Hour:&nbsp;</label>
-								<select id="recurringModalStartTime" name="startTime" class="form-select form-select-sm" style="width: 80px;" required></select>
-							</div>
-							<div class="mb-0 d-flex align-items-center gap-2" style="white-space: nowrap;">
-								<label for="recurringModalEndTime" class="form-label mb-0 time-label" style="font-size: 0.9rem; font-weight: 600; width: 75px;">End Hour:&nbsp;</label>
-								<select id="recurringModalEndTime" name="endTime" class="form-select form-select-sm" style="width: 80px;" required></select>
-								<div id="recurringModalTimeValidationError" class="time-validation-error"></div>
-							</div>
-						</div>
-					</div>
-
-					<!-- Notes -->
-					<div class="mb-0 mt-2">
-						<label for="recurringModalNotes" class="form-label" style="font-size: 0.9rem; font-weight: 600;">Notes (Optional)</label>
-						<textarea id="recurringModalNotes" name="notes" class="form-control" rows="2"></textarea>
-					</div>
-
-					<!-- Hidden fields -->
-					<input type="hidden" id="recurringModalRoomId">
-					<input type="hidden" id="recurringModalStartDate">
-					<input type="hidden" id="recurringModalRecurrenceEndDate">
-					<input type="hidden" id="recurringModalRecurrencePattern">
-				</form>
-			</div>
-
-			<div class="modal-footer justify-content-start">
-				<button type="button" class="btn btn-primary" id="submitRecurringBookingBtn">Create Booking</button>
-				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-			</div>
-		</div>
-	</div>
-</div>
-
-<!-- Modify Recurring Booking Modal -->
-<div class="modal fade" id="modifyRecurringBookingModal" tabindex="-1" aria-labelledby="modifyRecurringBookingModalLabel" aria-hidden="true">
-	<div class="modal-dialog booking-modal-dialog" style="max-width: 600px;">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title" id="modifyRecurringBookingModalLabel">Modify Recurring Booking</h5>
+				<h5 class="modal-title" id="modifyRecurringBookingModalLabel">Book/Delete Recurring Booking</h5>
 				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
 
@@ -1246,8 +1193,9 @@
 				</div>
 
 				<!-- Room Details Section -->
-				<div class="row mb-3">
-					<div class="col-6">
+				<div class="row">
+					<!-- Left column: Room Details -->
+					<div class="col-4">
 						<strong style="font-size: 1rem;" id="modifyRecurringModalRoomNameDetail"></strong>
 						<small class="text-muted d-block" style="font-size: 0.9rem;">
 							<div id="modifyRecurringModalRoomCode"></div>
@@ -1255,27 +1203,27 @@
 							<div>Capacity: <span id="modifyRecurringModalRoomCapacity"></span></div>
 						</small>
 					</div>
-					<div class="col-6">
-						<div style="font-size: 0.9rem;">
-							<div><strong>Start:</strong> <span id="modifyRecurringModalStartDateDisplay"></span></div>
-							<div><strong>End:</strong> <span id="modifyRecurringModalRecurrenceEndDateDisplay"></span></div>
-							<div><strong>Pattern:</strong> <span id="modifyRecurringModalRecurrencePatternDisplay"></span></div>
+					<!-- Vertical divider -->
+					<div class="col-1 d-flex justify-content-center">
+						<div style="border-left: 1px solid #dee2e6; height: 100%;"></div>
+					</div>
+					<!-- Right column: Booking Details -->
+					<div class="col-7">
+						<div class="mb-0">
+							<div style="white-space: nowrap; font-size: 0.9rem;"><strong>Start:</strong> <span id="modifyRecurringModalStartDateDisplay"></span></div>
+							<div style="white-space: nowrap; font-size: 0.9rem;"><strong>End:</strong> <span id="modifyRecurringModalRecurrenceEndDateDisplay"></span></div>
+							<div style="white-space: nowrap; font-size: 0.9rem;"><strong>Recurrence Pattern:</strong> <span id="modifyRecurringModalRecurrencePatternDisplay"></span></div>
+						</div>
+						<div class="mb-0 d-flex align-items-center gap-2" style="white-space: nowrap;">
+							<label for="modifyRecurringStartTime" class="form-label mb-0 time-label" style="font-size: 0.9rem; font-weight: 600; width: 90px;">Start Hour:</label>
+							<select id="modifyRecurringStartTime" class="form-select form-select-sm" style="width: 80px;" required></select>
+						</div>
+						<div class="mb-0 d-flex align-items-center gap-2" style="white-space: nowrap;">
+							<label for="modifyRecurringEndTime" class="form-label mb-0 time-label" style="font-size: 0.9rem; font-weight: 600; width: 90px;">End Hour:</label>
+							<select id="modifyRecurringEndTime" class="form-select form-select-sm" style="width: 80px;" required></select>
+							<div id="modifyRecurringTimeValidationError" class="time-validation-error"></div>
 						</div>
 					</div>
-				</div>
-
-				<hr />
-
-				<!-- Time Selection Section -->
-				<div class="mb-3">
-					<label class="form-label"><strong>Select New Time</strong></label>
-					<div class="d-flex gap-2 align-items-center">
-						<label for="modifyRecurringStartTime" class="form-label mb-0" style="width: 80px;">Start Hour:</label>
-						<select id="modifyRecurringStartTime" class="form-select form-select-sm" style="width: 100px;"></select>
-						<label for="modifyRecurringEndTime" class="form-label mb-0 ms-2" style="width: 70px;">End Hour:</label>
-						<select id="modifyRecurringEndTime" class="form-select form-select-sm" style="width: 100px;"></select>
-					</div>
-					<div id="modifyRecurringTimeValidationError" class="time-validation-error"></div>
 				</div>
 
 				<hr />
@@ -1299,9 +1247,7 @@
 			<div class="modal-footer justify-content-start">
 				<button type="button" class="btn btn-primary btn-sm" id="modifyRecurringSyncAllBtn">Book Missing Bookings</button>
 				<button type="button" class="btn btn-danger btn-sm" id="modifyRecurringDeleteAllBtn">Delete All</button>
-				<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
 			</div>
 		</div>
 	</div>
 </div>
-
