@@ -116,6 +116,22 @@
 			margin-bottom: 20px;
 			border-radius: 5px;
 		}
+		.forgot-password-modal .modal-content {
+			border: none;
+			border-radius: 10px;
+			box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+		}
+		.forgot-password-modal .modal-header {
+			background: #1E3A5F;
+			color: white;
+			border-bottom: 2px solid #e9ecef;
+			border-radius: 10px 10px 0 0;
+		}
+		.forgot-password-modal .modal-footer {
+			border-top: 2px solid #e9ecef;
+			background-color: #f8f9fa;
+			border-radius: 0 0 10px 10px;
+		}
 		@@media (max-width: 767px) {
 			.login-content {
 				grid-template-columns: 1fr;
@@ -201,7 +217,7 @@
 						</div>
 
 						<div class="text-end mb-3">
-							<button type="button" class="btn btn-link p-0" style="color: #1E3A5F; font-size: 14px; font-weight: 300;" onclick="alert('Please contact the IT admin to reset your password at admin@university.edu')">
+							<button type="button" class="btn btn-link p-0" style="color: #1E3A5F; font-size: 14px; font-weight: 300;" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
 								Forgot password?
 							</button>
 						</div>
@@ -240,6 +256,23 @@
 						<code>admin@university.edu</code><br />
 						Create this user in Supabase Auth
 					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade forgot-password-modal" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="forgotPasswordModalLabel">Password Reset</h5>
+					<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<p class="mb-0">Please contact the IT admin to reset your password at <a href="mailto:admin@university.edu">admin@university.edu</a>.</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 				</div>
 			</div>
 		</div>
