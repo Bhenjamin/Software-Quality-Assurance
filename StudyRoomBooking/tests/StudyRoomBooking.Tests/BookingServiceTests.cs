@@ -244,12 +244,22 @@ public class BookingServiceTests
             Status = BookingStatus.Confirmed,
         };
         _bookingRepoMock.Setup(r => r.GetByIdAsync(7)).ReturnsAsync(booking);
+        _userRepoMock
+            .Setup(u => u.GetByIdAsync(10))
+            .ReturnsAsync(new User { Id = 10, Email = "student@uni.edu" });
+        _roomRepoMock
+            .Setup(r => r.GetByIdAsync(1))
+            .ReturnsAsync(new Room { Id = 1, Name = "Study Room A" });
 
         await _bookingService.CancelBookingAsync(7);
 
         Assert.AreEqual(BookingStatus.Cancelled, booking.Status);
         _bookingRepoMock.Verify(
             r => r.UpdateAsync(It.Is<Booking>(b => b.Status == BookingStatus.Cancelled)),
+            Times.Once
+        );
+        _notificationServiceMock.Verify(
+            n => n.SendBookingCancellationAsync("student@uni.edu", "Study Room A", booking.BookingDate),
             Times.Once
         );
     }

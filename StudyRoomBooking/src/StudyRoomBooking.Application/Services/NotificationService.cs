@@ -58,11 +58,31 @@ public class NotificationService : INotificationService
 
     public async Task SendBookingCancellationAsync(string email, string roomName, DateTime bookingDate)
     {
-        // Mock implementation - console output
-        Console.WriteLine($"[NOTIFICATION] Booking Cancellation sent to {email}");
-        Console.WriteLine($"  Room: {roomName}");
-        Console.WriteLine($"  Date: {bookingDate:dd/MM/yyyy}");
-        await Task.CompletedTask;
+        var subject = "Study room booking cancelled";
+        var body = $"Đặt phòng học của bạn đã được hủy.\n" +
+                   $"Phòng học: {roomName}\n" +
+                   $"Ngày: {bookingDate:dd/MM/yyyy}\n\n" +
+                   "----------------------------------------\n\n" +
+                   $"Your study room booking has been cancelled.\n" +
+                   $"Room: {roomName}\n" +
+                   $"Date: {bookingDate:dd/MM/yyyy}\n";
+
+        if (!_emailOptions.Enabled)
+        {
+            Console.WriteLine($"[NOTIFICATION] Booking Cancellation for {email}\n{body}");
+            return;
+        }
+
+        using var message = new MailMessage(_emailOptions.From, email, subject, body);
+        using var client = new SmtpClient(_emailOptions.Host, _emailOptions.Port)
+        {
+            EnableSsl = _emailOptions.UseSsl,
+            DeliveryMethod = SmtpDeliveryMethod.Network,
+            UseDefaultCredentials = false,
+            Credentials = new NetworkCredential(_emailOptions.Username, _emailOptions.Password)
+        };
+
+        await client.SendMailAsync(message);
     }
 
     public async Task SendBookingModificationAsync(string email, string roomName, DateTime oldDate, DateTime newDate)

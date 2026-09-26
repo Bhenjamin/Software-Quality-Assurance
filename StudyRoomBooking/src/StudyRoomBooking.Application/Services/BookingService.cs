@@ -155,6 +155,30 @@ public class BookingService : IBookingService
             booking.UpdatedAt = DateTime.UtcNow;
             await _unitOfWork.Bookings.UpdateAsync(booking);
             await _unitOfWork.SaveChangesAsync();
+            await SendBookingCancellationNotificationAsync(booking);
+        }
+    }
+
+    private async Task SendBookingCancellationNotificationAsync(Booking booking)
+    {
+        try
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(booking.UserId);
+            var room = await _unitOfWork.Rooms.GetByIdAsync(booking.RoomId);
+
+            if (user != null && room != null)
+            {
+                await _notificationService.SendBookingCancellationAsync(
+                    user.Email,
+                    room.Name,
+                    booking.BookingDate
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ERROR] Failed to send booking cancellation: {ex.Message}");
+            Console.WriteLine($"[ERROR] Failed to send booking cancellation: {ex.Message}");
         }
     }
 
