@@ -48,8 +48,10 @@ public class RecurringBookingModel : PageModel
 
     public async Task OnGetAsync()
     {
-        SearchCriteria.StartDate = DateTime.Today;
-        SearchCriteria.RecurrenceEndDate = DateTime.Today.AddDays(30);
+        // If current time is after 22:00, show the next day
+        var now = DateTime.Now;
+        SearchCriteria.StartDate = now.Hour >= 22 ? DateTime.Today.AddDays(1) : DateTime.Today;
+        SearchCriteria.RecurrenceEndDate = SearchCriteria.StartDate.AddDays(30);
         // StartTime and EndTime are nullable, so leave them as null (not set)
 
         // Get current user ID
@@ -234,8 +236,9 @@ public class RecurringBookingModel : PageModel
                 return;
             }
 
-            // Validate recurrence end date is after start date
-            if (SearchCriteria.RecurrenceEndDate.Date < SearchCriteria.StartDate.Date)
+            // Validate recurrence end date is after start date (only if recurrence pattern is not None)
+            if (SearchCriteria.RecurrencePattern != RecurrencePattern.None && 
+                SearchCriteria.RecurrenceEndDate.Date < SearchCriteria.StartDate.Date)
             {
                 ModelState.AddModelError(string.Empty, "Recurrence End Date must be on or after the Start Date.");
                 PopulateAvailableBuildings();
@@ -391,6 +394,15 @@ public class RecurringBookingModel : PageModel
                 };
             }
 
+            // Parse recurrence pattern first to check if it's None
+            if (!Enum.TryParse<RecurrencePattern>(recurrencePattern, out var pattern))
+            {
+                return new JsonResult(new { success = false, error = "Invalid recurrence pattern." })
+                {
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
             // Parse recurrence end date
             DateTime? recurrenceEnd = null;
             if (!string.IsNullOrEmpty(recurrenceEndDate) && recurrenceEndDate != "")
@@ -404,23 +416,14 @@ public class RecurringBookingModel : PageModel
                 }
                 recurrenceEnd = parsedEndDate;
 
-                // Validate recurrence end date is not before start date
-                if (recurrenceEnd.Value.Date < date.Date)
+                // Validate recurrence end date is not before start date (only if recurrence pattern is not None)
+                if (pattern != RecurrencePattern.None && recurrenceEnd.Value.Date < date.Date)
                 {
                     return new JsonResult(new { success = false, error = "Recurrence end date must be on or after the start date." })
                     {
                         StatusCode = StatusCodes.Status400BadRequest
                     };
                 }
-            }
-
-            // Parse recurrence pattern
-            if (!Enum.TryParse<RecurrencePattern>(recurrencePattern, out var pattern))
-            {
-                return new JsonResult(new { success = false, error = "Invalid recurrence pattern." })
-                {
-                    StatusCode = StatusCodes.Status400BadRequest
-                };
             }
 
             // Validate booking date and time constraints for the start date

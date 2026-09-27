@@ -47,7 +47,9 @@ public class IndexModel : PageModel
             CurrentUserId = userId;
         }
 
-        SearchCriteria.BookingDate = DateTime.Today;
+        // If current time is after 22:00, show the next day
+        var now = DateTime.Now;
+        SearchCriteria.BookingDate = now.Hour >= 22 ? DateTime.Today.AddDays(1) : DateTime.Today;
         // StartTime and EndTime are nullable, so leave them as null (not set)
 
         // Get the current user role from session

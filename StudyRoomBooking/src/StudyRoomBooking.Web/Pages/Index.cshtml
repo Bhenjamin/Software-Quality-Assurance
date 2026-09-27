@@ -2,8 +2,10 @@
 @model IndexModel
 @{
 	ViewData["Title"] = "Book a Room";
-	var minDate = DateTime.Today.ToString("yyyy-MM-dd");
-	var maxDate = DateTime.Today.AddDays(60).ToString("yyyy-MM-dd");
+	var now = DateTime.Now;
+	var baseDate = now.Hour >= 22 ? DateTime.Today.AddDays(1) : DateTime.Today;
+	var minDate = baseDate.ToString("yyyy-MM-dd");
+	var maxDate = baseDate.AddDays(60).ToString("yyyy-MM-dd");
 }
 
 <style>
@@ -46,6 +48,28 @@
 	.calendar-slot-hidden {
 		/* Hide subsequent slots in a merged group */
 		display: none !important;
+	}
+
+	.matrix-loading-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(255, 255, 255, 0.7);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.3s ease;
+		z-index: 1000;
+		border-radius: inherit;
+	}
+	.matrix-loading-overlay.active {
+		opacity: 1;
+		pointer-events: all;
+	}
+	.matrix-card-wrapper {
+		position: relative;
+	}
 	}
 
 	td.merged-slot-container {
@@ -146,7 +170,9 @@
 
 	@if (Model.SearchResults.Any())
 	{
-		<div class="card mt-4">
+		<div class="matrix-card-wrapper">
+			<div class="matrix-loading-overlay" id="matrixLoadingOverlay"></div>
+			<div class="card mt-4">
 			<div class="card-header">
 				<div style="display: flex; justify-content: flex-start; align-items: flex-start; gap: 15px;">
 					<div style="width: 55%;">
@@ -253,30 +279,31 @@
 							}
 						</tbody>
 					</table>
-				</div>
-			</div>
-		</div>
+								</div>
+							</div>
+								</div>
+								</div>
 
-		<style>
-			.room-matrix table {
-				font-size: 0.9rem;
-			}
-			.room-matrix .badge {
-				font-size: 0.75rem;
-				padding: 4px 8px;
-			}
-			.room-matrix th {
-				background-color: #f8f9fa;
-				padding: 8px 4px;
-				font-size: 0.85rem;
-			}
-			.room-matrix td {
-				padding: 8px 4px;
-				height: auto;
-			}
-		</style>
-	}
-	else if (Model.HasSearched)
+								<style>
+									.room-matrix table {
+										font-size: 0.9rem;
+									}
+									.room-matrix .badge {
+										font-size: 0.75rem;
+										padding: 4px 8px;
+									}
+									.room-matrix th {
+										background-color: #f8f9fa;
+										padding: 8px 4px;
+										font-size: 0.85rem;
+									}
+									.room-matrix td {
+										padding: 8px 4px;
+										height: auto;
+									}
+								</style>
+							}
+							else if (Model.HasSearched)
 	{
 		<div class="alert alert-info">No available rooms found for the selected criteria.</div>
 	}
@@ -1130,6 +1157,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 	// Auto-submit form when any search input changes
 	function autoSubmitSearch() {
+		// Show loading overlay
+		const loadingOverlay = document.getElementById('matrixLoadingOverlay');
+		if (loadingOverlay) {
+			loadingOverlay.classList.add('active');
+		}
+
 		const form = document.querySelector('form');
 		if (form) {
 			form.submit();

@@ -2,8 +2,10 @@
 @model RecurringBookingModel
 @{
 	ViewData["Title"] = "Search Recurring Bookings";
-	var minDate = DateTime.Today.ToString("yyyy-MM-dd");
-	var maxDate = DateTime.Today.AddDays(90).ToString("yyyy-MM-dd");
+	var now = DateTime.Now;
+	var baseDate = now.Hour >= 22 ? DateTime.Today.AddDays(1) : DateTime.Today;
+	var minDate = baseDate.ToString("yyyy-MM-dd");
+	var maxDate = baseDate.AddDays(60).ToString("yyyy-MM-dd");
 }
 
 <style>
@@ -19,6 +21,30 @@
 	.booking-modal-dialog {
 		max-width: 450px;
 		width: 90%;
+	}
+	.recurrence-end-date-disabled {
+		opacity: 0.3;
+		pointer-events: none;
+	}
+	.matrix-loading-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(255, 255, 255, 0.7);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.3s ease;
+		z-index: 1000;
+		border-radius: inherit;
+	}
+	.matrix-loading-overlay.active {
+		opacity: 1;
+		pointer-events: all;
+	}
+	.matrix-card-wrapper {
+		position: relative;
 	}
 </style>
 
@@ -59,7 +85,7 @@
 					</div>
 				</div>
 			</div>
-			<div style="width: 22%;">
+			<div style="width: 22%;" id="recurrenceEndDateContainer">
 				<div class="form-group">
 					<label for="recurrenceEndDate" class="form-label">Recurrence End Date</label>
 					<div class="input-group">
@@ -151,17 +177,32 @@
 
 	@if (Model.SearchResults.Any())
 	{
-		<div class="card mt-4">
+		<div class="matrix-card-wrapper">
+			<div class="matrix-loading-overlay" id="matrixLoadingOverlay"></div>
+			<div class="card mt-4">
 			<div class="card-header">
 				<div style="display: flex; justify-content: flex-start; align-items: flex-start; gap: 15px;">
 					<div style="width: 55%;">
-						<h5 class="mb-0">Available Rooms for @Model.SearchCriteria.StartDate.ToString("dddd, MMMM dd, yyyy")</h5>
-						<small class="text-muted">Recurring from @Model.SearchCriteria.StartDate.ToString("MMM dd") to @Model.SearchCriteria.RecurrenceEndDate.ToString("MMM dd, yyyy") | Time Range: 08:00 - 22:00
-							@if (Model.SearchCriteria.StartTime.HasValue || Model.SearchCriteria.EndTime.HasValue)
-							{
-								<br /><strong style="color: #0c63e4;">✓ Filtered: Showing only rooms available at specified hours across the entire date range</strong>
-							}
-						</small>
+						@if (Model.SearchCriteria.RecurrencePattern == StudyRoomBooking.Domain.Enums.RecurrencePattern.None || Model.SearchCriteria.RecurrencePattern == null)
+						{
+							<h5 class="mb-0">Available Rooms for @Model.SearchCriteria.StartDate.ToString("dddd, MMMM dd, yyyy")</h5>
+							<small class="text-muted">Time Range: 08:00 - 22:00
+								@if (Model.SearchCriteria.StartTime.HasValue || Model.SearchCriteria.EndTime.HasValue)
+								{
+									<br /><strong style="color: #0c63e4;">✓ Filtered: Showing only rooms available at specified hours</strong>
+								}
+							</small>
+						}
+						else
+						{
+							<h5 class="mb-0">Available Rooms for all recurring dates from<br />@Model.SearchCriteria.StartDate.ToString("dd/MM/yyyy") to @Model.SearchCriteria.RecurrenceEndDate.ToString("dd/MM/yyyy")</h5>
+							<small class="text-muted">Recurring pattern: @(Model.SearchCriteria.RecurrencePattern == StudyRoomBooking.Domain.Enums.RecurrencePattern.FourWeeks ? "Four Weeks" : Model.SearchCriteria.RecurrencePattern.ToString()) | Time Range: 08:00 - 22:00
+								@if (Model.SearchCriteria.StartTime.HasValue || Model.SearchCriteria.EndTime.HasValue)
+								{
+									<br /><strong style="color: #0c63e4;">✓ Filtered: Showing only rooms available at specified hours across the entire date range</strong>
+								}
+							</small>
+						}
 					</div>
 					<div style="width: 45%; display: grid; grid-template-columns: 2fr 1fr; gap: 10px; font-size: 0.9rem;">
 						<div style="display: flex; align-items: flex-start; gap: 10px;">
@@ -305,11 +346,12 @@
 							}
 						</tbody>
 					</table>
-				</div>
-			</div>
-		</div>
+							</div>
+								</div>
+							</div>
+						</div>
 
-		<div class="mt-4 mb-4">
+						<div class="mt-4 mb-4">
 			<a href="@Url.Page("/Staff/RecurringBooking")" class="btn btn-secondary">Clear Search</a>
 		</div>
 	}
@@ -712,8 +754,31 @@
 		// Validate on page load
 		// validateTimes(); // Commented out - no time filters on this page
 
+		// Update the state of Recurrence End Date field based on Recurrence Pattern
+		function updateRecurrenceEndDateState() {
+			const recurrencePatternInput = document.getElementById('recurrencePattern');
+			const recurrenceEndDateContainer = document.getElementById('recurrenceEndDateContainer');
+
+			if (recurrencePatternInput && recurrenceEndDateContainer) {
+				const selectedPattern = recurrencePatternInput.value;
+				if (selectedPattern === '0' || selectedPattern === 'None') {
+					// Disable and fade when pattern is None
+					recurrenceEndDateContainer.classList.add('recurrence-end-date-disabled');
+				} else {
+					// Enable when pattern is not None
+					recurrenceEndDateContainer.classList.remove('recurrence-end-date-disabled');
+				}
+			}
+		}
+
 		// Auto-submit form when any search input changes
 		function autoSubmitSearch() {
+			// Show loading overlay
+			const loadingOverlay = document.getElementById('matrixLoadingOverlay');
+			if (loadingOverlay) {
+				loadingOverlay.classList.add('active');
+			}
+
 			const form = document.querySelector('form');
 			if (form) {
 				form.submit();
@@ -745,7 +810,15 @@
 
 			// Recurrence Pattern input (dropdown)
 			const recurrencePatternInput = document.getElementById('recurrencePattern');
-			if (recurrencePatternInput) recurrencePatternInput.addEventListener('change', autoSubmitSearch);
+			if (recurrencePatternInput) {
+				// Call on page load to set initial state
+				updateRecurrenceEndDateState();
+				// Call on change
+				recurrencePatternInput.addEventListener('change', function() {
+					updateRecurrenceEndDateState();
+					autoSubmitSearch();
+				});
+			}
 		}
 	});
 
