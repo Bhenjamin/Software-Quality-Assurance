@@ -225,11 +225,11 @@ public class RecurringBookingModel : PageModel
                 return;
             }
 
-            // Validate start date is not more than 180 days ahead
+            // Validate start date is not more than 90 days ahead
             var daysInAdvance = (SearchCriteria.StartDate.Date - today).Days;
-            if (daysInAdvance > 180)
+            if (daysInAdvance > 90)
             {
-                ModelState.AddModelError(string.Empty, $"Start date can only be up to 6 months (180 days) ahead. Your selected date is {daysInAdvance} days away.");
+                ModelState.AddModelError(string.Empty, $"Start date can only be up to 3 months (90 days) ahead. Your selected date is {daysInAdvance} days away.");
                 PopulateAvailableBuildings();
                 return;
             }

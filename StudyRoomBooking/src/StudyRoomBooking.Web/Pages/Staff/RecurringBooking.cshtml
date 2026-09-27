@@ -3,7 +3,7 @@
 @{
 	ViewData["Title"] = "Search Recurring Bookings";
 	var minDate = DateTime.Today.ToString("yyyy-MM-dd");
-	var maxDate = DateTime.Today.AddDays(180).ToString("yyyy-MM-dd");
+	var maxDate = DateTime.Today.AddDays(90).ToString("yyyy-MM-dd");
 }
 
 <style>
@@ -41,7 +41,7 @@
 		<div class="d-flex align-items-end gap-4">
 			<div style="width: 22%;">
 				<div class="form-group">
-					<label for="startDate" class="form-label">Start Date <small class="text-muted"> - Limit: 6 months</small></label>
+					<label for="startDate" class="form-label">Start Date <small class="text-muted"> - Limit: 3 months</small></label>
 					<div class="input-group">
 						<button type="button" id="startDateBackBtn" class="btn btn-outline-secondary" title="Previous day">
 							<i class="bi bi-chevron-down"></i> ◀
@@ -274,7 +274,19 @@
 												@if (slotStatus == SlotStatus.Mixed)
 												{
 													<!-- Red + Blue: Mixed booking -->
-													<span class="badge calendar-slot calendar-slot-booked" style="position: relative; background: linear-gradient(135deg, #dc3545 50%, #2563EB 50%);"> </span>
+													<span class="badge calendar-slot calendar-slot-booked calendar-slot-booked-mixed" 
+														style="position: relative; background: linear-gradient(135deg, #dc3545 50%, #2563EB 50%); cursor: pointer;"
+														data-room-id="@room.Id"
+														data-time-slot="@(startHour.ToString().PadLeft(2,'0')):00"
+														data-start-date="@Model.SearchCriteria.StartDate.ToString("yyyy-MM-dd")"
+														data-start-time="@(startHour.ToString().PadLeft(2,'0')):00"
+														data-end-time="@(endHour.ToString().PadLeft(2,'0')):00"
+														data-recurrence-end-date="@Model.SearchCriteria.RecurrenceEndDate.ToString("yyyy-MM-dd")"
+														data-recurrence-pattern="@Model.SearchCriteria.RecurrencePattern"
+														data-room-name="@room.Name"
+														data-room-code="@room.Code"
+														data-room-location="@room.Location"
+														data-room-capacity="@room.Capacity"> </span>
 												}
 												else
 												{
@@ -312,6 +324,7 @@
 <script>
 
 	// Function to refresh the matrix display without page reload
+	// Intelligently handles color transitions based on original slot color
 	async function refreshMatrixDisplay(status = 'YourBooking') {
 		try {
 			// Get booking details from modal
@@ -348,16 +361,57 @@
 				cells.forEach(cell => {
 					const button = cell.querySelector('button, span');
 					if (button) {
-						console.log(`Updating cell to status: ${status}`);
+						// Check the original slot color BEFORE updating
+						const wasBlue = button.classList.contains('calendar-slot-booked-self');
+						const wasMixed = button.classList.contains('calendar-slot-booked-mixed');
+						const wasGreen = button.classList.contains('calendar-slot-free');
+						const wasRed = button.classList.contains('calendar-slot-booked') && !wasBlue && !wasMixed;
+
+						console.log(`Updating cell: wasBlue=${wasBlue}, wasMixed=${wasMixed}, wasGreen=${wasGreen}, wasRed=${wasRed}, status=${status}`);
 
 						// Remove all status classes
-						button.classList.remove('calendar-slot-free', 'calendar-slot-booked', 'calendar-slot-booked-self', 'calendar-slot-unavailable');
+						button.classList.remove('calendar-slot-free', 'calendar-slot-booked', 'calendar-slot-booked-self', 'calendar-slot-booked-mixed', 'calendar-slot-unavailable');
 
-						// Add the appropriate class and color based on status
+						// Determine the new status based on original color and action
+						let newStatus = status;
 						if (status === 'Available') {
-							// Slot is now available (deleted)
+							// Deletion occurred - check what it was before
+							if (wasBlue) {
+								// Blue slot → turn green (completely available)
+								newStatus = 'Available';
+								console.log('Blue slot deleted → turning green (Available)');
+							} else if (wasMixed) {
+								// Red+Blue slot → turn red (other bookings remain)
+								newStatus = 'Booked';
+								console.log('Mixed slot deleted → turning red (Booked - other bookings remain)');
+							} else if (wasRed) {
+								// Red slot → stay red (other bookings remain, nothing to delete)
+								newStatus = 'Booked';
+								console.log('Red slot deleted → staying red (Booked)');
+							}
+						} else {
+							// Booking success occurred - check what it was before
+							if (wasGreen) {
+								// Green slot → turn blue (only your booking)
+								newStatus = 'YourBooking';
+								console.log('Green slot booked → turning blue (YourBooking)');
+							} else if (wasRed) {
+								// Red slot → turn red+blue (your booking + other bookings)
+								newStatus = 'Mixed';
+								console.log('Red slot booked → turning red+blue (Mixed)');
+							} else if (wasMixed) {
+								// Mixed slot → stay mixed (your booking + other bookings remain)
+								newStatus = 'Mixed';
+								console.log('Mixed slot booked → staying mixed (Mixed)');
+							}
+						}
+
+						// Add the appropriate class and color based on new status
+						if (newStatus === 'Available') {
+							// Slot is available (green)
 							button.classList.add('calendar-slot-free');
 							button.style.backgroundColor = '#d4edda'; // Green
+							button.style.background = '#d4edda';
 
 							// Convert span to button if needed (recreate the booking button)
 							if (button.tagName === 'SPAN') {
@@ -365,10 +419,10 @@
 								newButton.type = 'button';
 								newButton.className = 'badge calendar-slot calendar-slot-free btn-recurring-book';
 								newButton.style.border = 'none';
-								newButton.style.background = 'none';
+								newButton.style.background = '#d4edda';
+								newButton.style.backgroundColor = '#d4edda';
 								newButton.style.padding = '0';
 								newButton.style.cursor = 'pointer';
-								newButton.style.backgroundColor = '#d4edda';
 
 								// Copy data attributes
 								Array.from(button.attributes).forEach(attr => {
@@ -380,10 +434,81 @@
 								cell.innerHTML = '';
 								cell.appendChild(newButton);
 							}
+						} else if (newStatus === 'Booked') {
+							// Slot is booked by others (red)
+							button.classList.add('calendar-slot-booked');
+							button.style.backgroundColor = '#dc3545'; // Red
+							button.style.background = '#dc3545';
+							button.style.cursor = 'not-allowed'; // Not clickable
+							button.style.pointerEvents = 'none'; // Disable pointer events
+
+							// Convert button to span if needed
+							if (button.tagName === 'BUTTON') {
+								const newSpan = document.createElement('span');
+								newSpan.className = 'badge calendar-slot calendar-slot-booked';
+								newSpan.style.cursor = 'not-allowed';
+								newSpan.style.backgroundColor = '#dc3545';
+								newSpan.style.pointerEvents = 'none'; // Disable pointer events
+
+								// Copy data attributes
+								Array.from(button.attributes).forEach(attr => {
+									if (attr.name.startsWith('data-')) {
+										newSpan.setAttribute(attr.name, attr.value);
+									}
+								});
+
+								cell.innerHTML = '';
+								cell.appendChild(newSpan);
+							}
+						} else if (newStatus === 'Mixed') {
+							// Slot is mixed (red + blue)
+							button.classList.add('calendar-slot-booked', 'calendar-slot-booked-mixed');
+							button.style.backgroundColor = '#dc3545'; // Red (visible part)
+							button.style.background = 'linear-gradient(135deg, #dc3545 50%, #2563EB 50%)'; // Red+Blue gradient
+							button.style.cursor = 'pointer'; // Make clickable
+							button.style.pointerEvents = 'auto'; // Enable pointer events
+
+							// Copy data attributes to button if converting from another element
+							if (button.tagName === 'BUTTON') {
+								// Button already has the data attributes from when it was created
+								// Just update the styles
+								button.style.cursor = 'pointer';
+								button.style.position = 'relative';
+								button.style.background = 'linear-gradient(135deg, #dc3545 50%, #2563EB 50%)';
+								button.style.pointerEvents = 'auto'; // Enable pointer events
+
+								// Convert button to span
+								const newSpan = document.createElement('span');
+								newSpan.className = 'badge calendar-slot calendar-slot-booked calendar-slot-booked-mixed';
+								newSpan.style.cursor = 'pointer';
+								newSpan.style.position = 'relative';
+								newSpan.style.background = 'linear-gradient(135deg, #dc3545 50%, #2563EB 50%)';
+								newSpan.style.backgroundColor = '#dc3545';
+								newSpan.style.pointerEvents = 'auto'; // Enable pointer events - CRITICAL for clickability
+
+								// Copy ALL attributes from button to span - especially data attributes
+								Array.from(button.attributes).forEach(attr => {
+									if (attr.name.startsWith('data-') || attr.name === 'style') {
+										if (attr.name !== 'style') { // Skip style since we're setting inline
+											newSpan.setAttribute(attr.name, attr.value);
+										}
+									}
+								});
+
+								// Ensure all required data attributes are present
+								if (!newSpan.getAttribute('data-room-id')) newSpan.setAttribute('data-room-id', roomId);
+								if (!newSpan.getAttribute('data-time-slot')) newSpan.setAttribute('data-time-slot', timeSlotStr);
+								if (!newSpan.getAttribute('data-start-time')) newSpan.setAttribute('data-start-time', `${String(startHour).padStart(2, '0')}:00`);
+								if (!newSpan.getAttribute('data-end-time')) newSpan.setAttribute('data-end-time', `${String(startHour + 1).padStart(2, '0')}:00`);
+
+								cell.innerHTML = '';
+								cell.appendChild(newSpan);
+							}
 						} else {
-							// Slot is booked (Default is 'YourBooking')
+							// Slot is your booking (blue)
 							button.classList.add('calendar-slot-booked-self');
 							button.style.backgroundColor = '#2563EB'; // Blue
+							button.style.background = '#2563EB';
 
 							// Convert button to span if it's a booking
 							if (button.tagName === 'BUTTON') {
@@ -524,7 +649,9 @@
 		function updateEndDateButtons() {
 			const currentDate = endDateInput.value;
 			const minDate = endDateInput.getAttribute('min');
-			endDateBackBtn.disabled = currentDate === minDate;
+			const maxDate = endDateInput.getAttribute('max');
+			endDateBackBtn.disabled = currentDate <= minDate;
+			endDateForwardBtn.disabled = currentDate >= maxDate;
 		}
 
 		endDateBackBtn.addEventListener('click', function(e) {
@@ -714,6 +841,33 @@
 		}
 	});
 
+	// Add click handler to mixed slots (Red+Blue) to open modify modal
+	document.addEventListener('click', async function(e) {
+		const mixedSlot = e.target.closest('.calendar-slot-booked-mixed');
+		if (mixedSlot) {
+			e.preventDefault();
+			e.stopPropagation();
+
+			// Get data attributes directly from the mixed slot
+			const roomId = mixedSlot.getAttribute('data-room-id');
+			const startDate = mixedSlot.getAttribute('data-start-date');
+			const startTime = mixedSlot.getAttribute('data-start-time');
+			const endTime = mixedSlot.getAttribute('data-end-time');
+			const recurrenceEndDate = mixedSlot.getAttribute('data-recurrence-end-date');
+			const recurrencePattern = mixedSlot.getAttribute('data-recurrence-pattern');
+			const roomDetails = {
+				Name: mixedSlot.getAttribute('data-room-name'),
+				Code: mixedSlot.getAttribute('data-room-code'),
+				Location: mixedSlot.getAttribute('data-room-location'),
+				Capacity: parseInt(mixedSlot.getAttribute('data-room-capacity'))
+			};
+
+			console.log('Mixed slot clicked with data:', {roomId, startDate, startTime, endTime, recurrenceEndDate, recurrencePattern, roomDetails});
+
+			await openModifyRecurringBookingModal(roomId, startDate, startTime, endTime, recurrenceEndDate, recurrencePattern, roomDetails);
+		}
+	});
+
 	// Function to open modify recurring booking modal
 	async function openModifyRecurringBookingModal(roomId, startDate, startTime, endTime, recurrenceEndDate, recurrencePattern, roomDetails) {
 		try {
@@ -823,6 +977,20 @@
 	// Function to refresh booking statuses when time changes
 	async function refreshModifyRecurringBookingStatuses(roomId, startDate, recurrenceEndDate, recurrencePattern, defaultStartTime, defaultEndTime) {
 		try {
+			// DISABLE buttons immediately while we're fetching/updating data
+			const syncBtn = document.getElementById('modifyRecurringSyncAllBtn');
+			const deleteBtn = document.getElementById('modifyRecurringDeleteAllBtn');
+
+			syncBtn.disabled = true;
+			syncBtn.style.opacity = '0.5';
+			syncBtn.style.cursor = 'wait';
+			syncBtn.title = 'Loading booking details...';
+
+			deleteBtn.disabled = true;
+			deleteBtn.style.opacity = '0.5';
+			deleteBtn.style.cursor = 'wait';
+			deleteBtn.title = 'Loading booking details...';
+
 			console.log('refreshModifyRecurringBookingStatuses called with:', {roomId, startDate, recurrenceEndDate, recurrencePattern, defaultStartTime, defaultEndTime});
 
 			// Get time values from dropdowns with better error handling
@@ -944,8 +1112,7 @@
 			console.log('Stored dates with bookings count:', datesWithBookings.length, 'Dates:', datesWithBookings);
 
 			// Disable sync button when all dates already have "existing" status
-			const hasAnyMissingBooking = data.dateStatuses.some(ds => ds.status !== 'existing');
-			const syncBtn = document.getElementById('modifyRecurringSyncAllBtn');
+			const hasAnyMissingBooking = data.dateStatuses.some(ds => ds.status === 'missing' || ds.status === 'missing hour');
 
 			if (!hasAnyMissingBooking) {
 				// All dates are existing - disable the sync button
@@ -963,7 +1130,6 @@
 
 			// Disable delete button when there are no existing bookings to delete
 			const hasAnyExistingBooking = data.dateStatuses.some(ds => ds.status === 'existing' || ds.status === 'missing hour');
-			const deleteBtn = document.getElementById('modifyRecurringDeleteAllBtn');
 
 			if (!hasAnyExistingBooking) {
 				// All dates are missing - disable the delete button
@@ -985,6 +1151,20 @@
 			console.error('Error refreshing statuses:', error);
 			document.getElementById('modifyRecurringBookingAlert').style.display = 'block';
 			document.getElementById('modifyRecurringBookingErrors').innerHTML = error.message;
+
+			// Keep buttons disabled on error but show it's an error state
+			const syncBtn = document.getElementById('modifyRecurringSyncAllBtn');
+			const deleteBtn = document.getElementById('modifyRecurringDeleteAllBtn');
+
+			syncBtn.disabled = true;
+			syncBtn.style.opacity = '0.5';
+			syncBtn.style.cursor = 'not-allowed';
+			syncBtn.title = 'Error loading details - please try again';
+
+			deleteBtn.disabled = true;
+			deleteBtn.style.opacity = '0.5';
+			deleteBtn.style.cursor = 'not-allowed';
+			deleteBtn.title = 'Error loading details - please try again';
 		}
 	}
 
