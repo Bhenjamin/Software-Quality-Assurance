@@ -907,19 +907,98 @@ public class RecurringBookingModel : PageModel
                     }
                     else
                     {
-                        // Partial booking(s) - not covering full requested time, label as "missing hour"
-                        // Display only the overlapping portion
-                        status = "missing hour";
-                        timeDisplay = $"{overlapStartTime:hh\\:mm}-{overlapEndTime:hh\\:mm}";
-                        System.Diagnostics.Debug.WriteLine($"  -> Status: MISSING HOUR");
+                        // Partial booking(s) - not covering full requested time
+                        // Check if there are conflicting bookings in the UNCOVERED portion
+                        TimeSpan? uncoveredStart = null;
+                        TimeSpan? uncoveredEnd = null;
+
+                        // Determine which part is uncovered
+                        if (mergedStartTime > newStart)
+                        {
+                            // Uncovered time at the start
+                            uncoveredStart = newStart;
+                            uncoveredEnd = mergedStartTime;
+                        }
+                        else if (mergedEndTime < newEnd)
+                        {
+                            // Uncovered time at the end
+                            uncoveredStart = mergedEndTime;
+                            uncoveredEnd = newEnd;
+                        }
+
+                        // Check if other users have bookings in the uncovered time
+                        bool hasConflictInUncovered = false;
+                        TimeSpan? conflictInUncoveredStart = null;
+                        TimeSpan? conflictInUncoveredEnd = null;
+
+                        if (uncoveredStart.HasValue && uncoveredEnd.HasValue)
+                        {
+                            var conflictsInUncovered = bookingsOnDate.Where(b =>
+                                b.UserId != userId &&
+                                !(b.EndTime <= uncoveredStart || b.StartTime >= uncoveredEnd)).ToList();
+
+                            if (conflictsInUncovered.Count > 0)
+                            {
+                                hasConflictInUncovered = true;
+                                // Get the merged conflict time range in the uncovered portion
+                                var conflictStart = conflictsInUncovered.Min(b => b.StartTime);
+                                var conflictEnd = conflictsInUncovered.Max(b => b.EndTime);
+
+                                // Calculate actual overlap with uncovered time
+                                conflictInUncoveredStart = conflictStart > uncoveredStart ? conflictStart : uncoveredStart;
+                                conflictInUncoveredEnd = conflictEnd < uncoveredEnd ? conflictEnd : uncoveredEnd;
+
+                                System.Diagnostics.Debug.WriteLine($"  Uncovered portion: {uncoveredStart:hh\\:mm}-{uncoveredEnd:hh\\:mm}");
+                                System.Diagnostics.Debug.WriteLine($"  Conflict in uncovered: {conflictInUncoveredStart:hh\\:mm}-{conflictInUncoveredEnd:hh\\:mm}");
+                            }
+                        }
+
+                        if (hasConflictInUncovered && conflictInUncoveredStart.HasValue && conflictInUncoveredEnd.HasValue)
+                        {
+                            // Prioritize showing the booked conflict over missing hour
+                            status = "booked";
+                            timeDisplay = $"{conflictInUncoveredStart:hh\\:mm}-{conflictInUncoveredEnd:hh\\:mm}";
+                            System.Diagnostics.Debug.WriteLine($"  -> Status: BOOKED (in uncovered portion)");
+                        }
+                        else
+                        {
+                            // No conflicts in uncovered portion, show as missing hour
+                            status = "missing hour";
+                            timeDisplay = $"{overlapStartTime:hh\\:mm}-{overlapEndTime:hh\\:mm}";
+                            System.Diagnostics.Debug.WriteLine($"  -> Status: MISSING HOUR");
+                        }
                     }
                 }
                 else if (conflicts.Count > 0)
                 {
-                    // There's a conflicting booking but user doesn't have one
-                    status = "missing";
-                    timeDisplay = ""; // No time for "missing"
-                    System.Diagnostics.Debug.WriteLine($"  -> Status: MISSING (conflict)");
+                    // There's a conflicting booking by another user but this user doesn't have one
+                    // Calculate the overlap of other user's bookings with the search time window
+                    TimeSpan? conflictOverlapStart = null;
+                    TimeSpan? conflictOverlapEnd = null;
+
+                    // Get the merged time range of all conflicting bookings
+                    var conflictStartTime = conflicts.Min(b => b.StartTime);
+                    var conflictEndTime = conflicts.Max(b => b.EndTime);
+
+                    // Calculate overlap with the search time window (newStart to newEnd)
+                    conflictOverlapStart = conflictStartTime > newStart ? conflictStartTime : newStart;
+                    conflictOverlapEnd = conflictEndTime < newEnd ? conflictEndTime : newEnd;
+
+                    if (conflictOverlapStart.HasValue && conflictOverlapEnd.HasValue && conflictOverlapStart < conflictOverlapEnd)
+                    {
+                        // There is a valid overlap - show as "booked" with the overlapping time range
+                        status = "booked";
+                        timeDisplay = $"{conflictOverlapStart:hh\\:mm}-{conflictOverlapEnd:hh\\:mm}";
+                        System.Diagnostics.Debug.WriteLine($"  Conflict time range: {conflictStartTime:hh\\:mm}-{conflictEndTime:hh\\:mm}, overlap with search window: {conflictOverlapStart:hh\\:mm}-{conflictOverlapEnd:hh\\:mm}");
+                        System.Diagnostics.Debug.WriteLine($"  -> Status: BOOKED");
+                    }
+                    else
+                    {
+                        // Conflicts exist but don't overlap with search window
+                        status = "missing";
+                        timeDisplay = "";
+                        System.Diagnostics.Debug.WriteLine($"  -> Status: MISSING (no overlap with search window)");
+                    }
                 }
                 else
                 {
@@ -1095,11 +1174,166 @@ public class RecurringBookingModel : PageModel
                     b.UserId == userId && 
                     !(b.EndTime <= newStart || b.StartTime >= newEnd));
 
-                // Check if there are conflicting bookings (by any user) with the new time
-                var conflicts = bookingsOnDate.Where(b => 
-                    b.UserId != userId && 
+                // Get all bookings (by any user) that overlap with the requested time on this date
+                var allOverlappingBookings = bookingsOnDate.Where(b => 
                     !(b.EndTime <= newStart || b.StartTime >= newEnd)).ToList();
 
+                System.Diagnostics.Debug.WriteLine($"[RecurringDetails] Date: {date:yyyy-MM-dd}, NewStart: {newStart:hh\\:mm}, NewEnd: {newEnd:hh\\:mm}");
+                System.Diagnostics.Debug.WriteLine($"[RecurringDetails] AllOverlappingBookings count: {allOverlappingBookings.Count}");
+                foreach (var b in allOverlappingBookings)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[RecurringDetails]   - Booking: UserId={b.UserId}, Start={b.StartTime:hh\\:mm}, End={b.EndTime:hh\\:mm}");
+                }
+
+                // Generate time segments and their statuses
+                var timeSegments = new List<object>();
+
+                if (userBooking != null)
+                {
+                    // Current user has a booking - show exist status
+                    var displayEnd = userBooking.EndTime < newEnd ? userBooking.EndTime : newEnd;
+                    timeSegments.Add(new
+                    {
+                        startTime = userBooking.StartTime.ToString(@"hh\:mm"),
+                        endTime = displayEnd.ToString(@"hh\:mm"),
+                        status = "exist",
+                        detail = $"Your booking"
+                    });
+
+                    // Check for other users' bookings after the user's booking
+                    var otherBookingsAfter = allOverlappingBookings
+                        .Where(b => b.UserId != userId && b.StartTime >= userBooking.EndTime)
+                        .OrderBy(b => b.StartTime)
+                        .FirstOrDefault();
+
+                    if (otherBookingsAfter != null && otherBookingsAfter.StartTime < newEnd)
+                    {
+                        var bookedStart = otherBookingsAfter.StartTime;
+                        var bookedEnd = otherBookingsAfter.EndTime < newEnd ? otherBookingsAfter.EndTime : newEnd;
+                        timeSegments.Add(new
+                        {
+                            startTime = bookedStart.ToString(@"hh\:mm"),
+                            endTime = bookedEnd.ToString(@"hh\:mm"),
+                            status = "booked",
+                            detail = "Booked by another user"
+                        });
+                    }
+
+                    // Add missing segment if any
+                    var lastEnd = userBooking.EndTime;
+                    var otherBooking = otherBookingsAfter;
+                    if (otherBooking != null && otherBooking.StartTime > userBooking.EndTime && otherBooking.StartTime < newEnd)
+                    {
+                        lastEnd = otherBooking.StartTime;
+                    }
+
+                    if (lastEnd < newEnd)
+                    {
+                        timeSegments.Add(new
+                        {
+                            startTime = lastEnd.ToString(@"hh\:mm"),
+                            endTime = newEnd.ToString(@"hh\:mm"),
+                            status = "missing",
+                            detail = "Missing hour"
+                        });
+                    }
+                }
+                else
+                {
+                    // No current user booking - check for other users' bookings
+                    var otherBookingsList = allOverlappingBookings.Where(b => b.UserId != userId).OrderBy(b => b.StartTime).ToList();
+
+                    if (otherBookingsList.Count > 0)
+                    {
+                        var currentPos = newStart;
+
+                        // Add missing time before first booking
+                        if (otherBookingsList[0].StartTime > newStart)
+                        {
+                            timeSegments.Add(new
+                            {
+                                startTime = newStart.ToString(@"hh\:mm"),
+                                endTime = otherBookingsList[0].StartTime.ToString(@"hh\:mm"),
+                                status = "missing",
+                                detail = "Missing hour"
+                            });
+                            currentPos = otherBookingsList[0].StartTime;
+                        }
+
+                        // Add all other users' bookings (clipped to requested time range)
+                        for (int i = 0; i < otherBookingsList.Count; i++)
+                        {
+                            var otherBooking = otherBookingsList[i];
+                            var bookedStart = otherBooking.StartTime;
+                            var bookedEnd = otherBooking.EndTime;
+
+                            // Check if booking overlaps with requested time range
+                            if (bookedStart < newEnd && bookedEnd > newStart)
+                            {
+                                // Clip to requested time range
+                                if (bookedStart < newStart)
+                                    bookedStart = newStart;
+                                if (bookedEnd > newEnd)
+                                    bookedEnd = newEnd;
+
+                                System.Diagnostics.Debug.WriteLine($"[RecurringDetails] Date: {date:yyyy-MM-dd} - Other user booking found and adding: {bookedStart:hh\\:mm}-{bookedEnd:hh\\:mm}");
+
+                                timeSegments.Add(new
+                                {
+                                    startTime = bookedStart.ToString(@"hh\:mm"),
+                                    endTime = bookedEnd.ToString(@"hh\:mm"),
+                                    status = "booked",
+                                    detail = "Booked by another user"
+                                });
+
+                                currentPos = bookedEnd;
+
+                                // Add missing time between this booking and the next one
+                                if (i + 1 < otherBookingsList.Count)
+                                {
+                                    var nextBooking = otherBookingsList[i + 1];
+                                    if (nextBooking.StartTime > bookedEnd && nextBooking.StartTime < newEnd)
+                                    {
+                                        timeSegments.Add(new
+                                        {
+                                            startTime = bookedEnd.ToString(@"hh\:mm"),
+                                            endTime = nextBooking.StartTime.ToString(@"hh\:mm"),
+                                            status = "missing",
+                                            detail = "Missing hour"
+                                        });
+                                    }
+                                }
+                            }
+                        }
+
+                        // Add missing time after last booking
+                        var lastBooking = otherBookingsList[otherBookingsList.Count - 1];
+                        var lastEnd = lastBooking.EndTime > newEnd ? newEnd : lastBooking.EndTime;
+                        if (lastEnd < newEnd)
+                        {
+                            timeSegments.Add(new
+                            {
+                                startTime = lastEnd.ToString(@"hh\:mm"),
+                                endTime = newEnd.ToString(@"hh\:mm"),
+                                status = "missing",
+                                detail = "Missing hour"
+                            });
+                        }
+                    }
+                    else
+                    {
+                        // No other bookings - entire slot is missing
+                        timeSegments.Add(new
+                        {
+                            startTime = newStart.ToString(@"hh\:mm"),
+                            endTime = newEnd.ToString(@"hh\:mm"),
+                            status = "missing",
+                            detail = "Missing hour"
+                        });
+                    }
+                }
+
+                // Determine overall date status for backward compatibility
                 string status = "missing";
                 string detail = "";
 
@@ -1108,14 +1342,18 @@ public class RecurringBookingModel : PageModel
                     status = "exist";
                     detail = $"Exists: {userBooking.StartTime:hh\\:mm}-{userBooking.EndTime:hh\\:mm}";
                 }
-                else if (conflicts.Count > 0)
-                {
-                    status = "conflict";
-                    detail = $"Conflict: booked {conflicts[0].StartTime:hh\\:mm}-{conflicts[0].EndTime:hh\\:mm}";
-                }
                 else
                 {
-                    detail = "Available for booking";
+                    var otherBookings = allOverlappingBookings.Where(b => b.UserId != userId).ToList();
+                    if (otherBookings.Count > 0)
+                    {
+                        status = "booked";
+                        detail = $"Booked: {otherBookings[0].StartTime:hh\\:mm}-{otherBookings[0].EndTime:hh\\:mm}";
+                    }
+                    else
+                    {
+                        detail = "Available for booking";
+                    }
                 }
 
                 dateStatuses.Add(new
@@ -1123,7 +1361,8 @@ public class RecurringBookingModel : PageModel
                     date = date.ToString("yyyy-MM-dd"),
                     dateDisplay = date.ToString("dddd, MMM dd"),
                     status = status,
-                    detail = detail
+                    detail = detail,
+                    timeSegments = timeSegments
                 });
             }
 
@@ -1523,6 +1762,9 @@ public class RecurringBookingModel : PageModel
                 }
             }
 
+            System.Diagnostics.Debug.WriteLine($"[BookMissing] Generated recurrence dates: {string.Join(", ", recurrenceDates.Select(d => d.ToString("yyyy-MM-dd")))}");
+            System.Diagnostics.Debug.WriteLine($"[BookMissing] Total dates to process: {recurrenceDates.Count}");
+
             // Get room
             var room = await _roomService.GetRoomByIdAsync(roomId);
             if (room == null)
@@ -1578,6 +1820,7 @@ public class RecurringBookingModel : PageModel
             // Process each date in the recurrence
             foreach (var date in recurrenceDates)
             {
+                System.Diagnostics.Debug.WriteLine($"[BookMissing] Processing date: {date:yyyy-MM-dd}");
                 try
                 {
                     // Find user's booking for this date that overlaps with new time
@@ -1586,6 +1829,8 @@ public class RecurringBookingModel : PageModel
                         b.BookingDate.Date == date.Date &&
                         b.Status != BookingStatus.Cancelled &&
                         !(b.EndTime <= newStart || b.StartTime >= newEnd));
+
+                    System.Diagnostics.Debug.WriteLine($"[BookMissing] {date:yyyy-MM-dd} - userBookingOnDate found: {userBookingOnDate != null}");
 
                     TimeSpan bookStartTime = newStart;
                     TimeSpan bookEndTime = newEnd;
@@ -1636,48 +1881,63 @@ public class RecurringBookingModel : PageModel
                     }
                     else
                     {
-                        // No booking exists for this date, check if there's a conflicting booking (across all rooms)
-                        var conflicts = conflictingBookingsAllRooms.Where(b =>
-                            b.BookingDate.Date == date.Date &&
-                            !(b.EndTime <= newStart || b.StartTime >= newEnd)).ToList();
+                        System.Diagnostics.Debug.WriteLine($"[BookMissing] {date:yyyy-MM-dd} - No existing booking, checking conflicts with user's bookings in other rooms");
 
-                        if (conflicts.Count > 0)
+                        // Check only for the CURRENT USER's overlapping bookings in OTHER rooms on this date
+                        // (This matches the user's requirement: prevent booking if user has overlapping time in another room)
+                        var userConflictsInOtherRooms = allUserBookings.Where(b =>
+                            b.BookingDate.Date == date.Date &&
+                            b.RoomId != roomId &&
+                            b.Status != BookingStatus.Cancelled &&
+                            !(b.EndTime <= bookStartTime || b.StartTime >= bookEndTime)).ToList();
+
+                        System.Diagnostics.Debug.WriteLine($"[BookMissing] {date:yyyy-MM-dd} - User conflicts in other rooms: {userConflictsInOtherRooms.Count}");
+
+                        if (userConflictsInOtherRooms.Count > 0)
                         {
-                            var conflictingRoomIds = string.Join(", ", conflicts.Select(c => c.RoomId).Distinct());
+                            System.Diagnostics.Debug.WriteLine($"[BookMissing] {date:yyyy-MM-dd} - SKIPPED: User has conflicting booking in other room");
                             results.Add(new
                             {
                                 date = date.ToString("yyyy-MM-dd"),
                                 dateDisplay = date.ToString("dd/MM"),
                                 status = "error",
-                                message = $"Cannot book: Time slot conflicts with bookings in other rooms (Room IDs: {conflictingRoomIds})"
+                                message = $"Cannot book: You already have a booking in another room at {bookStartTime:hh\\:mm}-{bookEndTime:hh\\:mm}"
                             });
                             errorCount++;
                             continue;
                         }
 
-                        // Check for overlapping bookings by current user on the same date with different times
+                        System.Diagnostics.Debug.WriteLine($"[BookMissing] {date:yyyy-MM-dd} - Checking overlapping bookings by current user in THIS room");
+
+                        // Check for overlapping bookings by current user in THIS room on the same date
                         var userOverlappingBookings = allBookings.Where(b =>
                             b.UserId == userId &&
                             b.BookingDate.Date == date.Date &&
                             b.Status != BookingStatus.Cancelled &&
                             !(b.EndTime <= bookStartTime || b.StartTime >= bookEndTime)).ToList();
 
+                        System.Diagnostics.Debug.WriteLine($"[BookMissing] {date:yyyy-MM-dd} - User overlapping bookings in this room: {userOverlappingBookings.Count}");
+
                         if (userOverlappingBookings.Count > 0)
                         {
+                            System.Diagnostics.Debug.WriteLine($"[BookMissing] {date:yyyy-MM-dd} - SKIPPED: Overlapping booking by user in this room");
                             results.Add(new
                             {
                                 date = date.ToString("yyyy-MM-dd"),
                                 dateDisplay = date.ToString("dd/MM"),
                                 status = "error",
-                                message = "Cannot book: You already have a booking that overlaps with this time slot"
+                                message = "Cannot book: You already have a booking that overlaps with this time slot in this room"
                             });
                             errorCount++;
                             continue;
                         }
+
+                        System.Diagnostics.Debug.WriteLine($"[BookMissing] {date:yyyy-MM-dd} - Passed all checks, proceeding to availability check");
                     }
 
                     // Validate availability
                     var isAvailable = await _roomService.IsRoomAvailableAsync(roomId, date, bookStartTime, bookEndTime);
+                    System.Diagnostics.Debug.WriteLine($"[BookMissing] {date:yyyy-MM-dd} - isAvailable: {isAvailable}");
                     if (!isAvailable)
                     {
                         results.Add(new
@@ -1699,6 +1959,7 @@ public class RecurringBookingModel : PageModel
                         bookEndTime,
                         skipAdvanceDaysCheck: true
                     );
+                    System.Diagnostics.Debug.WriteLine($"[BookMissing] {date:yyyy-MM-dd} - isValid: {isValid}, errorMsg: {errorMsg}");
 
                     if (!isValid)
                     {
