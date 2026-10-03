@@ -886,8 +886,8 @@ public class IndexModel : PageModel
                 };
             }
 
-            // Cancel the booking
-            await _bookingService.CancelBookingAsync(bookingId);
+            // Cancel the booking with authorisation check
+            await _bookingService.CancelBookingAsync(bookingId, userId, isAdmin: false);
 
             return new JsonResult(new
             {

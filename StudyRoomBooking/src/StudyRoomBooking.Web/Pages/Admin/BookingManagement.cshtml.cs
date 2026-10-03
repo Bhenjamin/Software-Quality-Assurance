@@ -52,7 +52,15 @@ public class BookingManagementModel : AdminPageModel
 
             FilterDate = filterDate;
             FilterStatus = filterStatus;
-            await _bookingService.CancelBookingAsync(id);
+
+            // Admin cancellation with authorisation check (isAdmin: true)
+            var adminIdStr = HttpContext.Session.GetString("UserId");
+            if (!int.TryParse(adminIdStr, out int adminId))
+            {
+                throw new UnauthorizedAccessException("Admin user not authenticated");
+            }
+
+            await _bookingService.CancelBookingAsync(id, adminId, isAdmin: true);
             return RedirectToPage(new { filterDate = FilterDate?.ToString("yyyy-MM-dd"), filterStatus = FilterStatus });
         }
         catch (Exception ex)

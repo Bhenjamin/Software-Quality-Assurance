@@ -146,17 +146,31 @@ public class BookingService : IBookingService
         return booking;
     }
 
-    public async Task CancelBookingAsync(int bookingId)
+    /// <summary>
+    /// Cancels a booking with authorisation checks.
+    /// Only the booking owner or an admin can cancel a booking.
+    /// </summary>
+    public async Task CancelBookingAsync(int bookingId, int requestingUserId, bool isAdmin)
     {
         var booking = await _unitOfWork.Bookings.GetByIdAsync(bookingId);
-        if (booking != null)
+        if (booking == null)
         {
-            booking.Status = BookingStatus.Cancelled;
-            booking.UpdatedAt = DateTime.UtcNow;
-            await _unitOfWork.Bookings.UpdateAsync(booking);
-            await _unitOfWork.SaveChangesAsync();
-            await SendBookingCancellationNotificationAsync(booking);
+            throw new ArgumentException("Booking not found", nameof(bookingId));
         }
+
+        // Check authorisation: only admins or the booking owner can cancel
+        if (!isAdmin && booking.UserId != requestingUserId)
+        {
+            throw new UnauthorizedAccessException(
+                "You are not authorized to cancel this booking. Only the booking owner or an administrator can cancel it."
+            );
+        }
+
+        booking.Status = BookingStatus.Cancelled;
+        booking.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.Bookings.UpdateAsync(booking);
+        await _unitOfWork.SaveChangesAsync();
+        await SendBookingCancellationNotificationAsync(booking);
     }
 
     private async Task SendBookingCancellationNotificationAsync(Booking booking)

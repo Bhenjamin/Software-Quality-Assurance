@@ -13,7 +13,7 @@ public interface IBookingService
     Task<List<Booking>> GetRoomBookingsByDateRangeAsync(int roomId, DateTime startDate, DateTime endDate);
     Task<Booking> CreateBookingAsync(Booking booking);
     Task<Booking> UpdateBookingAsync(Booking booking);
-    Task CancelBookingAsync(int bookingId);
+    Task CancelBookingAsync(int bookingId, int requestingUserId, bool isAdmin);
     Task<(bool IsValid, string ErrorMessage)> ValidateBookingAsync(int roomId, DateTime bookingDate, TimeSpan startTime, TimeSpan endTime, int? bookingIdToExclude = null, bool skipAdvanceDaysCheck = false);
     List<DateTime> GenerateRecurrenceDates(DateTime startDate, DateTime endDate, RecurrencePattern pattern);
 }

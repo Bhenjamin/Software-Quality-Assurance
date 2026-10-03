@@ -33,7 +33,13 @@ public class BookingHistoryModel : PageModel
     {
         try
         {
-            await _bookingService.CancelBookingAsync(id);
+            var userIdStr = HttpContext.Session.GetString("UserId");
+            if (!int.TryParse(userIdStr, out int userId))
+            {
+                throw new UnauthorizedAccessException("User not authenticated");
+            }
+
+            await _bookingService.CancelBookingAsync(id, userId, isAdmin: false);
             return RedirectToPage(new { message = "Booking cancelled successfully!" });
         }
         catch (Exception ex)

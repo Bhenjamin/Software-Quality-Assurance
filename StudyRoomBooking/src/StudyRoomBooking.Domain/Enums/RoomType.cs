@@ -7,5 +7,6 @@ public enum RoomType
     Seminar,
     ComputerLab,
     DesignStudio,
-    EngineeringLab
+    EngineeringLab,
+    MediaStudio
 }
