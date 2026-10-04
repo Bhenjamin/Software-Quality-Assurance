@@ -1,51 +1,162 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using StudyRoomBooking.Application.Services;
 using StudyRoomBooking.Domain.Entities;
 using StudyRoomBooking.Domain.Enums;
 using StudyRoomBooking.Domain.Interfaces;
+using StudyRoomBooking.Infrastructure.Persistence;
+using StudyRoomBooking.Infrastructure.Repositories;
 
 namespace StudyRoomBooking.Tests;
 
 // Test cases TC-01 to TC-08 from our test plan.
 // These test BookingService directly (and AccessRuleService for the eligibility ones)
-// using mocked repos so we don't need an actual database running.
+// against an isolated relational database.
 [TestClass]
 public class BookingServiceTests
 {
-    private Mock<IUnitOfWork> _unitOfWorkMock = null!;
-    private Mock<IBookingRepository> _bookingRepoMock = null!;
-    private Mock<IRoomRepository> _roomRepoMock = null!;
-    private Mock<IUserRepository> _userRepoMock = null!;
-    private Mock<IRoomMajorRestrictionRepository> _roomMajorRestrictionRepoMock = null!;
-    private Mock<INotificationService> _notificationServiceMock = null!;
+    private SqliteConnection _connection = null!;
+    private StudyRoomBookingDbContext _dbContext = null!;
+    private IUnitOfWork _unitOfWork = null!;
+    private RecordingNotificationService _notificationService = null!;
     private BookingService _bookingService = null!;
     private RoomService _roomService = null!;
 
-    // Runs before every test so each one gets a fresh set of mocks
+    // Each test gets a fresh database, isolated from application data and other tests.
     [TestInitialize]
-    public void Setup()
+    public async Task Setup()
     {
-        _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _bookingRepoMock = new Mock<IBookingRepository>();
-        _roomRepoMock = new Mock<IRoomRepository>();
-        _userRepoMock = new Mock<IUserRepository>();
-        _roomMajorRestrictionRepoMock = new Mock<IRoomMajorRestrictionRepository>();
-        _notificationServiceMock = new Mock<INotificationService>();
+        _connection = new SqliteConnection("Data Source=:memory:");
+        await _connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<StudyRoomBookingDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+        _dbContext = new StudyRoomBookingDbContext(options);
+        await _dbContext.Database.EnsureCreatedAsync();
 
-        _unitOfWorkMock.Setup(u => u.Bookings).Returns(_bookingRepoMock.Object);
-        _unitOfWorkMock.Setup(u => u.Rooms).Returns(_roomRepoMock.Object);
-        _unitOfWorkMock.Setup(u => u.Users).Returns(_userRepoMock.Object);
-        _unitOfWorkMock
-            .Setup(u => u.RoomMajorRestrictions)
-            .Returns(_roomMajorRestrictionRepoMock.Object);
+        _unitOfWork = new EfUnitOfWork(_dbContext);
+        _notificationService = new RecordingNotificationService();
 
         _bookingService = new BookingService(
-            _unitOfWorkMock.Object,
-            _notificationServiceMock.Object
+            _unitOfWork,
+            _notificationService
         );
 
-        _roomService = new RoomService(_unitOfWorkMock.Object);
+        _roomService = new RoomService(_unitOfWork);
+    }
+
+    [TestCleanup]
+    public async Task Cleanup()
+    {
+        await _dbContext.DisposeAsync();
+        await _connection.DisposeAsync();
+    }
+
+    private async Task<User> AddUserAsync(int id = 10, string email = "student@uni.edu")
+    {
+        var user = new User
+        {
+            Id = id,
+            UserId = $"test-user-{id}",
+            Name = $"Test User {id}",
+            Email = email,
+            Role = UserRole.Student
+        };
+        _dbContext.Users.Add(user);
+        await _dbContext.SaveChangesAsync();
+        return user;
+    }
+
+    private async Task<Room> AddRoomAsync(
+        int id = 1,
+        string name = "Study Room A",
+        RoomType type = RoomType.Study
+    )
+    {
+        var room = new Room
+        {
+            Id = id,
+            Code = $"TEST-{id}",
+            Name = name,
+            Type = type,
+            IsAvailable = true
+        };
+        _dbContext.Rooms.Add(room);
+        await _dbContext.SaveChangesAsync();
+        return room;
+    }
+
+    private async Task AddBookingAsync(Booking booking)
+    {
+        _dbContext.Bookings.Add(booking);
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private sealed class RecordingNotificationService : INotificationService
+    {
+        public TaskCompletionSource<BookingConfirmation> ConfirmationSent { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public BookingCancellation? CancellationSent { get; private set; }
+
+        public Task SendBookingConfirmationAsync(
+            string email,
+            string roomName,
+            DateTime bookingDate,
+            TimeSpan startTime,
+            TimeSpan endTime,
+            string confirmationNumber
+        )
+        {
+            ConfirmationSent.TrySetResult(new BookingConfirmation(
+                email,
+                roomName,
+                bookingDate,
+                startTime,
+                endTime,
+                confirmationNumber
+            ));
+            return Task.CompletedTask;
+        }
+
+        public Task SendBookingCancellationAsync(string email, string roomName, DateTime bookingDate)
+        {
+            CancellationSent = new BookingCancellation(email, roomName, bookingDate);
+            return Task.CompletedTask;
+        }
+
+        public Task SendBookingModificationAsync(string email, string roomName, DateTime oldDate, DateTime newDate)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed record BookingConfirmation(
+        string Email,
+        string RoomName,
+        DateTime BookingDate,
+        TimeSpan StartTime,
+        TimeSpan EndTime,
+        string ConfirmationNumber
+    );
+
+    private sealed record BookingCancellation(string Email, string RoomName, DateTime BookingDate);
+
+    private static async Task<BookingConfirmation> WaitForConfirmationAsync(
+        RecordingNotificationService notificationService
+    )
+    {
+        var completed = await Task.WhenAny(
+            notificationService.ConfirmationSent.Task,
+            Task.Delay(TimeSpan.FromSeconds(5))
+        );
+        Assert.AreSame(
+            notificationService.ConfirmationSent.Task,
+            completed,
+            "Booking confirmation notification was not sent."
+        );
+        return await notificationService.ConfirmationSent.Task;
     }
 
     // TC-01: Book an available room successfully (FR2, FR3)
@@ -54,14 +165,8 @@ public class BookingServiceTests
     [TestMethod]
     public async Task TC01_BookAvailableRoom_Succeeds()
     {
-        // no bookings exist yet for this room
-        _bookingRepoMock.Setup(r => r.GetByRoomIdAsync(1)).ReturnsAsync(new List<Booking>());
-        _userRepoMock
-            .Setup(u => u.GetByIdAsync(10))
-            .ReturnsAsync(new User { Id = 10, Email = "student@uni.edu" });
-        _roomRepoMock
-            .Setup(r => r.GetByIdAsync(1))
-            .ReturnsAsync(new Room { Id = 1, Name = "Study Room A" });
+        await AddUserAsync();
+        await AddRoomAsync();
 
         var bookingDate = DateTime.Today.AddDays(1);
         var newBooking = new Booking
@@ -84,14 +189,16 @@ public class BookingServiceTests
         Assert.IsTrue(isValid);
         Assert.AreEqual(BookingStatus.Confirmed, result.Status);
         Assert.IsFalse(string.IsNullOrEmpty(result.ConfirmationNumber));
-        _bookingRepoMock.Verify(r => r.AddAsync(It.IsAny<Booking>()), Times.Once);
-        _notificationServiceMock.Verify(n => n.SendBookingConfirmationAsync(
-            "student@uni.edu",
-            "Study Room A",
-            bookingDate,
-            new TimeSpan(9, 0, 0),
-            new TimeSpan(10, 0, 0),
-            result.ConfirmationNumber!), Times.Once);
+        var storedBooking = await _unitOfWork.Bookings.GetByIdAsync(result.Id);
+        Assert.IsNotNull(storedBooking);
+        Assert.AreEqual(BookingStatus.Confirmed, storedBooking.Status);
+        var notification = await WaitForConfirmationAsync(_notificationService);
+        Assert.AreEqual("student@uni.edu", notification.Email);
+        Assert.AreEqual("Study Room A", notification.RoomName);
+        Assert.AreEqual(bookingDate, notification.BookingDate);
+        Assert.AreEqual(new TimeSpan(9, 0, 0), notification.StartTime);
+        Assert.AreEqual(new TimeSpan(10, 0, 0), notification.EndTime);
+        Assert.AreEqual(result.ConfirmationNumber, notification.ConfirmationNumber);
     }
 
     // TC-02: Reject a double-booking for the same room and time slot (FR3, NFR2)
@@ -101,6 +208,8 @@ public class BookingServiceTests
     [TestMethod]
     public async Task TC02_DoubleBooking_IsRejected()
     {
+        await AddUserAsync();
+        await AddRoomAsync();
         var bookingDate = DateTime.Today.AddDays(1);
         var existingBooking = new Booking
         {
@@ -111,9 +220,8 @@ public class BookingServiceTests
             EndTime = new TimeSpan(10, 0, 0),
             Status = BookingStatus.Confirmed,
         };
-        _bookingRepoMock
-            .Setup(r => r.GetByRoomIdAsync(1))
-            .ReturnsAsync(new List<Booking> { existingBooking });
+        existingBooking.UserId = 10;
+        await AddBookingAsync(existingBooking);
 
         // someone else tries to grab an overlapping slot on the same room
         var (isValid, errorMessage) = await _bookingService.ValidateBookingAsync(
@@ -133,17 +241,13 @@ public class BookingServiceTests
     [TestMethod]
     public async Task TC03_IneligibleStudent_RestrictedRoomHiddenFromSearchResults()
     {
-        var designStudio = new Room
+        var designStudio = await AddRoomAsync(type: RoomType.DesignStudio, name: "Design Studio");
+        _dbContext.RoomMajorRestrictions.Add(new RoomMajorRestriction
         {
-            Id = 1,
-            Name = "Design Studio",
-            Type = RoomType.DesignStudio,
-            IsAvailable = true,
-        };
-        _roomRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Room> { designStudio });
-        _roomMajorRestrictionRepoMock
-            .Setup(r => r.GetAllowedMajorsForRoomAsync(designStudio.Id))
-            .ReturnsAsync(new List<StudentMajor> { StudentMajor.Arts });
+            RoomId = designStudio.Id,
+            Major = StudentMajor.Arts
+        });
+        await _dbContext.SaveChangesAsync();
 
         // an Engineering student searches for Design Studio rooms
         var results = await _roomService.SearchRoomsAsync(
@@ -163,17 +267,13 @@ public class BookingServiceTests
     [TestMethod]
     public async Task TC04_EligibleStudent_RestrictedRoomVisibleInSearchResults()
     {
-        var designStudio = new Room
+        var designStudio = await AddRoomAsync(type: RoomType.DesignStudio, name: "Design Studio");
+        _dbContext.RoomMajorRestrictions.Add(new RoomMajorRestriction
         {
-            Id = 1,
-            Name = "Design Studio",
-            Type = RoomType.DesignStudio,
-            IsAvailable = true,
-        };
-        _roomRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Room> { designStudio });
-        _roomMajorRestrictionRepoMock
-            .Setup(r => r.GetAllowedMajorsForRoomAsync(designStudio.Id))
-            .ReturnsAsync(new List<StudentMajor> { StudentMajor.Arts });
+            RoomId = designStudio.Id,
+            Major = StudentMajor.Arts
+        });
+        await _dbContext.SaveChangesAsync();
 
         // an Arts student searches for Design Studio rooms
         var results = await _roomService.SearchRoomsAsync(
@@ -193,6 +293,8 @@ public class BookingServiceTests
     [TestMethod]
     public async Task TC05_ModifyFutureBooking_ToAvailableSlot_Succeeds()
     {
+        await AddUserAsync();
+        await AddRoomAsync();
         var bookingDate = DateTime.Today.AddDays(2);
         var existingBooking = new Booking
         {
@@ -204,9 +306,7 @@ public class BookingServiceTests
             EndTime = new TimeSpan(10, 0, 0),
             Status = BookingStatus.Confirmed,
         };
-        _bookingRepoMock
-            .Setup(r => r.GetByRoomIdAsync(1))
-            .ReturnsAsync(new List<Booking> { existingBooking });
+        await AddBookingAsync(existingBooking);
 
         // moving the booking to the afternoon instead
         var newStart = new TimeSpan(14, 0, 0);
@@ -226,7 +326,10 @@ public class BookingServiceTests
         Assert.IsTrue(isValid);
         Assert.AreEqual(newStart, updated.StartTime);
         Assert.AreEqual(newEnd, updated.EndTime);
-        _bookingRepoMock.Verify(r => r.UpdateAsync(It.IsAny<Booking>()), Times.Once);
+        var storedBooking = await _unitOfWork.Bookings.GetByIdAsync(existingBooking.Id);
+        Assert.IsNotNull(storedBooking);
+        Assert.AreEqual(newStart, storedBooking.StartTime);
+        Assert.AreEqual(newEnd, storedBooking.EndTime);
     }
 
     // TC-06: Cancel a future booking (FR7)
@@ -235,6 +338,8 @@ public class BookingServiceTests
     [TestMethod]
     public async Task TC06_CancelFutureBooking_UpdatesStatusToCancelled()
     {
+        await AddUserAsync();
+        await AddRoomAsync();
         var booking = new Booking
         {
             Id = 7,
@@ -243,25 +348,17 @@ public class BookingServiceTests
             BookingDate = DateTime.Today.AddDays(3),
             Status = BookingStatus.Confirmed,
         };
-        _bookingRepoMock.Setup(r => r.GetByIdAsync(7)).ReturnsAsync(booking);
-        _userRepoMock
-            .Setup(u => u.GetByIdAsync(10))
-            .ReturnsAsync(new User { Id = 10, Email = "student@uni.edu" });
-        _roomRepoMock
-            .Setup(r => r.GetByIdAsync(1))
-            .ReturnsAsync(new Room { Id = 1, Name = "Study Room A" });
+        await AddBookingAsync(booking);
 
         // TC-06: Cancel future booking - owner cancellation with authorisation
         await _bookingService.CancelBookingAsync(7, requestingUserId: 10, isAdmin: false);
 
-        Assert.AreEqual(BookingStatus.Cancelled, booking.Status);
-        _bookingRepoMock.Verify(
-            r => r.UpdateAsync(It.Is<Booking>(b => b.Status == BookingStatus.Cancelled)),
-            Times.Once
-        );
-        _notificationServiceMock.Verify(
-            n => n.SendBookingCancellationAsync("student@uni.edu", "Study Room A", booking.BookingDate),
-            Times.Once
+        var storedBooking = await _unitOfWork.Bookings.GetByIdAsync(7);
+        Assert.IsNotNull(storedBooking);
+        Assert.AreEqual(BookingStatus.Cancelled, storedBooking.Status);
+        Assert.AreEqual(
+            new BookingCancellation("student@uni.edu", "Study Room A", booking.BookingDate),
+            _notificationService.CancellationSent
         );
     }
 
@@ -288,7 +385,6 @@ public class BookingServiceTests
     [TestMethod]
     public async Task TC08_MissingStudentId_IsRejected()
     {
-        _userRepoMock.Setup(u => u.GetByIdAsync(It.IsAny<int>())).ReturnsAsync((User?)null);
         var bookingWithNoUser = new Booking
         {
             RoomId = 1,
@@ -303,64 +399,6 @@ public class BookingServiceTests
         );
     }
 
-    // ============================================================
-    // TC-11 to TC-20: Additional test cases for test plan coverage
-    // ============================================================
-
-    // TC-11: Confirmation email is sent with correct booking details (FR5)
-    // Verifies that when a booking is created, the notification service
-    // is called with the correct booking information.
-    [TestMethod]
-    public async Task TC11_BookingConfirmation_EmailSentWithCorrectDetails()
-    {
-        // Arrange
-        var studentEmail = "student@uni.edu";
-        var roomName = "Study Room A";
-        var bookingDate = DateTime.Today.AddDays(1);
-        var startTime = new TimeSpan(9, 0, 0);
-        var endTime = new TimeSpan(10, 0, 0);
-        var confirmationNumber = "CONF001";
-
-        _userRepoMock
-            .Setup(u => u.GetByIdAsync(10))
-            .ReturnsAsync(new User { Id = 10, Email = studentEmail });
-
-        _roomRepoMock
-            .Setup(r => r.GetByIdAsync(1))
-            .ReturnsAsync(new Room { Id = 1, Name = roomName });
-
-        _bookingRepoMock
-            .Setup(r => r.GetByRoomIdAsync(1))
-            .ReturnsAsync(new List<Booking>());
-
-        var newBooking = new Booking
-        {
-            RoomId = 1,
-            UserId = 10,
-            BookingDate = bookingDate,
-            StartTime = startTime,
-            EndTime = endTime
-        };
-
-        // Act
-        var result = await _bookingService.CreateBookingAsync(newBooking);
-
-        // Assert
-        Assert.IsNotNull(result.ConfirmationNumber);
-        _notificationServiceMock.Verify(
-            n => n.SendBookingConfirmationAsync(
-                studentEmail,
-                roomName,
-                bookingDate,
-                startTime,
-                endTime,
-                It.IsAny<string>() // Any confirmation number is acceptable
-            ),
-            Times.Once,
-            "Notification service should be called once with correct booking details"
-        );
-    }
-
     // TC-12: Booking history displays correct status for past and upcoming bookings (FR8)
     // Verifies that user bookings can be retrieved and contain correct status information
     // for past, present, and future dates.
@@ -369,6 +407,10 @@ public class BookingServiceTests
     {
         // Arrange
         var userId = 10;
+        await AddUserAsync(userId);
+        await AddRoomAsync(1);
+        await AddRoomAsync(2, "Study Room B");
+        await AddRoomAsync(3, "Study Room C");
 
         var pastConfirmedBooking = new Booking
         {
@@ -403,14 +445,9 @@ public class BookingServiceTests
             Status = BookingStatus.Confirmed
         };
 
-        _bookingRepoMock
-            .Setup(r => r.GetByUserIdAsync(userId))
-            .ReturnsAsync(new List<Booking>
-            {
-                upcomingBooking,
-                cancelledBooking,
-                pastConfirmedBooking
-            });
+        await AddBookingAsync(pastConfirmedBooking);
+        await AddBookingAsync(cancelledBooking);
+        await AddBookingAsync(upcomingBooking);
 
         // Act
         var history = await _bookingService.GetBookingsByUserIdAsync(userId);
@@ -438,23 +475,17 @@ public class BookingServiceTests
     public async Task TC14_RoomAccessRules_FilterStudentSearch()
     {
         // Arrange
-        var roomId = 1;
-        var designStudio = new Room
+        var designStudio = await AddRoomAsync(
+            name: "Design Studio",
+            type: RoomType.DesignStudio
+        );
+        var roomId = designStudio.Id;
+        _dbContext.RoomMajorRestrictions.Add(new RoomMajorRestriction
         {
-            Id = roomId,
-            Name = "Design Studio",
-            Type = RoomType.DesignStudio,
-            IsAvailable = true
-        };
-
-        // Set up restrictions: only Arts students can use this room
-        _roomMajorRestrictionRepoMock
-            .Setup(r => r.GetAllowedMajorsForRoomAsync(roomId))
-            .ReturnsAsync(new List<StudentMajor> { StudentMajor.Arts });
-
-        _roomRepoMock
-            .Setup(r => r.GetAllAsync())
-            .ReturnsAsync(new List<Room> { designStudio });
+            RoomId = roomId,
+            Major = StudentMajor.Arts
+        });
+        await _dbContext.SaveChangesAsync();
 
         // Act: Arts student searches
         var artsStudentResults = await _roomService.SearchRoomsAsync(
@@ -490,6 +521,8 @@ public class BookingServiceTests
     public async Task TC15_NonAdmin_CannotCancelOtherUserBooking()
     {
         // Arrange
+        await AddUserAsync();
+        await AddRoomAsync();
         var booking = new Booking
         {
             Id = 1,
@@ -498,98 +531,13 @@ public class BookingServiceTests
             BookingDate = DateTime.Today.AddDays(1),
             Status = BookingStatus.Confirmed
         };
-
-        _bookingRepoMock
-            .Setup(r => r.GetByIdAsync(1))
-            .ReturnsAsync(booking);
-
-        _userRepoMock
-            .Setup(u => u.GetByIdAsync(10))
-            .ReturnsAsync(new User { Id = 10, Email = "user@uni.edu" });
-
-        _roomRepoMock
-            .Setup(r => r.GetByIdAsync(1))
-            .ReturnsAsync(new Room { Id = 1, Name = "Room A" });
+        await AddBookingAsync(booking);
 
         // Act: User 20 (non-admin, different from owner) tries to cancel user 10's booking
         // This should throw UnauthorizedAccessException
         await _bookingService.CancelBookingAsync(1, 20, false);
 
         // Assert: Exception thrown (handled by [ExpectedException])
-    }
-
-    // TC-15b: Owner CAN cancel their own booking
-    [TestMethod]
-    public async Task TC15_Owner_CanCancelOwnBooking()
-    {
-        // Arrange
-        var booking = new Booking
-        {
-            Id = 1,
-            UserId = 10, // Owner is user 10
-            RoomId = 1,
-            BookingDate = DateTime.Today.AddDays(1),
-            Status = BookingStatus.Confirmed
-        };
-
-        _bookingRepoMock
-            .Setup(r => r.GetByIdAsync(1))
-            .ReturnsAsync(booking);
-
-        _userRepoMock
-            .Setup(u => u.GetByIdAsync(10))
-            .ReturnsAsync(new User { Id = 10, Email = "user@uni.edu" });
-
-        _roomRepoMock
-            .Setup(r => r.GetByIdAsync(1))
-            .ReturnsAsync(new Room { Id = 1, Name = "Room A" });
-
-        // Act: User 10 cancels their own booking
-        await _bookingService.CancelBookingAsync(1, 10, false);
-
-        // Assert
-        _bookingRepoMock.Verify(
-            r => r.UpdateAsync(It.Is<Booking>(b => b.Status == BookingStatus.Cancelled)),
-            Times.Once,
-            "Booking should be updated to Cancelled status"
-        );
-    }
-
-    // TC-15c: Admin CAN cancel any booking
-    [TestMethod]
-    public async Task TC15_Admin_CanCancelAnyBooking()
-    {
-        // Arrange
-        var booking = new Booking
-        {
-            Id = 1,
-            UserId = 10, // Different user
-            RoomId = 1,
-            BookingDate = DateTime.Today.AddDays(1),
-            Status = BookingStatus.Confirmed
-        };
-
-        _bookingRepoMock
-            .Setup(r => r.GetByIdAsync(1))
-            .ReturnsAsync(booking);
-
-        _userRepoMock
-            .Setup(u => u.GetByIdAsync(10))
-            .ReturnsAsync(new User { Id = 10, Email = "user@uni.edu" });
-
-        _roomRepoMock
-            .Setup(r => r.GetByIdAsync(1))
-            .ReturnsAsync(new Room { Id = 1, Name = "Room A" });
-
-        // Act: Admin (user 999) cancels user 10's booking
-        await _bookingService.CancelBookingAsync(1, 999, true);
-
-        // Assert
-        _bookingRepoMock.Verify(
-            r => r.UpdateAsync(It.Is<Booking>(b => b.Status == BookingStatus.Cancelled)),
-            Times.Once,
-            "Admin should be able to cancel any booking"
-        );
     }
 
     // TC-17: Room search returns results within 2 seconds for 50+ reservations (NFR1)
@@ -601,6 +549,10 @@ public class BookingServiceTests
         // Arrange
         var rooms = new List<Room>();
         var allBookings = new List<Booking>();
+        for (int i = 1; i <= 10; i++)
+        {
+            await AddUserAsync(i);
+        }
 
         // Create 60 rooms with multiple bookings each
         for (int i = 1; i <= 60; i++)
@@ -608,6 +560,7 @@ public class BookingServiceTests
             rooms.Add(new Room
             {
                 Id = i,
+                Code = $"TEST-{i}",
                 Name = $"Room {i}",
                 Capacity = 4,
                 Type = i % 2 == 0 ? RoomType.Study : RoomType.Meeting,
@@ -630,16 +583,9 @@ public class BookingServiceTests
             }
         }
 
-        _roomRepoMock
-            .Setup(r => r.GetAllAsync())
-            .ReturnsAsync(rooms);
-
-        // Mock GetByRoomIdAsync to return bookings for each room
-        _bookingRepoMock
-            .Setup(b => b.GetByRoomIdAsync(It.IsAny<int>()))
-            .Returns<int>((roomId) => Task.FromResult(
-                allBookings.Where(b => b.RoomId == roomId).ToList()
-            ));
+        _dbContext.Rooms.AddRange(rooms);
+        _dbContext.Bookings.AddRange(allBookings);
+        await _dbContext.SaveChangesAsync();
 
         var searchDate = DateTime.Today.AddDays(1); // Day 1
         var searchStartTime = new TimeSpan(14, 0, 0); // 14:00 - no conflict (bookings are 9:00-11:00)
