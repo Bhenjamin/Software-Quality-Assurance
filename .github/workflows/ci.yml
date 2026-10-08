@@ -12,6 +12,7 @@ permissions:
 env:
   SOLUTION_FILE: StudyRoomBooking/StudyRoomBooking.slnx
   WEB_PROJECT: StudyRoomBooking/src/StudyRoomBooking.Web
+  COVERAGE_MIN: 30
 
 jobs:
   build-and-test:
@@ -33,6 +34,13 @@ jobs:
       - name: Build
         run: dotnet build "${{ env.SOLUTION_FILE }}" --configuration Release --no-restore
 
+      - name: Run basic lint checks
+        run: >
+          dotnet format "${{ env.SOLUTION_FILE }}" analyzers
+          --severity error
+          --verify-no-changes
+          --no-restore
+
       - name: Run automated tests
         run: >
           dotnet test "${{ env.SOLUTION_FILE }}"
@@ -41,6 +49,25 @@ jobs:
           --logger "trx;LogFileName=test-results.trx"
           --collect:"XPlat Code Coverage"
           --results-directory TestResults
+
+      - name: Check code coverage threshold
+        shell: bash
+        run: |
+          coverage_file=$(find TestResults -name coverage.cobertura.xml -print -quit)
+          if [ -z "$coverage_file" ]; then
+            echo "No Cobertura coverage report found."
+            exit 1
+          fi
+
+          line_rate=$(grep -o 'line-rate="[0-9.]*"' "$coverage_file" | head -n 1 | cut -d '"' -f 2)
+          if [ -z "$line_rate" ]; then
+            echo "Could not read line coverage from $coverage_file."
+            exit 1
+          fi
+
+          coverage_percent=$(awk "BEGIN { printf \"%.1f\", $line_rate * 100 }")
+          echo "Line coverage: ${coverage_percent}% (minimum: ${{ env.COVERAGE_MIN }}%)"
+          awk "BEGIN { exit !($coverage_percent >= ${{ env.COVERAGE_MIN }}) }"
 
       - name: Upload test results and coverage
         if: always()
