@@ -67,6 +67,7 @@ jobs:
       - name: Start the app and check it responds
         env:
           SUPABASE_CONNECTION_STRING: ${{ secrets.SUPABASE_CONNECTION_STRING }}
+          ConnectionStrings__Supabase: ${{ secrets.SUPABASE_CONNECTION_STRING }}
         run: |
           if [ -z "$SUPABASE_CONNECTION_STRING" ]; then
             echo "SUPABASE_CONNECTION_STRING repository secret is not configured."
