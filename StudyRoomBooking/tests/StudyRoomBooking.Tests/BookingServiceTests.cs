@@ -381,7 +381,7 @@ public class BookingServiceTests
 
     // TC-08: Reject a booking with a missing / invalid student ID (FR2, edge case)
     // This is what SHOULD happen if someone submits a booking with no student
-    // attached to it. Skipped because right now nothing actually stops this.
+    // attached to it. 
     [TestMethod]
     public async Task TC08_MissingStudentId_IsRejected()
     {
